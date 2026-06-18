@@ -1,59 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Uvita — Online Marketplace API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 asosida qurilgan modular monolith REST API.
 
-## About Laravel
+## Texnologiyalar
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Laravel 12** — PHP framework
+- **PHP 8.4** — dasturlash tili
+- **MySQL 8** — asosiy ma'lumotlar bazasi
+- **Redis** — OTP saqlash, cache, session
+- **Docker** — konteynerizatsiya
+- **Laravel Sanctum** — token autentifikatsiya
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## O'rnatish
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Talablar
 
-## Learning Laravel
+- Docker
+- Docker Compose
+- Git
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Qadamlar
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+# 1. Reponi klonlash
+git clone https://github.com/diyorbek1118/Uvita.git
+cd Uvita
 
-## Laravel Sponsors
+# 2. .env faylini sozlash
+cp .env.example .env
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# 3. Docker konteynerlarini ishga tushirish
+docker-compose up -d --build
 
-### Premium Partners
+# 4. App kalitini yaratish
+docker exec app php artisan key:generate
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# 5. Migratsiyalarni ishga tushirish
+docker exec app php artisan migrate
+```
 
-## Contributing
+## API
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Base URL: `http://localhost:8000/api`
 
-## Code of Conduct
+### Auth
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| Method | Endpoint | Tavsif |
+|--------|----------|--------|
+| POST | `/auth/send-otp` | OTP kod yuborish |
+| POST | `/auth/verify-otp` | OTP kodni tasdiqlash |
+| POST | `/auth/logout` | Chiqish |
 
-## Security Vulnerabilities
+### send-otp
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```json
+POST /api/auth/send-otp
+Content-Type: application/json
 
-## License
+{
+    "phone": "+998901234567",
+    "type": "login"
+}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### verify-otp
+
+```json
+POST /api/auth/verify-otp
+Content-Type: application/json
+
+{
+    "phone": "+998901234567",
+    "code": "123456",
+    "type": "login"
+}
+```
+
+### logout
+
+```json
+POST /api/auth/logout
+Authorization: Bearer {token}
+```
+
+## Loyiha strukturasi
+
+```
+Modules/
+├── Auth/         — autentifikatsiya
+├── User/         — foydalanuvchi
+├── Product/      — mahsulotlar
+├── Cart/         — savat
+└── Order/        — buyurtmalar
+```
+
+## Litsenziya
+
+MIT
