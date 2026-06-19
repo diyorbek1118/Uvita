@@ -2,16 +2,11 @@
 
 namespace Modules\Auth\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseRequest;
 use Modules\Auth\Enums\OtpTypeEnum;
 
-class SendOtpRequest extends FormRequest
+class SendOtpRequest extends BaseRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [
