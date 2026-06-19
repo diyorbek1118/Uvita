@@ -21,44 +21,28 @@ class AuthController extends Controller
 
     public function sendOtp(SendOtpRequest $request): JsonResponse
     {
-        try {
-            $this->authService->sendOtp(
-                SendOtpDTO::fromArray($request->validated())
-            );
+        $this->authService->sendOtp(
+            SendOtpDTO::fromArray($request->validated())
+        );
 
-            return ApiResponse::success(
-                message: 'OTP kod yuborildi.'
-            );
-
-        } catch (\Exception $e) {
-            $code = $e->getCode();
-            $httpCode = ($code >= 400 && $code < 600) ? $code : 500;
-
-            return ApiResponse::error($e->getMessage(), $httpCode);
-        }
+        return ApiResponse::success(
+            message: 'OTP kod yuborildi.'
+        );
     }
 
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse
     {
-        try {
-            $result = $this->authService->verifyOtp(
-                VerifyOtpDTO::fromArray($request->validated())
-            );
+        $result = $this->authService->verifyOtp(
+            VerifyOtpDTO::fromArray($request->validated())
+        );
 
-            return ApiResponse::success(
-                data: [
-                    'token' => $result['token'],
-                    'user'  => new UserResource($result['user']),
-                ],
-                message: 'Muvaffaqiyatli kirildi.'
-            );
-
-        } catch (\Exception $e) {
-            $code = $e->getCode();
-            $httpCode = ($code >= 400 && $code < 600) ? $code : 500;
-
-            return ApiResponse::error($e->getMessage(), $httpCode);
-        }
+        return ApiResponse::success(
+            data: [
+                'token' => $result['token'],
+                'user'  => new UserResource($result['user']),
+            ],
+            message: 'Muvaffaqiyatli kirildi.'
+        );
     }
 
     public function logout(Request $request): JsonResponse
