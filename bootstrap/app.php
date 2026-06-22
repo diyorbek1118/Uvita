@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Domain\Exceptions\InvalidOtpException;
 use Modules\Auth\Domain\Exceptions\OtpRateLimitException;
+use Modules\Product\Domain\Exceptions\InsufficientStockException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -34,6 +35,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (OtpRateLimitException $e) {
             return response()->json(['message' => $e->getMessage()], 429);
+        });
+
+        $exceptions->render(function (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         });
 
         $exceptions->render(function (NotFoundHttpException $e) {

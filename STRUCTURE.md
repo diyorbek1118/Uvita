@@ -12,8 +12,8 @@ backend/
 │   ├── Jobs/
 │   │   └── SendSmsJob.php              # ShouldQueue — SmsService::send() async
 │   ├── Providers/
-│   │   └── AppServiceProvider.php      # loadModuleMigrations() glob + loadLegacyModuleRoutes()
-│   │                                   # Bindings: User, OtpAttempt, TokenService, Category
+│   │   └── AppServiceProvider.php      # loadModuleMigrations() glob
+│   │                                   # Bindings: User, OtpAttempt, TokenService, Category, Product
 │   └── Shared/
 │       ├── Exceptions/
 │       │   └── DomainException.php
@@ -85,7 +85,7 @@ backend/
 │   │   │   ├── Handlers/
 │   │   │   │   ├── CreateCategoryHandler.php         # → CategoryModel (201)
 │   │   │   │   ├── UpdateCategoryHandler.php         # → CategoryModel (200)
-│   │   │   │   ├── DeleteCategoryHandler.php         # → void (204)
+│   │   │   │   ├── DeleteCategoryHandler.php         # → void
 │   │   │   │   ├── GetCategoryListHandler.php        # Eloquent paginator → (200)
 │   │   │   │   └── GetCategoryByIdHandler.php        # CategoryModel::findOrFail → (200)
 │   │   │   └── Queries/
@@ -103,12 +103,63 @@ backend/
 │   │       ├── Controllers/
 │   │       │   └── CategoryController.php  # index|show|store|update|destroy
 │   │       ├── Requests/
-│   │       │   ├── CreateCategoryRequest.php  # name req | slug nullable+unique | image url | parent_id
-│   │       │   └── UpdateCategoryRequest.php  # + is_active
+│   │       │   ├── CreateCategoryRequest.php
+│   │       │   └── UpdateCategoryRequest.php
 │   │       ├── Resources/
-│   │       │   └── CategoryResource.php       # id,name,slug,image,parentId,isActive
+│   │       │   └── CategoryResource.php
 │   │       └── routes/
 │   │           └── api.php             # GET categories (public) | POST/PUT/DELETE (TODO: auth:admin)
+│   │
+│   ├── Product/                        # ✅ DDD to'liq
+│   │   ├── Domain/
+│   │   │   ├── Entities/
+│   │   │   │   └── Product.php         # create(), approve(), reject(), modify()
+│   │   │   ├── Enums/
+│   │   │   │   └── ProductStatusEnum.php  # Active, Inactive, Rejected
+│   │   │   ├── Exceptions/
+│   │   │   │   └── InsufficientStockException.php
+│   │   │   └── Repositories/
+│   │   │       └── ProductRepositoryInterface.php    # findById, save, delete, slugExists
+│   │   ├── Application/
+│   │   │   ├── Commands/
+│   │   │   │   ├── CreateProductCommand.php
+│   │   │   │   ├── UpdateProductCommand.php          # id + dto
+│   │   │   │   ├── DeleteProductCommand.php          # id
+│   │   │   │   ├── ApproveProductCommand.php         # id
+│   │   │   │   └── RejectProductCommand.php          # id + reason
+│   │   │   ├── DTOs/
+│   │   │   │   ├── CreateProductDTO.php              # name, slug(auto), desc, price, stock, images, categoryId, managerId
+│   │   │   │   └── UpdateProductDTO.php
+│   │   │   ├── Handlers/
+│   │   │   │   ├── CreateProductHandler.php          # → ProductModel (201)
+│   │   │   │   ├── UpdateProductHandler.php          # → ProductModel (200)
+│   │   │   │   ├── DeleteProductHandler.php          # → void (soft delete)
+│   │   │   │   ├── ApproveProductHandler.php         # → ProductModel (200)
+│   │   │   │   ├── RejectProductHandler.php          # → ProductModel (200)
+│   │   │   │   ├── GetProductListHandler.php         # spatie QueryBuilder, faqat active
+│   │   │   │   └── GetProductByIdHandler.php         # faqat active, findOrFail
+│   │   │   └── Queries/
+│   │   │       ├── GetProductListQuery.php           # perPage
+│   │   │       └── GetProductByIdQuery.php           # id
+│   │   ├── Infrastructure/
+│   │   │   └── Persistence/
+│   │   │       ├── Migrations/
+│   │   │       │   └── 2026_06_22_000003_create_products_table.php
+│   │   │       ├── Models/
+│   │   │       │   └── Product.php     # SoftDeletes, status cast, category() relation
+│   │   │       └── Repositories/
+│   │   │           └── EloquentProductRepository.php
+│   │   └── Presentation/
+│   │       ├── Controllers/
+│   │       │   └── ProductController.php  # index|show|store|update|destroy|approve|reject
+│   │       ├── Requests/
+│   │       │   ├── CreateProductRequest.php
+│   │       │   ├── UpdateProductRequest.php
+│   │       │   └── RejectProductRequest.php
+│   │       ├── Resources/
+│   │       │   └── ProductResource.php
+│   │       └── routes/
+│   │           └── api.php             # GET public | POST/PUT (TODO: auth:manager) | DELETE/approve/reject (TODO: auth:admin)
 │   │
 │   ├── User/                           # ⚠️ Domain + Infrastructure tayyor
 │   │   ├── Domain/
@@ -125,10 +176,10 @@ backend/
 │   │           └── Repositories/
 │   │               └── EloquentUserRepository.php
 │   │
-│   └── [Kelgusi: Product, Cart, Order, Payment, Review, Courier, Admin/*]
+│   └── [Kelgusi: Cart, Order, Payment, Review, Courier, Admin/*]
 │
 ├── bootstrap/
-│   ├── app.php                         # glob route + exception mapping
+│   ├── app.php                         # glob route + exception mapping (Invalid/RateLimit/InsufficientStock/NotFound)
 │   └── providers.php
 │
 ├── config/

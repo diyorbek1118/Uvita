@@ -12,6 +12,8 @@ use Modules\Auth\Infrastructure\Auth\SanctumTokenService;
 use Modules\Auth\Infrastructure\Persistence\Repositories\EloquentOtpAttemptRepository;
 use Modules\Category\Domain\Repositories\CategoryRepositoryInterface;
 use Modules\Category\Infrastructure\Persistence\Repositories\EloquentCategoryRepository;
+use Modules\Product\Domain\Repositories\ProductRepositoryInterface;
+use Modules\Product\Infrastructure\Persistence\Repositories\EloquentProductRepository;
 use Modules\User\Domain\Repositories\UserRepositoryInterface;
 use Modules\User\Infrastructure\Persistence\Repositories\EloquentUserRepository;
 
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(OtpAttemptRepositoryInterface::class, EloquentOtpAttemptRepository::class);
         $this->app->bind(TokenServiceInterface::class, SanctumTokenService::class);
         $this->app->bind(CategoryRepositoryInterface::class, EloquentCategoryRepository::class);
+        $this->app->bind(ProductRepositoryInterface::class, EloquentProductRepository::class);
     }
 
     public function boot(): void
