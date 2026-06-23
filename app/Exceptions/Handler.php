@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exceptions;
 
+use App\Shared\Exceptions\DomainException;
 use App\Shared\Responses\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -13,67 +17,60 @@ use Throwable;
 
 class Handler extends ExceptionHandler
 {
-    /**
-     * Report qilinmaydigan (logga yozilmaydigan) xatoliklar ro'yxati.
-     *
-     * @var array<int, class-string<Throwable>>
-     */
     protected $dontReport = [];
 
-    /**
-     * Ilova uchun xatoliklarni boshqarish qoidalarini ro'yxatdan o'tkazish.
-     */
     public function register(): void
     {
         $this->renderable(function (Throwable $e) {
 
-            // 1. Validatsiya xatoliklari (FormRequest yoki $request->validate())
+            // 1. Validatsiya xatoliklari — FormRequest yoki $request->validate()
             if ($e instanceof ValidationException) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Validatsiya xatosi.',
+                    'message' => "Ma'lumotlar noto'g'ri.",
                     'errors'  => $e->errors(),
                 ], 422);
             }
 
-            // 2. Autentifikatsiya xatosi (Sanctum yoki Bearer token xato bo'lsa)
+            // 2. Autentifikatsiya xatosi — Sanctum / Bearer token yo'q yoki muddati o'tgan
             if ($e instanceof AuthenticationException) {
-                return ApiResponse::error('Tizimga kirish talab etiladi.', 401);
+                return ApiResponse::error('Autentifikatsiya talab qilinadi.', 401);
             }
 
-            // 3. Model topilmadi (Masalan: User::findOrFail($id))
+            // 3. Model topilmadi — findOrFail() dan
             if ($e instanceof ModelNotFoundException) {
                 return ApiResponse::error('Resurs topilmadi.', 404);
             }
 
-            // 4. API Endpoint (Route) topilmadi
+            // 4. Route topilmadi
             if ($e instanceof NotFoundHttpException) {
                 return ApiResponse::error('Endpoint topilmadi.', 404);
             }
 
-            // 5. Umumiy HTTP xatolari (403 Forbidden, 429 Too Many Requests va h.k.)
+            // 5. Database xatoligi — SQL, ulanish va boshqa DB xatolari
+            //    Raw SQL, host, port, database nomi clientga ko'rsatilmaydi
+            if ($e instanceof QueryException) {
+                return ApiResponse::error('Tizim xatosi yuz berdi.', 500);
+            }
+
+            // 6. Umumiy HTTP xatolari — 403, 429 va boshqalar
             if ($e instanceof HttpException) {
                 return ApiResponse::error(
-                    $e->getMessage() ?: 'Tizim taqiqlagan so\'rov.', 
+                    $e->getMessage() ?: "So'rov bajarilmadi.",
                     $e->getStatusCode()
                 );
             }
 
-            // 6. Biznes mantiq xatoliklari (Service-lardan otilgan custom throw new \Exceptionlar)
-            if ($e instanceof \Exception) {
-                $code = $e->getCode();
-                // Agar kod HTTP statusga to'g'ri kelmasa, default 422 (Unprocessable Entity) qaytaramiz
-                $httpCode = ($code >= 400 && $code < 600) ? $code : 422;
-
-                return ApiResponse::error($e->getMessage(), $httpCode);
+            // 7. Domain (biznes mantiq) xatoliklari — bootstrap/app.php da ro'yxatlanmaganlar uchun
+            if ($e instanceof DomainException) {
+                return ApiResponse::error($e->getMessage(), 422);
             }
 
-            // 7. Fatal Error yoki Kutilmagan boshqa har qanday xatolik (Throwable)
-            // Agar localda bo'lsangiz (debug true) va kutilmagan xato bo'lsa, Laravel debug trace-ni ko'rsatadi.
-            // Agar productionda bo'lsa, chiroyli "Server xatoligi" qaytadi.
+            // 8. Kutilmagan boshqa barcha xatoliklar — tafsilotlar yashiriladi
             if (!config('app.debug')) {
-                return ApiResponse::error('Serverda ichki xatolik yuz berdi.', 500);
+                return ApiResponse::error('Tizim xatosi yuz berdi.', 500);
             }
+
+            // Debug rejimida Laravel standart debug ekranini ko'rsatadi
         });
     }
 }

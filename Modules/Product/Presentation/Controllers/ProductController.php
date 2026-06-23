@@ -78,11 +78,11 @@ final class ProductController extends Controller
             ->response();
     }
 
-    public function destroy(int $product): JsonResponse
+    public function destroy(int $product): \Illuminate\Http\Response
     {
         $this->deleteHandler->handle(new DeleteProductCommand($product));
 
-        return response()->json(['message' => "Mahsulot o'chirildi"]);
+        return response()->noContent();
     }
 
     public function approve(int $product): JsonResponse

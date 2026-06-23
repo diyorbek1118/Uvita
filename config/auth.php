@@ -20,24 +20,29 @@ return [
             'provider' => 'users',
         ],
 
+        'sanctum' => [
+            'driver'   => 'sanctum',
+            'provider' => 'staff',
+        ],
+
         'manager' => [
-            'driver'   => 'session',
-            'provider' => 'managers',
+            'driver'   => 'sanctum',
+            'provider' => 'staff',
         ],
 
         'courier' => [
-            'driver'   => 'session',
-            'provider' => 'couriers',
+            'driver'   => 'sanctum',
+            'provider' => 'staff',
         ],
 
         'admin' => [
-            'driver'   => 'session',
-            'provider' => 'admins',
+            'driver'   => 'sanctum',
+            'provider' => 'staff',
         ],
 
         'super_admin' => [
-            'driver'   => 'session',
-            'provider' => 'super_admins',
+            'driver'   => 'sanctum',
+            'provider' => 'staff',
         ],
     ],
 
@@ -47,24 +52,9 @@ return [
             'model'  => Modules\User\Infrastructure\Persistence\Models\User::class,
         ],
 
-        'managers' => [
+        'staff' => [
             'driver' => 'eloquent',
-            'model'  => 'Modules\Manager\Infrastructure\Persistence\Models\Manager',
-        ],
-
-        'couriers' => [
-            'driver' => 'eloquent',
-            'model'  => 'Modules\Courier\Infrastructure\Persistence\Models\Courier',
-        ],
-
-        'admins' => [
-            'driver' => 'eloquent',
-            'model'  => 'Modules\Admin\Infrastructure\Persistence\Models\Admin',
-        ],
-
-        'super_admins' => [
-            'driver' => 'eloquent',
-            'model'  => 'Modules\Admin\Infrastructure\Persistence\Models\SuperAdmin',
+            'model'  => Modules\Admin\Infrastructure\Persistence\Models\Staff::class,
         ],
     ],
 

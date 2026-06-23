@@ -12,7 +12,8 @@ final class GetProductByIdHandler
 {
     public function handle(GetProductByIdQuery $query): ProductModel
     {
-        return ProductModel::where('status', ProductStatusEnum::Active->value)
+        return ProductModel::with('category')
+            ->where('status', ProductStatusEnum::Active->value)
             ->findOrFail($query->id);
     }
 }

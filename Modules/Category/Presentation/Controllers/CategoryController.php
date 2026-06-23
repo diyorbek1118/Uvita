@@ -70,10 +70,10 @@ final class CategoryController extends Controller
             ->response();
     }
 
-    public function destroy(int $category): JsonResponse
+    public function destroy(int $category): \Illuminate\Http\Response
     {
         $this->deleteHandler->handle(new DeleteCategoryCommand($category));
 
-        return response()->json(['message' => 'Kategoriya o\'chirildi']);
+        return response()->noContent();
     }
 }

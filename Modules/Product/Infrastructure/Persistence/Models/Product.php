@@ -22,6 +22,8 @@ final class Product extends Model
         'description',
         'price',
         'stock',
+        'rating',
+        'reviews_count',
         'status',
         'images',
         'category_id',
@@ -32,11 +34,13 @@ final class Product extends Model
     protected function casts(): array
     {
         return [
-            'price'      => 'integer',
-            'stock'      => 'integer',
-            'images'     => 'array',
-            'status'     => ProductStatusEnum::class,
-            'manager_id' => 'integer',
+            'price'         => 'integer',
+            'stock'         => 'integer',
+            'rating'        => 'float',
+            'reviews_count' => 'integer',
+            'images'        => 'array',
+            'status'        => ProductStatusEnum::class,
+            'manager_id'    => 'integer',
         ];
     }
 
