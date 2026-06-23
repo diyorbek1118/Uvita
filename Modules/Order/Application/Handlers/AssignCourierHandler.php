@@ -26,7 +26,7 @@ final class AssignCourierHandler
         $saved = $this->orders->save($order);
 
         dispatch(new SendTelegramJob(
-            chatId:  (string) config('telegram.manager_chat_id', ''),
+            role:    'manager',
             message: "🚴 <b>Buyurtma #{$saved->id}</b>\n\nKuryer #{$command->courierId} tayinlandi."
         ));
 

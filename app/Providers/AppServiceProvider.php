@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Shared\Services\Settings\SettingService;
 use Illuminate\Support\ServiceProvider;
+use Modules\Admin\Domain\Repositories\SettingRepositoryInterface;
+use Modules\Admin\Infrastructure\Persistence\Repositories\EloquentSettingRepository;
 use Modules\Auth\Application\Contracts\TokenServiceInterface;
 use Modules\Auth\Domain\Repositories\OtpAttemptRepositoryInterface;
 use Modules\Auth\Infrastructure\Auth\SanctumTokenService;
@@ -37,6 +40,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(OrderRepositoryInterface::class, EloquentOrderRepository::class);
         $this->app->bind(PaymentRepositoryInterface::class, EloquentPaymentRepository::class);
         $this->app->bind(ReviewRepositoryInterface::class, EloquentReviewRepository::class);
+        $this->app->bind(SettingRepositoryInterface::class, EloquentSettingRepository::class);
+        $this->app->singleton(SettingService::class);
     }
 
     public function boot(): void

@@ -28,7 +28,7 @@ final class MarkDeliveredHandler
 
         dispatch(new SendSmsJob($order->phone, "Buyurtma #{$saved->id} muvaffaqiyatli yetkazildi."));
         dispatch(new SendTelegramJob(
-            chatId:  (string) config('telegram.manager_chat_id', ''),
+            role:    'manager',
             message: "✅ <b>Buyurtma #{$saved->id} yetkazildi</b>\n\n📞 {$order->phone}"
         ));
 

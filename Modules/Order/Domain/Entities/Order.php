@@ -97,10 +97,10 @@ class Order
         $this->status = OrderStatus::DELIVERED;
     }
 
-    public function incrementNotFound(): void
+    public function incrementNotFound(int $maxAttempts = 3): void
     {
         $this->notFoundCount++;
-        if ($this->notFoundCount >= 3) {
+        if ($this->notFoundCount >= $maxAttempts) {
             $this->markDeliveryIssue();
         }
     }

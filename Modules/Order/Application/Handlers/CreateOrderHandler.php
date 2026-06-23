@@ -13,6 +13,7 @@ use Modules\Order\Domain\Entities\Order;
 use Modules\Order\Domain\Entities\OrderItem;
 use Modules\Order\Domain\Enums\OrderStatus;
 use Modules\Order\Domain\Exceptions\InsufficientStockException;
+use App\Shared\Services\Settings\SettingService;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
 use Modules\Order\Domain\ValueObjects\DeliveryAddress;
 use Modules\Order\Domain\ValueObjects\DeliveryTime;
@@ -27,6 +28,7 @@ final class CreateOrderHandler
     public function __construct(
         private readonly OrderRepositoryInterface $orders,
         private readonly CreatePaymentHandler     $createPaymentHandler,
+        private readonly SettingService           $settingService,
     ) {}
 
     public function handle(CreateOrderCommand $command): OrderModel
@@ -57,7 +59,7 @@ final class CreateOrderHandler
                 );
             }
 
-            $deliveryPrice = (int) config('cart.delivery_price', 15000);
+            $deliveryPrice = $this->settingService->deliveryPrice();
 
             $order = new Order(
                 id:             null,
@@ -86,7 +88,7 @@ final class CreateOrderHandler
         dispatch(new ClearCartJob($dto->userId));
         dispatch(new SendSmsJob($dto->phone, "Buyurtma #{$savedOrder->id} yaratildi."));
         dispatch(new SendTelegramJob(
-            chatId:  (string) config('telegram.manager_chat_id', ''),
+            role:    'manager',
             message: "🛒 <b>Yangi buyurtma #{$savedOrder->id}</b>\n\n📞 {$dto->phone}\n💰 {$savedOrder->grand_total} so'm\n🕐 {$dto->deliveryTime}"
         ));
 

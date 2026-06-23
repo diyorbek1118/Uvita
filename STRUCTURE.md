@@ -15,11 +15,12 @@ backend/
 │   │       └── BaseRequest.php
 │   ├── Jobs/
 │   │   ├── SendSmsJob.php              # ShouldQueue — SmsService::send() async
-│   │   ├── SendTelegramJob.php         # ShouldQueue — TelegramService::send() async
+│   │   ├── SendTelegramJob.php         # ShouldQueue — role('manager'|'admin'|'courier') + message; TelegramService::sendTo{Role}()
 │   │   └── ClearCartJob.php            # ShouldQueue — buyurtma yaratilganda savatni tozalaydi
 │   ├── Providers/
 │   │   └── AppServiceProvider.php      # loadModuleMigrations() glob
-│   │                                   # Bindings: User, OtpAttempt, TokenService, Category, Product, Cart, Order, Payment, Review
+│   │                                   # Bindings: User, OtpAttempt, TokenService, Category, Product, Cart, Order, Payment, Review, Setting
+│   │                                   # Singleton: SettingService
 │   └── Shared/
 │       ├── Exceptions/
 │       │   └── DomainException.php
@@ -28,8 +29,11 @@ backend/
 │       └── Services/
 │           ├── SMS/
 │           │   └── SmsService.php      # send(): void — Log::info() mock
-│           └── Telegram/
-│               └── TelegramService.php # send(): void — Log::info() mock (TODO: Bot API)
+│           ├── Telegram/
+│           │   └── TelegramService.php # send(chatId,msg):bool | sendToManager/Admin/Courier(msg):void
+│           │                           # Http::post Telegram Bot API; try/catch; Log::warning if empty
+│           └── Settings/
+│               └── SettingService.php  # singleton; get/deliveryPrice/otpExpirySeconds/maxNotFoundAttempts etc; Cache::remember 24h
 │
 ├── Modules/
 │   │
@@ -154,7 +158,7 @@ backend/
 │   │   │       ├── Migrations/
 │   │   │       │   └── 2026_06_22_000003_create_products_table.php
 │   │   │       ├── Models/
-│   │   │       │   └── Product.php     # SoftDeletes, status+rating+reviews_count casts, category() relation
+│   │   │       │   └── Product.php     # SoftDeletes, status+rating+reviews_count casts, category()+manager() relations
 │   │   │       └── Repositories/
 │   │   │           └── EloquentProductRepository.php
 │   │   └── Presentation/
@@ -167,7 +171,7 @@ backend/
 │   │       ├── Resources/
 │   │       │   └── ProductResource.php    # category: {id, name, slug} via whenLoaded
 │   │       └── routes/
-│   │           └── api.php             # GET public | POST/PUT (role.manager) | DELETE (role.admin) | PUT admin/products/{id}/approve|reject (role.admin)
+│   │           └── api.php             # GET public | POST/PUT (role.manager) | DELETE (role.admin)
 │   │
 │   ├── User/                           # ✅ DDD to'liq
 │   │   ├── Domain/
@@ -180,7 +184,7 @@ backend/
 │   │   │       ├── Migrations/
 │   │   │       │   └── 0001_01_01_000000_create_users_table.php
 │   │   │       ├── Models/
-│   │   │       │   └── User.php
+│   │   │       │   └── User.php        # orders() HasMany → OrderModel
 │   │   │       └── Repositories/
 │   │   │           └── EloquentUserRepository.php
 │   │   └── Presentation/
@@ -336,28 +340,110 @@ backend/
 │   │       └── routes/
 │   │           └── api.php              # GET courier/profile|history|stats (auth:sanctum + role.courier)
 │   │
-│   ├── Admin/                          # ✅ Staff auth tayyor
+│   ├── Admin/                          # ✅ Staff auth + Admin/* + Super/* + Settings
 │   │   ├── Domain/
-│   │   │   └── Enums/
-│   │   │       └── StaffRole.php       # manager|courier|admin|super_admin
+│   │   │   ├── Entities/
+│   │   │   │   └── Setting.php         # readonly; id,key(SettingKey),value,description; withValue()
+│   │   │   ├── Enums/
+│   │   │   │   └── StaffRole.php       # manager|courier|admin|super_admin
+│   │   │   ├── Exceptions/
+│   │   │   │   └── SettingNotFoundException.php  # extends RuntimeException → 404
+│   │   │   ├── Repositories/
+│   │   │   │   └── SettingRepositoryInterface.php  # findByKey, findAll, save
+│   │   │   └── ValueObjects/
+│   │   │       └── SettingKey.php      # backed enum: delivery_price|delivery_city|min_order_amount|otp_expiry_seconds|otp_max_attempts|otp_block_minutes|max_not_found_attempts|review_request_delay_hours
 │   │   ├── Application/
+│   │   │   ├── Commands/
+│   │   │   │   ├── ApproveProductCommand.php     # id
+│   │   │   │   ├── RejectProductCommand.php      # id + reason
+│   │   │   │   ├── ToggleCourierActiveCommand.php # id
+│   │   │   │   ├── CreateStaffCommand.php        # wraps CreateStaffDTO
+│   │   │   │   ├── UpdateStaffCommand.php        # staffId + UpdateStaffDTO
+│   │   │   │   ├── DeleteStaffCommand.php        # staffId
+│   │   │   │   ├── ToggleStaffCommand.php        # staffId
+│   │   │   │   ├── UpdateSettingCommand.php      # wraps UpdateSettingDTO
+│   │   │   │   └── UpdateSettingsCommand.php     # array of UpdateSettingDTO
 │   │   │   ├── DTOs/
-│   │   │   │   └── StaffLoginDTO.php   # email, password; fromRequest()
+│   │   │   │   ├── StaffLoginDTO.php             # email, password; fromRequest()
+│   │   │   │   ├── CreateStaffDTO.php            # name, email, password, role; fromRequest()
+│   │   │   │   ├── UpdateStaffDTO.php            # name, email, role; fromRequest()
+│   │   │   │   └── UpdateSettingDTO.php          # key(SettingKey), value; fromRequest()/fromArray()
+│   │   │   ├── Queries/
+│   │   │   │   ├── GetPendingProductsQuery.php   # (empty)
+│   │   │   │   ├── GetAllProductsQuery.php       # status(nullable filter)
+│   │   │   │   ├── GetDeliveryIssueOrdersQuery.php # (empty)
+│   │   │   │   ├── GetCourierByIdQuery.php       # courierId
+│   │   │   │   ├── GetAllStaffQuery.php          # role(nullable filter)
+│   │   │   │   ├── GetStaffByIdQuery.php         # staffId
+│   │   │   │   ├── GetAllUsersQuery.php          # search(nullable — phone or name)
+│   │   │   │   ├── GetUserByIdQuery.php          # userId
+│   │   │   │   ├── GetAllTransactionsQuery.php   # provider, status, date_from, date_to
+│   │   │   │   ├── GetAllSettingsQuery.php       # (empty)
+│   │   │   │   └── GetSettingByKeyQuery.php      # key(SettingKey)
 │   │   │   └── Handlers/
-│   │   │       └── StaffLoginHandler.php  # Hash::check; is_active; createToken(role); → [staff, token]
+│   │   │       ├── StaffLoginHandler.php         # Hash::check; is_active; createToken(role); → [staff, token]
+│   │   │       ├── GetPendingProductsHandler.php # status=inactive + manager_id NOT NULL, with(manager), paginate(20)
+│   │   │       ├── GetAllProductsHandler.php     # optional status filter, with(manager), paginate(20)
+│   │   │       ├── ApproveProductHandler.php     # status check → active; SendTelegramJob to manager
+│   │   │       ├── RejectProductHandler.php      # status → rejected + reason; SendTelegramJob
+│   │   │       ├── GetDeliveryIssueOrdersHandler.php # status=delivery_issue, with(items.product,user), paginate(20)
+│   │   │       ├── GetOrderStatsHandler.php      # DB::table count per status → array + total
+│   │   │       ├── GetAvailableCouriersHandler.php  # role=courier + is_active=true + delivering_count virtual
+│   │   │       ├── GetAllCouriersHandler.php     # role=courier + stats virtual attrs
+│   │   │       ├── GetCourierByIdHandler.php     # stats + last 10 deliveries virtual attrs
+│   │   │       ├── ToggleCourierActiveHandler.php   # toggle is_active → Staff
+│   │   │       ├── GetReviewStatsHandler.php     # DB::table reviews count per status
+│   │   │       ├── GetAllStaffHandler.php        # optional role filter, paginate(20)
+│   │   │       ├── GetStaffByIdHandler.php       # Staff::findOrFail
+│   │   │       ├── CreateStaffHandler.php        # email unique check; Hash::make(password); is_active=true → 201
+│   │   │       ├── UpdateStaffHandler.php        # email unique (except self); update name/email/role
+│   │   │       ├── DeleteStaffHandler.php        # super_admin check; delete
+│   │   │       ├── ToggleStaffHandler.php        # super_admin check; toggle is_active
+│   │   │       ├── GetAllUsersHandler.php        # withCount(orders)+withMax(orders,created_at); search filter; paginate(20)
+│   │   │       ├── GetUserByIdHandler.php        # withCount(orders); last 5 orders virtual attr
+│   │   │       ├── GetAllTransactionsHandler.php # provider/status/date filters; with(order); paginate(20)
+│   │   │       ├── GetTransactionStatsHandler.php # total/paid/failed/cancelled + by_provider breakdown
+│   │   │       ├── GetAllSettingsHandler.php     # grouped: delivery/otp/order → array
+│   │   │       ├── UpdateSettingHandler.php      # validate per-key range; save; Cache::forget("setting_{key}")
+│   │   │       └── UpdateSettingsHandler.php     # DB::transaction → UpdateSettingHandler loop
 │   │   ├── Infrastructure/
 │   │   │   └── Persistence/
 │   │   │       ├── Migrations/
-│   │   │       │   └── 2026_06_23_000005_create_staff_table.php
-│   │   │       └── Models/
-│   │   │           └── Staff.php       # extends Authenticatable, HasApiTokens; role→StaffRole cast
+│   │   │       │   ├── 2026_06_23_000005_create_staff_table.php
+│   │   │       │   └── 2026_06_23_000009_create_settings_table.php  # key(unique), value(text), description
+│   │   │       ├── Models/
+│   │   │       │   ├── Staff.php       # extends Authenticatable, HasApiTokens; role→StaffRole cast
+│   │   │       │   └── SettingModel.php # table: settings; toDomainEntity()
+│   │   │       └── Repositories/
+│   │   │           └── EloquentSettingRepository.php  # implements SettingRepositoryInterface
 │   │   └── Presentation/
 │   │       ├── Controllers/
-│   │       │   └── StaffAuthController.php  # login(→200+token) | logout(→200)
+│   │       │   ├── StaffAuthController.php       # login(→200+token) | logout(→200)
+│   │       │   ├── AdminProductController.php    # pendingProducts|allProducts|approve|reject
+│   │       │   ├── AdminOrderController.php      # deliveryIssues|stats
+│   │       │   ├── AdminCourierController.php    # available|index|show|toggleActive
+│   │       │   ├── AdminReviewController.php     # stats
+│   │       │   ├── AdminStaffController.php      # index|show|store|update|destroy|toggleActive
+│   │       │   ├── AdminUserController.php       # index|show (read-only)
+│   │       │   ├── AdminTransactionController.php # index|stats
+│   │       │   └── AdminSettingsController.php   # index|update|bulkUpdate
 │   │       ├── Requests/
-│   │       │   └── StaffLoginRequest.php
+│   │       │   ├── StaffLoginRequest.php
+│   │       │   ├── RejectProductRequest.php      # reason(required, max:500)
+│   │       │   ├── CreateStaffRequest.php        # name,email,password,role validation
+│   │       │   ├── UpdateStaffRequest.php        # name,email,role; unique email ignore self
+│   │       │   ├── UpdateSettingRequest.php      # key(in SettingKey values), value(required)
+│   │       │   └── UpdateSettingsRequest.php     # settings[].key + settings[].value
+│   │       ├── Resources/
+│   │       │   ├── AdminProductResource.php      # id,name,status,images,manager{id,name},rejection_reason
+│   │       │   ├── AdminCourierResource.php      # id,name,is_active,delivering_count|stats|recent_deliveries(virtual)
+│   │       │   ├── StaffResource.php             # id,name,email,role,is_active,created_at
+│   │       │   ├── AdminUserResource.php         # id,name,phone,orders_count,last_order_at (list)
+│   │       │   ├── AdminUserDetailResource.php   # + recent_orders[5] (show)
+│   │       │   ├── TransactionResource.php       # id,order_id,provider,transaction_id,amount,status
+│   │       │   └── SettingResource.php           # key, value, description
 │   │       └── routes/
-│   │           └── api.php             # POST staff/login | POST staff/logout (auth:sanctum)
+│   │           └── api.php             # POST staff/login|logout | admin/*(role.admin) | super/*(role.super_admin) incl. settings
 │   │
 │   │
 │   ├── Review/                         # ✅ DDD to'liq — sharh + moderatsiya
@@ -466,22 +552,23 @@ backend/
 │               └── api.php                           # POST payment/create(auth:api) | POST payment/payme|click|uzum/webhook
 │
 ├── bootstrap/
-│   ├── app.php                         # glob route + exception mapping + middleware aliases (role.manager/courier/admin/super_admin)
+│   ├── app.php                         # glob route + exception mapping (incl. SettingNotFoundException→404) + middleware aliases
 │   └── providers.php
 │
 ├── config/
 │   ├── auth.php                        # guards: api(users), sanctum+manager+courier+admin+super_admin(staff) + otp_ttl_seconds
 │   ├── cart.php                        # delivery_price ← DELIVERY_PRICE env
 │   ├── payment.php                     # test_mode, payme(id/key/test_key/urls), click(service_id/merchant_id/secret_key), uzum(service_id/username/password)
-│   └── telegram.php                    # bot_token, manager_chat_id, api_url
+│   └── telegram.php                    # bot_token; chat_ids.manager[]/admin[]/courier[] — array_filter(explode(',', env(...)))
 │
 ├── database/
 │   ├── migrations/
 │   │   ├── 0001_01_01_000001_create_cache_table.php
 │   │   └── 0001_01_01_000002_create_jobs_table.php
 │   └── seeders/
-│       ├── DatabaseSeeder.php          # → StaffSeeder
-│       └── StaffSeeder.php             # truncate+insert: manager@|courier@|admin@|super@uvita.uz (password123)
+│       ├── DatabaseSeeder.php          # → StaffSeeder, SettingsSeeder
+│       ├── StaffSeeder.php             # truncate+insert: manager@|courier@|admin@|super@uvita.uz (password123)
+│       └── SettingsSeeder.php          # 8 settings: delivery_price,delivery_city,min_order_amount,otp_*,max_not_found_attempts,review_request_delay_hours
 │
 ├── routes/
 │   ├── api.php                         # Bo'sh placeholder

@@ -15,6 +15,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Domain\Exceptions\SettingNotFoundException;
 use Modules\Auth\Domain\Exceptions\InvalidOtpException;
 use Modules\Auth\Domain\Exceptions\OtpRateLimitException;
 use Modules\Payment\Domain\Exceptions\DuplicateTransactionException;
@@ -94,6 +95,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (OrderNotDeliveredException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (SettingNotFoundException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
         });
 
         // --- Infrastruktura va tizim xatoliklari ---

@@ -76,7 +76,7 @@ final class MarkPaymentPaidHandler
         ));
 
         dispatch(new SendTelegramJob(
-            chatId:  (string) config('telegram.manager_chat_id', ''),
+            role:    'manager',
             message: "✅ <b>Yangi to'langan buyurtma #{$command->orderId}</b>\n\n💰 " . number_format($order->grand_total, 0, '.', ' ') . " so'm\n📞 {$order->phone}"
         ));
     }

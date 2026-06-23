@@ -15,28 +15,76 @@ final class TelegramService
     public function __construct()
     {
         $this->token  = (string) config('telegram.bot_token', '');
-        $this->apiUrl = (string) config('telegram.api_url', 'https://api.telegram.org/bot');
+        $this->apiUrl = "https://api.telegram.org/bot{$this->token}";
     }
 
-    public function send(string $chatId, string $message): void
+    public function send(string $chatId, string $message): bool
     {
-        if ($this->token === '' || $chatId === '') {
-            Log::warning("TelegramService: token yoki chatId bo'sh, xabar yuborilmadi.");
+        if (empty($this->token) || empty($chatId)) {
+            Log::warning("Telegram: token yoki chatId bo'sh", [
+                'chat_id' => $chatId,
+            ]);
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)->post("{$this->apiUrl}/sendMessage", [
+                'chat_id'    => $chatId,
+                'text'       => $message,
+                'parse_mode' => 'HTML',
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('Telegram xato', [
+                    'chat_id'  => $chatId,
+                    'response' => $response->json(),
+                ]);
+                return false;
+            }
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Telegram exception', [
+                'message' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    public function sendToManager(string $message): void
+    {
+        $this->sendToMany(
+            config('telegram.chat_ids.manager', []),
+            $message
+        );
+    }
+
+    public function sendToAdmin(string $message): void
+    {
+        $this->sendToMany(
+            config('telegram.chat_ids.admin', []),
+            $message
+        );
+    }
+
+    public function sendToCourier(string $message): void
+    {
+        $this->sendToMany(
+            config('telegram.chat_ids.courier', []),
+            $message
+        );
+    }
+
+    private function sendToMany(array $chatIds, string $message): void
+    {
+        if (empty($chatIds)) {
+            Log::info("Telegram: chat_ids bo'sh, xabar yuborilmadi");
             return;
         }
 
-        $response = Http::timeout(10)->post("{$this->apiUrl}{$this->token}/sendMessage", [
-            'chat_id'    => $chatId,
-            'text'       => $message,
-            'parse_mode' => 'HTML',
-        ]);
-
-        if (!$response->successful()) {
-            Log::error("TelegramService: xabar yuborishda xato.", [
-                'chat_id'  => $chatId,
-                'status'   => $response->status(),
-                'response' => $response->body(),
-            ]);
+        foreach ($chatIds as $chatId) {
+            $this->send((string) $chatId, $message);
         }
     }
 }

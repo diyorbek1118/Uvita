@@ -21,9 +21,3 @@ Route::middleware(['auth:sanctum', 'role.manager'])->prefix('products')->group(f
 Route::middleware(['auth:sanctum', 'role.admin'])->prefix('products')->group(function (): void {
     Route::delete('/{product}', [ProductController::class, 'destroy']);
 });
-
-// Admin — tasdiqlash va rad etish (/admin/ prefix bilan)
-Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(function (): void {
-    Route::put('products/{id}/approve', [ProductController::class, 'approve']);
-    Route::put('products/{id}/reject',  [ProductController::class, 'reject']);
-});

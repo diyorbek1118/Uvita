@@ -16,12 +16,16 @@ final class SendTelegramJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
-        public readonly string $chatId,
+        public readonly string $role,
         public readonly string $message,
     ) {}
 
     public function handle(TelegramService $telegramService): void
     {
-        $telegramService->send($this->chatId, $this->message);
+        match ($this->role) {
+            'admin'   => $telegramService->sendToAdmin($this->message),
+            'courier' => $telegramService->sendToCourier($this->message),
+            default   => $telegramService->sendToManager($this->message),
+        };
     }
 }

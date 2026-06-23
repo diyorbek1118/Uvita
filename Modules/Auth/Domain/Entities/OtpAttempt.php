@@ -8,9 +8,6 @@ use DateTimeImmutable;
 
 final class OtpAttempt
 {
-    private const MAX_ATTEMPTS  = 5;
-    private const BLOCK_MINUTES = 10;
-
     public function __construct(
         public readonly ?int               $id,
         public readonly string             $phone,
@@ -56,12 +53,12 @@ final class OtpAttempt
             && hash_equals($this->code, $code);
     }
 
-    public function incrementAttempts(): void
+    public function incrementAttempts(int $maxAttempts = 5, int $blockMinutes = 10): void
     {
         $this->attemptsCount++;
 
-        if ($this->attemptsCount >= self::MAX_ATTEMPTS) {
-            $this->blockedUntil = new DateTimeImmutable('+' . self::BLOCK_MINUTES . ' minutes');
+        if ($this->attemptsCount >= $maxAttempts) {
+            $this->blockedUntil = new DateTimeImmutable("+{$blockMinutes} minutes");
         }
     }
 

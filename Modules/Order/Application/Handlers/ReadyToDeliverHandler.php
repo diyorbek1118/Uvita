@@ -26,7 +26,7 @@ final class ReadyToDeliverHandler
         $saved = $this->orders->save($order);
 
         dispatch(new SendTelegramJob(
-            chatId:  (string) config('telegram.manager_chat_id', ''),
+            role:    'manager',
             message: "📦 <b>Buyurtma #{$saved->id} tayyor</b>\n\nMahsulotlar yig'ildi, kuryerga topshirishga tayyor.\n📞 {$order->phone}"
         ));
 

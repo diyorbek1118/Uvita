@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use Modules\Auth\Application\Commands\SendOtpCommand;
 use Modules\Auth\Domain\Entities\OtpAttempt;
 use Modules\Auth\Domain\Exceptions\OtpRateLimitException;
+use App\Shared\Services\Settings\SettingService;
 use Modules\Auth\Domain\Repositories\OtpAttemptRepositoryInterface;
 use Modules\Auth\Domain\ValueObjects\PhoneNumber;
 
@@ -16,13 +17,9 @@ final class SendOtpHandler
 {
     private const OTP_LENGTH = 6;
 
-    private function ttlSeconds(): int
-    {
-        return (int) config('auth.otp_ttl_seconds', 120);
-    }
-
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
+        private readonly SettingService                $settingService,
     ) {}
 
     public function handle(SendOtpCommand $command): void
@@ -48,7 +45,7 @@ final class SendOtpHandler
         // 4. 6 xonali random kod
         $code = str_pad((string) random_int(0, 999999), self::OTP_LENGTH, '0', STR_PAD_LEFT);
 
-        $ttl = $this->ttlSeconds();
+        $ttl = $this->settingService->otpExpirySeconds();
 
         // 5. OtpAttempt entity yaratish
         $attempt = OtpAttempt::create(

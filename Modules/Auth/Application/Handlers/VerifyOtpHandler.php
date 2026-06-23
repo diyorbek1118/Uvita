@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Application\Handlers;
 
+use App\Shared\Services\Settings\SettingService;
 use Modules\Auth\Application\Commands\VerifyOtpCommand;
 use Modules\Auth\Application\Contracts\TokenServiceInterface;
 use Modules\Auth\Domain\Exceptions\InvalidOtpException;
@@ -19,6 +20,7 @@ final class VerifyOtpHandler
         private readonly OtpAttemptRepositoryInterface $otpRepository,
         private readonly UserRepositoryInterface       $userRepository,
         private readonly TokenServiceInterface         $tokenService,
+        private readonly SettingService                $settingService,
     ) {}
 
     /**
@@ -48,7 +50,10 @@ final class VerifyOtpHandler
 
         // 5. Kod noto'g'ri bo'lsa — urinishni oshir
         if (! $attempt->isValid($command->dto->code)) {
-            $attempt->incrementAttempts();
+            $attempt->incrementAttempts(
+                $this->settingService->otpMaxAttempts(),
+                $this->settingService->otpBlockMinutes(),
+            );
             $this->otpRepository->save($attempt);
 
             if ($attempt->isBlocked()) {
