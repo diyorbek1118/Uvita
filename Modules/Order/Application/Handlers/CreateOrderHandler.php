@@ -89,7 +89,7 @@ final class CreateOrderHandler
         dispatch(new SendSmsJob($dto->phone, "Buyurtma #{$savedOrder->id} yaratildi."));
         dispatch(new SendTelegramJob(
             role:    'manager',
-            message: "🛒 <b>Yangi buyurtma #{$savedOrder->id}</b>\n\n📞 {$dto->phone}\n💰 {$savedOrder->grand_total} so'm\n🕐 {$dto->deliveryTime}"
+            message: "🛒 <b>Yangi buyurtma #{$savedOrder->id}</b>\n\n📞 {$dto->phone}\n💰 {$savedOrder->grandTotal->amount} so'm\n🕐 {$dto->deliveryTime}"
         ));
 
         $orderModel = OrderModel::with(['items.product'])->findOrFail($savedOrder->id);
