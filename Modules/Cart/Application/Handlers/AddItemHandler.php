@@ -53,7 +53,7 @@ final class AddItemHandler
 
         $this->cartRepository->save($cart);
 
-        return CartModel::with('items.product')
+        return CartModel::with('items.product.category')
             ->where('user_id', $command->userId)
             ->firstOrFail();
     }

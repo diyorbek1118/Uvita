@@ -25,7 +25,7 @@ final class ClearCartHandler
         $cart->clear();
         $this->cartRepository->save($cart);
 
-        return CartModel::with('items.product')
+        return CartModel::with('items.product.category')
             ->where('user_id', $command->userId)
             ->first();
     }

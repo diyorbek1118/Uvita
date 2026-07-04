@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Review\Infrastructure\Persistence\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
@@ -13,6 +14,8 @@ use Modules\User\Infrastructure\Persistence\Models\User as UserModel;
 
 class ReviewModel extends Model
 {
+    use HasFactory;
+
     protected $table = 'reviews';
 
     protected $fillable = [

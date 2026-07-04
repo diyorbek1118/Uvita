@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Product\Infrastructure\Persistence\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,7 +14,7 @@ use Modules\Product\Domain\Enums\ProductStatusEnum;
 
 final class Product extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'products';
 

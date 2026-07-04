@@ -11,7 +11,7 @@ final class GetCartHandler
 {
     public function handle(GetCartQuery $query): ?CartModel
     {
-        return CartModel::with('items.product')
+        return CartModel::with('items.product.category')
             ->where('user_id', $query->userId)
             ->first();
     }

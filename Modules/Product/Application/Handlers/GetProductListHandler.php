@@ -20,6 +20,10 @@ final class GetProductListHandler
                 AllowedFilter::exact('category_id'),
                 AllowedFilter::partial('name'),
                 AllowedFilter::callback(
+                    'search',
+                    fn ($builder, $value) => $builder->where('name', 'like', "%{$value}%")
+                ),
+                AllowedFilter::callback(
                     'min_price',
                     fn ($builder, $value) => $builder->where('price', '>=', (int) $value)
                 ),
@@ -28,7 +32,7 @@ final class GetProductListHandler
                     fn ($builder, $value) => $builder->where('price', '<=', (int) $value)
                 ),
             )
-            ->allowedSorts('name', 'price', 'created_at')
+            ->allowedSorts('name', 'price', 'created_at', 'rating')
             ->defaultSort('-created_at')
             ->where('status', ProductStatusEnum::Active->value)
             ->paginate($query->perPage);

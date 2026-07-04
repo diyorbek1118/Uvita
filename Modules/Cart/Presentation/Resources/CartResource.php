@@ -25,15 +25,28 @@ final class CartResource extends JsonResource
         }
 
         $items = $this->items->map(fn(CartItemModel $item) => [
-            'id'       => $item->id,
-            'product'  => [
+            'id'          => $item->id,
+            'product_id'  => $item->product_id,
+            'name'        => $item->product->name,
+            'price'       => $item->product->price,
+            'quantity'    => $item->quantity,
+            'images'      => $item->product->images ?? [],
+            'category'    => $item->product->category ? [
+                'id'   => $item->product->category->id,
+                'name' => $item->product->category->name,
+            ] : null,
+            'product'     => [
                 'id'    => $item->product->id,
                 'name'  => $item->product->name,
                 'price' => $item->product->price,
                 'stock' => $item->product->stock,
+                'images' => $item->product->images ?? [],
+                'category' => $item->product->category ? [
+                    'id'   => $item->product->category->id,
+                    'name' => $item->product->category->name,
+                ] : null,
             ],
-            'quantity' => $item->quantity,
-            'subtotal' => $item->product->price * $item->quantity,
+            'subtotal'    => $item->product->price * $item->quantity,
         ])->values()->all();
 
         $total = (int) array_sum(array_column($items, 'subtotal'));

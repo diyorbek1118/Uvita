@@ -59,6 +59,9 @@ final class SendOtpHandler
 
         // 7. SMS ni queue orqali async yuborish
         $message = "Tasdiqlash kodi: {$code}. {$ttl} soniya ichida foydalaning.";
+        
+        \Illuminate\Support\Facades\Log::channel('single')->info("OTP yuborildi - Raqam: {$phone->value}, Kod: {$code}");
+        
         dispatch(new SendSmsJob($phone->value, $message));
     }
 }

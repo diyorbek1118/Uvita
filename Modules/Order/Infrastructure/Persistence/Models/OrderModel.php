@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Order\Infrastructure\Persistence\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,8 @@ use Modules\User\Infrastructure\Persistence\Models\User;
 
 class OrderModel extends Model
 {
+    use HasFactory;
+
     protected $table = 'orders';
 
     protected $fillable = [
