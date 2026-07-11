@@ -133,7 +133,7 @@ class SuperAdminStaffCrudTest extends TestCase
 
         $response = $this->asSuperAdmin()->deleteJson("/api/super/staff/{$staff->id}");
 
-        $response->assertStatus(200);
+        $response->assertStatus(204);   // DELETE → 204 No Content (CLAUDE.md konvensiyasi)
         $this->assertDatabaseMissing('staff', ['id' => $staff->id]);
     }
 

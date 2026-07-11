@@ -19,11 +19,6 @@ final class SettingService
         );
     }
 
-    public function deliveryPrice(): int
-    {
-        return (int) $this->get(SettingKey::DELIVERY_PRICE);
-    }
-
     public function deliveryCity(): string
     {
         return $this->get(SettingKey::DELIVERY_CITY);

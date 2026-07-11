@@ -32,7 +32,7 @@ final class NotFoundHandler
         dispatch(new SendSmsJob($order->phone, "Kuryer siz bilan bog'lana olmadi."));
         dispatch(new SendTelegramJob(
             role:    'manager',
-            message: "⚠️ <b>Buyurtma #{$saved->id} — topilmadi #{$saved->not_found_count}/{$maxAttempts}</b>\n\nSabab: {$command->reason}\n📞 {$order->phone}"
+            message: "⚠️ <b>Buyurtma #{$saved->id} — topilmadi #{$saved->notFoundCount}/{$maxAttempts}</b>\n\nSabab: {$command->reason}\n📞 {$order->phone}"
         ));
 
         return OrderModel::with(['items.product'])->findOrFail($saved->id);

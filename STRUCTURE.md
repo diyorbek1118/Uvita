@@ -10,6 +10,7 @@ backend/
 │   │   │   ├── EnsureIsManager.php     # role.manager — auth('sanctum')->check() → role → is_active
 │   │   │   ├── EnsureIsCourier.php     # role.courier
 │   │   │   ├── EnsureIsAdmin.php       # role.admin (admin|super_admin)
+│   │   │   ├── EnsureIsStaff.php       # role.staff (manager|admin|super_admin) — birlashgan dashboard guard
 │   │   │   └── EnsureIsSuperAdmin.php  # role.super_admin
 │   │   └── Requests/
 │   │       └── BaseRequest.php
@@ -32,8 +33,11 @@ backend/
 │           ├── Telegram/
 │           │   └── TelegramService.php # send(chatId,msg):bool | sendToManager/Admin/Courier(msg):void
 │           │                           # Http::post Telegram Bot API; try/catch; Log::warning if empty
-│           └── Settings/
-│               └── SettingService.php  # singleton; get/deliveryPrice/otpExpirySeconds/maxNotFoundAttempts etc; Cache::remember 24h
+│           ├── Settings/
+│           │   └── SettingService.php  # singleton; get/deliveryPrice/otpExpirySeconds/maxNotFoundAttempts etc; Cache::remember 24h
+│           └── Fee/
+│               ├── OrderFeeCalculator.php  # calculate(goods)→OrderFinancials; 15% platform + pog'onali courier; courierFeeSql() SQL CASE
+│               └── OrderFinancials.php      # readonly VO: seller/platformGross/courier/platformNet/customerTotal + toArray()
 │
 ├── Modules/
 │   │
@@ -163,7 +167,7 @@ backend/
 │   │   │           └── EloquentProductRepository.php
 │   │   └── Presentation/
 │   │       ├── Controllers/
-│   │       │   └── ProductController.php  # index|show|store|update|destroy|approve|reject
+│   │       │   └── ProductController.php  # index|show|store(auth managerId → inactive)|update|destroy|approve|reject
 │   │       ├── Requests/
 │   │       │   ├── CreateProductRequest.php
 │   │       │   ├── UpdateProductRequest.php
@@ -296,13 +300,13 @@ backend/
 │   │   ├── Infrastructure/
 │   │   │   └── Persistence/
 │   │   │       ├── Migrations/
-│   │   │       │   ├── 2026_06_23_000003_create_orders_table.php
+│   │   │       │   ├── 2026_06_23_000003_create_orders_table.php  # total_price+service_fee+courier_fee+grand_total; *_at milestone vaqtlari (delivery_price YO'Q)
 │   │   │       │   └── 2026_06_23_000004_create_order_items_table.php
 │   │   │       ├── Models/
-│   │   │       │   ├── OrderModel.php            # status→OrderStatus cast, address→array cast
+│   │   │       │   ├── OrderModel.php            # status→OrderStatus cast, address→array cast; *_at milestone castlari
 │   │   │       │   └── OrderItemModel.php        # belongsTo Order+Product
 │   │   │       └── Repositories/
-│   │   │           └── EloquentOrderRepository.php  # toDomain(); create/update split
+│   │   │           └── EloquentOrderRepository.php  # toDomain(); create/update split; update() status milestone vaqtini yozadi
 │   │   └── Presentation/
 │   │       ├── Controllers/
 │   │       │   └── OrderController.php           # index|show|store|cancel|paidOrders|confirm|readyToDeliver|markDelivering|markDelivered|notFound
@@ -379,11 +383,18 @@ backend/
 │   │   │   │   ├── GetUserByIdQuery.php          # userId
 │   │   │   │   ├── GetAllTransactionsQuery.php   # provider, status, date_from, date_to
 │   │   │   │   ├── GetAllSettingsQuery.php       # (empty)
-│   │   │   │   └── GetSettingByKeyQuery.php      # key(SettingKey)
+│   │   │   │   ├── GetSettingByKeyQuery.php      # key(SettingKey)
+│   │   │   │   ├── GetDashboardProductsQuery.php   # managerId(scope), status, categoryId, search, maxStock, perPage
+│   │   │   │   ├── GetDashboardProductByIdQuery.php # id, managerId(scope)
+│   │   │   │   ├── GetDashboardOrdersQuery.php     # managerScope, status, search, dateFrom/To, perPage
+│   │   │   │   ├── GetDashboardOrderDetailQuery.php # id, managerScope
+│   │   │   │   ├── GetTopProductsQuery.php         # limit
+│   │   │   │   ├── GetSalesTimeSeriesQuery.php     # period(daily|weekly|monthly), from, to
+│   │   │   │   └── GetRevenueBreakdownQuery.php    # from, to
 │   │   │   └── Handlers/
 │   │   │       ├── StaffLoginHandler.php         # Hash::check; is_active; createToken(role); → [staff, token]
 │   │   │       ├── GetPendingProductsHandler.php # status=inactive + manager_id NOT NULL, with(manager), paginate(20)
-│   │   │       ├── GetAllProductsHandler.php     # optional status filter, with(manager), paginate(20)
+│   │   │       ├── GetAllProductsHandler.php     # optional status filter (filter.status; "pending"→"inactive" alias; tryFrom guard), with(manager), paginate(20)
 │   │   │       ├── ApproveProductHandler.php     # status check → active; SendTelegramJob to manager
 │   │   │       ├── RejectProductHandler.php      # status → rejected + reason; SendTelegramJob
 │   │   │       ├── GetDeliveryIssueOrdersHandler.php # status=delivery_issue, with(items.product,user), paginate(20)
@@ -405,7 +416,19 @@ backend/
 │   │   │       ├── GetTransactionStatsHandler.php # total/paid/failed/cancelled + by_provider breakdown
 │   │   │       ├── GetAllSettingsHandler.php     # grouped: delivery/otp/order → array
 │   │   │       ├── UpdateSettingHandler.php      # validate per-key range; save; Cache::forget("setting_{key}")
-│   │   │       └── UpdateSettingsHandler.php     # DB::transaction → UpdateSettingHandler loop
+│   │   │       ├── UpdateSettingsHandler.php     # DB::transaction → UpdateSettingHandler loop
+│   │   │       ├── CreateStaffHandler.php        # (+admin guard: faqat manager/courier yarata oladi)
+│   │   │       ├── UpdateStaffHandler.php        # (+admin guard: faqat manager/courier tahrir/rol)
+│   │   │       ├── ToggleStaffHandler.php        # (+admin guard: faqat manager/courier)
+│   │   │       ├── GetDashboardProductsHandler.php   # sold_count+revenue subquery, role scope, filtrlar, SOLD_STATUSES
+│   │   │       ├── GetDashboardProductByIdHandler.php # bitta mahsulot + sold_count/revenue + ownership scope
+│   │   │       ├── UpdateDashboardProductHandler.php  # ownership guard → Product\UpdateProductHandler
+│   │   │       ├── GetDashboardOrdersHandler.php     # paginator; MANAGER_VISIBLE scope; filtrlar
+│   │   │       ├── GetDashboardOrderDetailHandler.php # items.product+user+courier; financials(setAttribute)
+│   │   │       ├── GetDashboardSummaryHandler.php    # operatsion KPI (orders/pending/issues/couriers/low_stock)
+│   │   │       ├── GetTopProductsHandler.php         # eng ko'p sotilgan (units_sold+revenue)
+│   │   │       ├── GetSalesTimeSeriesHandler.php     # vaqt qatori; SQL courier CASE + 15% (super)
+│   │   │       └── GetRevenueBreakdownHandler.php    # jami tushum taqsimoti (super)
 │   │   ├── Infrastructure/
 │   │   │   └── Persistence/
 │   │   │       ├── Migrations/
@@ -426,7 +449,10 @@ backend/
 │   │       │   ├── AdminStaffController.php      # index|show|store|update|destroy|toggleActive
 │   │       │   ├── AdminUserController.php       # index|show (read-only)
 │   │       │   ├── AdminTransactionController.php # index|stats
-│   │       │   └── AdminSettingsController.php   # index|update|bulkUpdate
+│   │       │   ├── AdminSettingsController.php   # index|update|bulkUpdate
+│   │       │   ├── DashboardProductController.php   # index|lowStock|show|store|update|destroy (rolga qarab; stock+sold_count+revenue)
+│   │       │   ├── DashboardOrderController.php     # index|show (manager paid+; timeline + narx breakdown admin/super'ga)
+│   │       │   └── DashboardAnalyticsController.php # summary|orderStatus|topProducts (admin) | sales|revenue (super)
 │   │       ├── Requests/
 │   │       │   ├── StaffLoginRequest.php
 │   │       │   ├── RejectProductRequest.php      # reason(required, max:500)
@@ -441,9 +467,12 @@ backend/
 │   │       │   ├── AdminUserResource.php         # id,name,phone,orders_count,last_order_at (list)
 │   │       │   ├── AdminUserDetailResource.php   # + recent_orders[5] (show)
 │   │       │   ├── TransactionResource.php       # id,order_id,provider,transaction_id,amount,status
-│   │       │   └── SettingResource.php           # key, value, description
+│   │       │   ├── SettingResource.php           # key, value, description
+│   │       │   ├── DashboardProductResource.php     # + stock, sold_count, revenue, category, manager
+│   │       │   ├── DashboardOrderResource.php       # ro'yxat: customer, courier, total/grand, items_count
+│   │       │   └── DashboardOrderDetailResource.php # items, timeline, financials(when admin/super)
 │   │       └── routes/
-│   │           └── api.php             # POST staff/login|logout | admin/*(role.admin) | super/*(role.super_admin) incl. settings
+│   │           └── api.php             # staff/login|logout | admin/*(role.admin) | dashboard/*(role.staff|admin|super_admin) | super/*(role.super_admin)
 │   │
 │   │
 │   ├── Review/                         # ✅ DDD to'liq — sharh + moderatsiya
@@ -565,10 +594,17 @@ backend/
 │   ├── migrations/
 │   │   ├── 0001_01_01_000001_create_cache_table.php
 │   │   └── 0001_01_01_000002_create_jobs_table.php
-│   └── seeders/
-│       ├── DatabaseSeeder.php          # → StaffSeeder, SettingsSeeder
-│       ├── StaffSeeder.php             # truncate+insert: manager@|courier@|admin@|super@uvita.uz (password123)
-│       └── SettingsSeeder.php          # 8 settings: delivery_price,delivery_city,min_order_amount,otp_*,max_not_found_attempts,review_request_delay_hours
+│   └── seeders/                        # Har jadval uchun alohida seeder
+│       ├── DatabaseSeeder.php          # dirijyor: truncate (FK off) + tartib bilan chaqiradi
+│       ├── SettingsSeeder.php          # 8 sozlama (delivery_price=0 legacy)
+│       ├── StaffSeeder.php             # super@|admin@|manager@|courier@|courier2@uvita.uz (password123)
+│       ├── CategorySeeder.php          # 6 kategoriya
+│       ├── UserSeeder.php              # 20 mijoz
+│       ├── ProductSeeder.php           # 30 mahsulot (admin/manager, active/inactive/rejected aralash)
+│       ├── CartSeeder.php              # 10 mijoz uchun savatcha
+│       ├── OrderSeeder.php             # 25 buyurtma; yangi narxlash (15% service) + milestone vaqtlari; >=50k
+│       ├── PaymentSeeder.php           # statusga mos to'lovlar
+│       └── ReviewSeeder.php            # delivered buyurtmalarga sharh + product rating yangilash
 │
 ├── routes/
 │   ├── api.php                         # Bo'sh placeholder

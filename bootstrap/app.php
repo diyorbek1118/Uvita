@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureIsAdmin;
 use App\Http\Middleware\EnsureIsCourier;
 use App\Http\Middleware\EnsureIsManager;
+use App\Http\Middleware\EnsureIsStaff;
 use App\Http\Middleware\EnsureIsSuperAdmin;
 use App\Shared\Exceptions\DomainException;
 use Illuminate\Auth\AuthenticationException;
@@ -51,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.courier'    => EnsureIsCourier::class,
             'role.admin'      => EnsureIsAdmin::class,
             'role.super_admin' => EnsureIsSuperAdmin::class,
+            'role.staff'      => EnsureIsStaff::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

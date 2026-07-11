@@ -18,6 +18,14 @@ final class ToggleStaffHandler
             abort(422, 'Bosh adminni bloklash mumkin emas');
         }
 
+        // Admin faqat menejer/kuryerni bloklashi/faollashtira oladi.
+        $actor = auth('sanctum')->user();
+        if ($actor instanceof Staff
+            && $actor->role === StaffRole::ADMIN
+            && !in_array($staff->role, [StaffRole::MANAGER, StaffRole::COURIER], true)) {
+            abort(403, "Admin faqat menejer yoki kuryerni boshqarishi mumkin");
+        }
+
         $staff->update(['is_active' => ! $staff->is_active]);
 
         return $staff->fresh();

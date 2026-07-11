@@ -56,13 +56,18 @@ final class ProductController extends Controller
 
     public function store(CreateProductRequest $request): JsonResponse
     {
-        // TODO: $managerId = auth('manager')->id() — Manager moduli tayyor bo'lgach
+        $managerId = auth('sanctum')->id();
+
         $result = $this->createHandler->handle(
-            CreateProductCommand::fromRequest($request)
+            CreateProductCommand::fromRequest($request, $managerId)
         );
 
+        $message = $managerId !== null
+            ? 'Mahsulot yaratildi, moderatsiya kutilmoqda'
+            : 'Mahsulot yaratildi';
+
         return ProductResource::make($result)
-            ->additional(['message' => 'Mahsulot yaratildi'])
+            ->additional(['message' => $message])
             ->response()
             ->setStatusCode(201);
     }

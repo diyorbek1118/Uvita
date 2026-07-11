@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Shared\Services\Fee\OrderFeeCalculator;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\User\Infrastructure\Persistence\Models\User as UserModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product as ProductModel;
@@ -30,9 +31,10 @@ class OrderFactory extends Factory
             'phone_secondary' => $this->faker->optional()->phoneNumber(),
             'delivery_time' => $this->faker->dateTimeBetween('+1 day', '+7 days')->format('Y-m-d H:i'),
             'courier_note' => $this->faker->optional()->sentence(),
-            'delivery_price' => 15000,
-            'total_price' => $this->faker->numberBetween(50000, 500000),
-            'grand_total' => $this->faker->numberBetween(65000, 515000),
+            'total_price' => $total = $this->faker->numberBetween(50000, 500000),
+            'service_fee' => ($fin = (new OrderFeeCalculator())->calculate($total))->platformFeeGross,
+            'courier_fee' => $fin->courierFee,
+            'grand_total' => $fin->customerTotal,
             'not_found_count' => 0,
         ];
     }

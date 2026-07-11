@@ -56,7 +56,10 @@ final class MarkPaymentPaidHandler
 
             // Order → paid
             $order = OrderModel::lockForUpdate()->findOrFail($command->orderId);
-            $order->update(['status' => OrderStatus::PAID->value]);
+            $order->update([
+                'status'  => OrderStatus::PAID->value,
+                'paid_at' => now(),
+            ]);
 
             // Stock atomik kamaytirish
             foreach ($order->items()->get() as $item) {

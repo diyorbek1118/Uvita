@@ -11,7 +11,7 @@
 ```
 PHP:      8.4
 Laravel:  12.x
-DB:       PostgreSQL
+DB:       MySQL 8
 Cache:    Redis (queue + session uchun)
 ```
 

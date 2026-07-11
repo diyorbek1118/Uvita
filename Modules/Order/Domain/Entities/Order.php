@@ -27,7 +27,8 @@ class Order
         public readonly string          $phone,
         public readonly ?string         $phoneSecondary,
         public readonly DeliveryTime    $deliveryTime,
-        public readonly Money           $deliveryPrice,
+        public readonly Money           $serviceFee,   // 15% xizmat haqi (mijoz to'laydi)
+        public readonly Money           $courierFee,   // pog'onali kuryer haqi (ichki; mijozga ko'rinmaydi)
         public readonly Money           $totalPrice,
         public readonly Money           $grandTotal,
         public readonly array           $items,

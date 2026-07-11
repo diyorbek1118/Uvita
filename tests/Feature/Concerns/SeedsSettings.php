@@ -11,7 +11,6 @@ trait SeedsSettings
     protected function seedSettings(array $overrides = []): void
     {
         $defaults = [
-            'delivery_price'           => '15000',
             'delivery_city'            => 'Toshkent',
             'min_order_amount'         => '50000',
             'otp_expiry_seconds'       => '120',

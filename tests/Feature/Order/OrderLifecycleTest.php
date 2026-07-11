@@ -136,6 +136,31 @@ class OrderLifecycleTest extends TestCase
         $response->assertStatus(401);
     }
 
+    public function test_order_below_minimum_amount_is_rejected(): void
+    {
+        // 1 x 30 000 = 30 000 < 50 000 (min_order_amount)
+        $payload                          = $this->validOrderPayload();
+        $payload['items'][0]['quantity']  = 1;
+
+        $response = $this->asCustomer()->postJson('/api/orders', $payload);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_order_pricing_charges_service_fee_not_delivery(): void
+    {
+        // 2 x 30 000 = 60 000 mahsulot; 15% xizmat = 9 000; jami 69 000
+        $response = $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.total_price', 60000)
+            ->assertJsonPath('data.service_fee', 9000)
+            ->assertJsonPath('data.grand_total', 69000)
+            ->assertJsonMissingPath('data.delivery_price')  // yetkazish mijozdan olinmaydi
+            ->assertJsonMissingPath('data.courier_fee');    // kuryer haqi mijozga ko'rinmaydi
+    }
+
     // ─── GET /api/orders ──────────────────────────────────────────────────────
 
     public function test_customer_can_list_own_orders(): void

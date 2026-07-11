@@ -11,6 +11,9 @@ use Modules\Admin\Presentation\Controllers\AdminSettingsController;
 use Modules\Admin\Presentation\Controllers\AdminStaffController;
 use Modules\Admin\Presentation\Controllers\AdminTransactionController;
 use Modules\Admin\Presentation\Controllers\AdminUserController;
+use Modules\Admin\Presentation\Controllers\DashboardAnalyticsController;
+use Modules\Admin\Presentation\Controllers\DashboardOrderController;
+use Modules\Admin\Presentation\Controllers\DashboardProductController;
 use Modules\Admin\Presentation\Controllers\StaffAuthController;
 
 Route::post('staff/login', [StaffAuthController::class, 'login']);
@@ -38,6 +41,48 @@ Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(functi
 
     // Reviews
     Route::get('reviews/stats', [AdminReviewController::class, 'stats']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard — birlashgan web panel (manager | admin | super_admin)
+| Ruxsatlar rolga qarab handler/route ichida cheklanadi.
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:sanctum', 'role.staff'])->prefix('dashboard')->group(function (): void {
+    // Mahsulotlar — manager o'ziniki, admin/super hammasi
+    Route::get('products/low-stock', [DashboardProductController::class, 'lowStock']);
+    Route::get('products',            [DashboardProductController::class, 'index']);
+    Route::get('products/{product}',  [DashboardProductController::class, 'show']);
+    Route::post('products',           [DashboardProductController::class, 'store']);
+    Route::put('products/{product}',  [DashboardProductController::class, 'update']);
+
+    // Buyurtmalar — manager paid+ ko'radi, admin/super hammasi; breakdown admin/super'ga
+    Route::get('orders',          [DashboardOrderController::class, 'index']);
+    Route::get('orders/{order}',  [DashboardOrderController::class, 'show']);
+});
+
+// Admin darajasi (admin | super) — mahsulot o'chirish + xodim boshqaruvi
+Route::middleware(['auth:sanctum', 'role.admin'])->prefix('dashboard')->group(function (): void {
+    Route::delete('products/{product}', [DashboardProductController::class, 'destroy']);
+
+    // Xodimlar — admin faqat menejer/kuryer (handler cheklaydi), o'chirish super'da qoladi
+    Route::get('staff',                    [AdminStaffController::class, 'index']);
+    Route::get('staff/{id}',               [AdminStaffController::class, 'show']);
+    Route::post('staff',                   [AdminStaffController::class, 'store']);
+    Route::put('staff/{id}',               [AdminStaffController::class, 'update']);
+    Route::put('staff/{id}/toggle-active', [AdminStaffController::class, 'toggleActive']);
+
+    // Analitika — operatsion (moliyaviy summasiz)
+    Route::get('analytics/summary',       [DashboardAnalyticsController::class, 'summary']);
+    Route::get('analytics/order-status',  [DashboardAnalyticsController::class, 'orderStatus']);
+    Route::get('analytics/top-products',  [DashboardAnalyticsController::class, 'topProducts']);
+});
+
+// Analitika — moliyaviy (faqat super admin)
+Route::middleware(['auth:sanctum', 'role.super_admin'])->prefix('dashboard')->group(function (): void {
+    Route::get('analytics/sales',   [DashboardAnalyticsController::class, 'sales']);
+    Route::get('analytics/revenue', [DashboardAnalyticsController::class, 'revenue']);
 });
 
 Route::middleware(['auth:sanctum', 'role.super_admin'])->prefix('super')->group(function (): void {

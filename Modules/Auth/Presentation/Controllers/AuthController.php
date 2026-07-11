@@ -45,7 +45,8 @@ final class AuthController extends Controller
                 'token' => $result['token'],
                 'user'  => $this->formatUser($result['user']),
             ],
-            'isNew' => $isNew,
+            'isNew'   => $isNew,
+            'message' => 'Muvaffaqiyatli kirildi',
         ], $statusCode);
     }
 

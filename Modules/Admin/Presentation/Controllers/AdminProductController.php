@@ -36,7 +36,7 @@ final class AdminProductController extends Controller
     public function allProducts(): JsonResponse
     {
         $products = $this->allHandler->handle(
-            new GetAllProductsQuery(status: request('status'))
+            new GetAllProductsQuery(status: request('filter.status'))
         );
 
         return AdminProductResource::collection($products)->response();

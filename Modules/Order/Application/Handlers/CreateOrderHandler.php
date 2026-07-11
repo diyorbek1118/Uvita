@@ -13,6 +13,8 @@ use Modules\Order\Domain\Entities\Order;
 use Modules\Order\Domain\Entities\OrderItem;
 use Modules\Order\Domain\Enums\OrderStatus;
 use Modules\Order\Domain\Exceptions\InsufficientStockException;
+use Modules\Order\Domain\Exceptions\MinimumOrderAmountException;
+use App\Shared\Services\Fee\OrderFeeCalculator;
 use App\Shared\Services\Settings\SettingService;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
 use Modules\Order\Domain\ValueObjects\DeliveryAddress;
@@ -29,6 +31,7 @@ final class CreateOrderHandler
         private readonly OrderRepositoryInterface $orders,
         private readonly CreatePaymentHandler     $createPaymentHandler,
         private readonly SettingService           $settingService,
+        private readonly OrderFeeCalculator       $feeCalculator,
     ) {}
 
     public function handle(CreateOrderCommand $command): OrderModel
@@ -59,7 +62,18 @@ final class CreateOrderHandler
                 );
             }
 
-            $deliveryPrice = $this->settingService->deliveryPrice();
+            // Minimal buyurtma tekshiruvi (mahsulotlar summasi bo'yicha)
+            $minOrder = $this->settingService->minOrderAmount();
+            if ($totalAmount < $minOrder) {
+                throw new MinimumOrderAmountException(
+                    "Minimal buyurtma summasi " . number_format($minOrder, 0, '.', ' ') . " so'm. "
+                    . "Savatchangiz: " . number_format($totalAmount, 0, '.', ' ') . " so'm."
+                );
+            }
+
+            // Narx breakdown: mijoz mahsulot + 15% xizmat haqi to'laydi.
+            // Kuryer haqi platformadan (ichki) — mijozga ko'rinmaydi.
+            $financials = $this->feeCalculator->calculate($totalAmount);
 
             $order = new Order(
                 id:             null,
@@ -69,9 +83,10 @@ final class CreateOrderHandler
                 phone:          $dto->phone,
                 phoneSecondary: $dto->phoneSecondary,
                 deliveryTime:   new DeliveryTime($dto->deliveryTime),
-                deliveryPrice:  new Money($deliveryPrice),
+                serviceFee:     new Money($financials->platformFeeGross),
+                courierFee:     new Money($financials->courierFee),
                 totalPrice:     new Money($totalAmount),
-                grandTotal:     new Money($totalAmount + $deliveryPrice),
+                grandTotal:     new Money($financials->customerTotal),
                 items:          $orderItems,
                 courierNote:    $dto->courierNote,
             );

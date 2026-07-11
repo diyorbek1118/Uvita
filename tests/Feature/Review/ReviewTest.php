@@ -72,9 +72,10 @@ class ReviewTest extends TestCase
             'address'        => json_encode(['region' => 'T', 'district' => 'Y', 'street' => 'N', 'house' => '1']),
             'phone'          => '+998901234567',
             'delivery_time'  => 'Ertaga',
-            'delivery_price' => 15000,
             'total_price'    => 30000,
-            'grand_total'    => 45000,
+            'service_fee'    => 4500,
+            'courier_fee'    => 10000,
+            'grand_total'    => 34500,
         ]);
     }
 
@@ -152,9 +153,10 @@ class ReviewTest extends TestCase
             'address'        => json_encode(['region' => 'T', 'district' => 'Y', 'street' => 'N', 'house' => '1']),
             'phone'          => '+998901234567',
             'delivery_time'  => 'Ertaga',
-            'delivery_price' => 15000,
             'total_price'    => 30000,
-            'grand_total'    => 45000,
+            'service_fee'    => 4500,
+            'courier_fee'    => 10000,
+            'grand_total'    => 34500,
         ]);
 
         $response = $this->asCustomer()->postJson('/api/reviews', [

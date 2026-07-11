@@ -6,7 +6,6 @@ namespace Modules\Admin\Domain\ValueObjects;
 
 enum SettingKey: string
 {
-    case DELIVERY_PRICE         = 'delivery_price';
     case DELIVERY_CITY          = 'delivery_city';
     case MIN_ORDER_AMOUNT       = 'min_order_amount';
     case OTP_EXPIRY_SECONDS     = 'otp_expiry_seconds';

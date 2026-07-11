@@ -71,8 +71,9 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
             'phone_secondary' => $order->phoneSecondary,
             'delivery_time'   => $order->deliveryTime->value,
             'courier_note'    => $order->courierNote,
-            'delivery_price'  => $order->deliveryPrice->amount,
             'total_price'     => $order->totalPrice->amount,
+            'service_fee'     => $order->serviceFee->amount,
+            'courier_fee'     => $order->courierFee->amount,
             'grand_total'     => $order->grandTotal->amount,
             'not_found_count' => $order->notFoundCount,
         ]);
@@ -93,14 +94,37 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
     private function update(Order $order): Order
     {
         $model = OrderModel::findOrFail($order->id);
-        $model->update([
+
+        $attributes = [
             'courier_id'      => $order->courierId,
             'status'          => $order->status->value,
             'courier_note'    => $order->courierNote,
             'not_found_count' => $order->notFoundCount,
-        ]);
+        ];
+
+        // Status milestone vaqtini yozamiz (faqat birinchi marta — qayta o'tishda saqlanadi).
+        $timestampColumn = $this->milestoneColumn($order->status);
+        if ($timestampColumn !== null && $model->{$timestampColumn} === null) {
+            $attributes[$timestampColumn] = now();
+        }
+
+        $model->update($attributes);
         $model->load('items');
         return $this->toDomain($model);
+    }
+
+    private function milestoneColumn(OrderStatus $status): ?string
+    {
+        return match ($status) {
+            OrderStatus::PAID             => 'paid_at',
+            OrderStatus::CONFIRMED        => 'confirmed_at',
+            OrderStatus::READY_TO_DELIVER => 'ready_at',
+            OrderStatus::DELIVERING       => 'delivering_at',
+            OrderStatus::DELIVERED        => 'delivered_at',
+            OrderStatus::DELIVERY_ISSUE   => 'delivery_issue_at',
+            OrderStatus::CANCELLED        => 'cancelled_at',
+            default                       => null,
+        };
     }
 
     private function toDomain(OrderModel $model): Order
@@ -121,7 +145,8 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
             phone:          $model->phone,
             phoneSecondary: $model->phone_secondary,
             deliveryTime:   new DeliveryTime($model->delivery_time),
-            deliveryPrice:  new Money($model->delivery_price),
+            serviceFee:     new Money($model->service_fee),
+            courierFee:     new Money($model->courier_fee),
             totalPrice:     new Money($model->total_price),
             grandTotal:     new Money($model->grand_total),
             items:          $items,

@@ -23,7 +23,6 @@ final class GetAllSettingsHandler
 
         return [
             'delivery' => [
-                'delivery_price'  => $all[SettingKey::DELIVERY_PRICE->value]   ?? null,
                 'delivery_city'   => $all[SettingKey::DELIVERY_CITY->value]    ?? null,
                 'min_order_amount'=> $all[SettingKey::MIN_ORDER_AMOUNT->value] ?? null,
             ],

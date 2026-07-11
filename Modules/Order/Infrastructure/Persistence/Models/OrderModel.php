@@ -26,15 +26,30 @@ class OrderModel extends Model
         'phone_secondary',
         'delivery_time',
         'courier_note',
-        'delivery_price',
         'total_price',
+        'service_fee',
+        'courier_fee',
         'grand_total',
         'not_found_count',
+        'paid_at',
+        'confirmed_at',
+        'ready_at',
+        'delivering_at',
+        'delivered_at',
+        'delivery_issue_at',
+        'cancelled_at',
     ];
 
     protected $casts = [
-        'status'  => OrderStatus::class,
-        'address' => 'array',
+        'status'            => OrderStatus::class,
+        'address'           => 'array',
+        'paid_at'           => 'datetime',
+        'confirmed_at'      => 'datetime',
+        'ready_at'          => 'datetime',
+        'delivering_at'     => 'datetime',
+        'delivered_at'      => 'datetime',
+        'delivery_issue_at' => 'datetime',
+        'cancelled_at'      => 'datetime',
     ];
 
     public function items(): HasMany

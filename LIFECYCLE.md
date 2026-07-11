@@ -246,19 +246,34 @@ DB::transaction(function () use ($order, $webhookData) {
 
 ---
 
-## Yetkazish Tizimi
+## Narx va Yetkazish Tizimi
 
 ```
-Hudud:          Bitta shahar (tizimda belgilangan — Super Admin sozlaydi)
-Narx:           Yagona tarif — Super Admin tomonidan belgilanadi
-                Masalan: 15 000 so'm — har qanday buyurtma uchun
-Minimum summa:  Ixtiyoriy (Super Admin belgilaydi)
+Hudud:          Bitta shahar (Super Admin sozlaydi)
+Yetkazish:      Mijozdan yetkazish uchun pul OLINMAYDI (tekin)
+Xizmat haqi:    Mahsulotlar summasining 15% — mijoz shuni qo'shib to'laydi
+Minimal summa:  50 000 so'm — kam bo'lsa buyurtma RAD etiladi (422)
+Kuryer haqi:    Pog'onali; platforma o'z 15% ustamasidan to'laydi — MIJOZGA KO'RINMAYDI
+                  < 200 000  → 10 000
+                  200–300k   → 15 000
+                  ≥ 300 000  → 20 000
 ```
 
-**Jami to'lov = Mahsulotlar narxi + Yetkazish tarifi**
+**Mijoz to'lovi = Mahsulotlar summasi + 15% xizmat haqi**  (yetkazish tekin)
 
-Yetkazish narxi buyurtma yaratilgan paytdagi tarif bo'yicha **snapshotga** olinadi.
-Admin narxni o'zgartirsa — eski buyurtmalarga ta'sir qilmaydi.
+Ichki taqsimot:
+```
+Sotuvchi oladi:      mahsulotlar summasi           (total_price)
+Platforma ustamasi:  15% xizmat haqi               (service_fee)  ← mijoz to'laydi
+Kuryerga:            pog'onali haq                 (courier_fee)  ← 15% ustamadan, ichki
+Platformada qoladi:  service_fee − courier_fee
+```
+
+Narxlar buyurtma yaratilganda **snapshotga** olinadi (total_price, service_fee,
+courier_fee, grand_total). Keyin qoidalar o'zgarsa — eski buyurtmalarga ta'sir qilmaydi.
+
+> Eslatma: 15% hozircha alohida "xizmat haqi" satri bo'lib ko'rsatiladi.
+> Kelajakda mahsulot narxiga qo'shib ko'rsatilishi mumkin.
 
 ---
 
@@ -317,8 +332,8 @@ Rate limiting:          IP va telefon raqam bo'yicha alohida kuzatiladi
 4. Savatcha sahifasida ko'rinadi:
    - Mahsulotlar ro'yxati + miqdor
    - Mahsulotlar jami narxi
-   - Yetkazish narxi
-   - To'lash kerak bo'lgan jami summa
+   - Xizmat haqi (15%)
+   - To'lash kerak bo'lgan jami summa (yetkazish tekin)
 ```
 
 **Qoidalar:**
@@ -346,7 +361,7 @@ Rate limiting:          IP va telefon raqam bo'yicha alohida kuzatiladi
      Masalan: "Ertaga 14:00–18:00"
    - Kuryer uchun izoh — ixtiyoriy
 4. To'lov usulini tanlaydi: Payme / Click / Uzum
-5. Jami summa ko'rinadi: mahsulotlar + yetkazish narxi
+5. Jami summa ko'rinadi: mahsulotlar + 15% xizmat haqi (yetkazish tekin)
 6. "To'lov qilish" tugmasini bosadi
 ```
 
@@ -357,10 +372,11 @@ Rate limiting:          IP va telefon raqam bo'yicha alohida kuzatiladi
 2. Har bir mahsulot uchun: SELECT FOR UPDATE + stock tekshiriladi
    → stock < quantity → 422: "Mahsulot yetarli emas: [nomi]"
    → Xato chiqsa — savatcha o'zgarmaydi, customer xabar oladi
-3. Order yaratiladi (status: pending)
-4. Order items yaratiladi:
+3. Minimal buyurtma tekshiriladi: mahsulotlar < 50 000 → 422 (buyurtma yaratilmaydi)
+4. Order yaratiladi (status: pending)
+5. Order items yaratiladi:
    → mahsulot_id + miqdor + shu paytdagi narx (snapshot)
-5. Yetkazish narxi snapshot qilinadi (hozirgi tarif)
+6. Narx snapshot: service_fee (15%) va courier_fee (pog'onali, ichki) hisoblanadi
 6. Savatcha tozalanadi
 7. Payment yaratiladi (status: pending)
 8. Customer ga SMS: "Buyurtmangiz #123 yaratildi. To'lovni amalga oshiring."
@@ -428,7 +444,7 @@ Status paid va undan keyin:
 3. Buyurtma detailini ko'radi:
    - Mahsulotlar ro'yxati + miqdorlar
    - Yetkazish manzili, vaqti, kuryer izohi
-   - Jami summa + yetkazish narxi
+   - Jami summa + xizmat haqi (15%)
    - Customer: faqat ism + asosiy telefon + qo'shimcha telefon
 4. Buyurtmani qabul qiladi → status: paid → confirmed
 5. Customer ga SMS: "Buyurtmangiz #123 qabul qilindi. Tayyorlanmoqda."
@@ -635,7 +651,7 @@ delivery_issue — noyob holat, admin hal qiladi
 | `Admin/Review` | `admin` | Sharh moderatsiyasi |
 | `Admin/User` | `super_admin` | To'liq user ma'lumotlari |
 | `Admin/Transaction` | `super_admin` | To'lov tranzaksiyalari tarixi |
-| `Admin/Settings` | `super_admin` | Yetkazish narxi, shahar chegarasi, tizim parametrlari |
+| `Admin/Settings` | `super_admin` | Xizmat haqi, shahar, minimal buyurtma, tizim parametrlari |
 | `Notification` | — | SMS + Telegram + Push (Shared Service) |
 
 ---
@@ -644,7 +660,9 @@ delivery_issue — noyob holat, admin hal qiladi
 
 ```
 Yetkazish hududi:     Bitta shahar (Super Admin tomonidan belgilanadi)
-Yetkazish narxi:      Yagona tarif — hamma buyurtmaga bir xil
+Yetkazish narxi:      Mijozdan OLINMAYDI (tekin); mijoz 15% xizmat haqi to'laydi
+Kuryer haqi:          Pog'onali, platforma 15% ustamadan to'laydi — mijozga ko'rinmaydi
+Minimal buyurtma:     50 000 so'm — kam bo'lsa buyurtma rad etiladi (422)
 Pul qaytarish:        Faqat pending holatda (to'lovsiz bekor qilish)
                       Delivery_issue — admin ixtiyori bilan (TBD)
 Kuryer "Topilmadi":   3 marta → delivery_issue → admin hal qiladi

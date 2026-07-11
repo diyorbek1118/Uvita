@@ -74,11 +74,11 @@ final class AdminStaffController extends Controller
             ->response();
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $id): \Illuminate\Http\Response
     {
         $this->deleteHandler->handle(new DeleteStaffCommand($id));
 
-        return response()->json(['message' => "Xodim o'chirildi"]);
+        return response()->noContent();
     }
 
     public function toggleActive(int $id): JsonResponse

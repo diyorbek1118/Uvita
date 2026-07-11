@@ -34,7 +34,6 @@ final class UpdateSettingHandler
     private function validateValue(SettingKey $key, string $value): void
     {
         match ($key) {
-            SettingKey::DELIVERY_PRICE         => $this->assertPositiveInt($value, 'Yetkazish narxi'),
             SettingKey::MIN_ORDER_AMOUNT       => $this->assertPositiveInt($value, 'Minimal buyurtma summasi'),
             SettingKey::OTP_EXPIRY_SECONDS     => $this->assertIntInRange($value, 60, 600, 'OTP muddati'),
             SettingKey::OTP_MAX_ATTEMPTS       => $this->assertIntInRange($value, 1, 10, 'OTP urinishlar soni'),
