@@ -15,8 +15,9 @@ final class ApproveProductHandler
     {
         $product = ProductModel::findOrFail($command->id);
 
-        if ($product->status !== ProductStatusEnum::Inactive) {
-            abort(422, 'Mahsulot tasdiqlanishga tayyor emas');
+        // Moderatsiyada (inactive) yoki bloklangan (rejected) mahsulotni tasdiqlash mumkin.
+        if ($product->status === ProductStatusEnum::Active) {
+            abort(422, 'Mahsulot allaqachon faol');
         }
 
         $product->update([

@@ -115,7 +115,6 @@ final class OrderController extends Controller
 
         $result = $this->createPaymentHandler->handle(new CreatePaymentCommand(
             orderId:  $id,
-            amount:   0,
             provider: $provider,
         ));
 

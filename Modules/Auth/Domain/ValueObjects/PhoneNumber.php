@@ -6,11 +6,6 @@ namespace Modules\Auth\Domain\ValueObjects;
 
 final readonly class PhoneNumber
 {
-    /**
-     * O'zbekiston mobil operator kodlari (SMS/OTP qabul qila oladigan).
-     * Statsionar kodlar (71 va h.k.) kiritilmagan — ular SMS ololmaydi.
-     * Yagona manba: FormRequest lar ham shu patternga tayanadi.
-     */
     public const PATTERN = '/^\+998(33|50|77|88|90|91|93|94|95|97|98|99)[0-9]{7}$/';
 
     public string $value;

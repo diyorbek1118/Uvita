@@ -51,11 +51,12 @@ Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(functi
 */
 Route::middleware(['auth:sanctum', 'role.staff'])->prefix('dashboard')->group(function (): void {
     // Mahsulotlar — manager o'ziniki, admin/super hammasi
-    Route::get('products/low-stock', [DashboardProductController::class, 'lowStock']);
-    Route::get('products',            [DashboardProductController::class, 'index']);
-    Route::get('products/{product}',  [DashboardProductController::class, 'show']);
-    Route::post('products',           [DashboardProductController::class, 'store']);
-    Route::put('products/{product}',  [DashboardProductController::class, 'update']);
+    Route::get('products/low-stock',    [DashboardProductController::class, 'lowStock']);
+    Route::post('products/upload-image', [DashboardProductController::class, 'uploadImage']);
+    Route::get('products',              [DashboardProductController::class, 'index']);
+    Route::get('products/{product}',    [DashboardProductController::class, 'show']);
+    Route::post('products',             [DashboardProductController::class, 'store']);
+    Route::put('products/{product}',    [DashboardProductController::class, 'update']);
 
     // Buyurtmalar — manager paid+ ko'radi, admin/super hammasi; breakdown admin/super'ga
     Route::get('orders',          [DashboardOrderController::class, 'index']);

@@ -143,11 +143,11 @@ POST /dashboard/products
   "images": ["https://picsum.photos/400/300"],
   "category_id": 1
 }
-→ 201 { "data": {...}, "message": "Mahsulot yaratildi" | "...moderatsiya kutilmoqda" }
+→ 201 { "data": {...}, "message": "Mahsulot yaratildi, moderatsiya kutilmoqda" }
 ```
 - `slug` avtomatik (name'dan) — yuborish shart emas.
-- Manager yaratsa → `status: inactive` (admin tasdig'i kerak).
-- Admin/super yaratsa → `status: active`.
+- **Kim yaratmasin** (manager/admin/super) → `status: inactive` (moderatsiyaga tushadi).
+- Faqat admin/super tasdiqlab `active` qiladi (pastdagi moderatsiya endpointlari).
 
 ### Tahrirlash
 ```
@@ -162,6 +162,71 @@ Manager begona mahsulotni tahrirlasa → `403`.
 DELETE /dashboard/products/{id}       → 204
 ```
 Manager → `403`.
+
+### Moderatsiya — tasdiqlash / rad etish (faqat admin/super)
+Har bir yaratilgan mahsulot `inactive` (moderatsiyada) bo'ladi. Admin/super uni
+tasdiqlaydi (`active`) yoki rad etadi/bloklaydi (`rejected`). Manager → `403`.
+
+```
+PUT /admin/products/{id}/approve
+→ 200 { "data": {...}, "message": "Mahsulot tasdiqlandi" }
+```
+- `inactive` yoki `rejected` mahsulotni `active` qiladi.
+- Allaqachon `active` bo'lsa → `422` ("Mahsulot allaqachon faol").
+
+```
+PUT /admin/products/{id}/reject
+{ "reason": "Rad etish sababi" }        // required · max 500
+→ 200 { "data": {...}, "message": "Mahsulot rad etildi" }
+```
+- Istalgan statusdan `rejected` qiladi (faol mahsulotni ham bloklash mumkin).
+- `reason` bo'sh → `422`.
+- Mahsulot manager'niki bo'lsa → unga Telegram xabar boradi.
+
+### Rasm yuklash (fayl)
+Mahsulot yaratish/tahrirlashda `images` — URL massivi. Fayldan URL olish uchun
+avval rasmni yuklang, so'ng qaytgan `url` ni `images` massiviga qo'shing.
+
+```
+POST /dashboard/products/upload-image
+Content-Type: multipart/form-data
+image=<fayl>        // required · image · jpeg|jpg|png|webp · max 5 MB
+folder=products     // ixtiyoriy · products (default) | categories — qaysi papkaga saqlash
+→ 201 { "data": { "url": "http://localhost:8000/storage/products/uuid.jpg" }, "message": "Rasm yuklandi" }
+```
+- Xato format/hajm → `422` (`{ "message": "...", "errors": { "image": ["..."] } }`).
+- Barcha staff (manager/admin/super) yuklashi mumkin.
+- `folder=categories` → kategoriya rasmi `storage/categories/...` ga saqlanadi.
+- Qaytgan `url` to'liq manzil — to'g'ridan `images` (mahsulot) yoki `image` (kategoriya) ga yoziladi.
+
+---
+
+## 4.1 Kategoriyalar (boshqaruv) — faqat admin/super
+
+Ko'rish hammaga ochiq; yaratish/tahrir/o'chirish **faqat admin/super** (`role.admin`).
+Manager → `403`. Endpointlar `/categories` (Category moduli).
+
+```
+GET    /categories?per_page=100         // ro'yxat (public, paginatsiya)
+GET    /categories/{id}                  // bitta
+POST   /categories                       // yaratish (admin/super)
+PUT    /categories/{id}                  // tahrir (admin/super)
+DELETE /categories/{id}                  // o'chirish (admin/super) → 204
+```
+
+**Item / Resource shakli:**
+```json
+{ "id": 1, "name": "Elektronika", "slug": "elektronika", "image": "https://...", "parentId": null, "isActive": true }
+```
+
+**Yaratish body:**
+```json
+{ "name": "Elektronika", "image": "https://.../storage/categories/uuid.jpg", "parent_id": null }
+```
+- `name` majburiy · `slug` avtomatik (name'dan) · `image` — URL (ixtiyoriy, upload'dan) · `parent_id` — ixtiyoriy (mavjud kategoriya).
+- Yaratilganda `isActive: true` (default).
+
+**Tahrir body:** `{ "name", "image", "parent_id", "is_active" }` — `is_active` bilan faol/nofaol qilinadi.
 
 ---
 

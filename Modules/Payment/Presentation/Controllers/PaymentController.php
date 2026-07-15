@@ -20,7 +20,6 @@ class PaymentController extends Controller
     {
         $result = $this->createHandler->handle(new CreatePaymentCommand(
             orderId:  (int) $request->validated('order_id'),
-            amount:   0,
             provider: (string) $request->validated('provider'),
         ));
 

@@ -96,7 +96,6 @@ final class CreateOrderHandler
 
         $paymentResult = $this->createPaymentHandler->handle(new CreatePaymentCommand(
             orderId:  $savedOrder->id,
-            amount:   0,
             provider: $dto->paymentMethod,
         ));
 

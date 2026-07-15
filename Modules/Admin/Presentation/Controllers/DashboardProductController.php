@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Presentation\Controllers;
 
+use App\Shared\Services\Upload\ImageUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -15,6 +16,7 @@ use Modules\Admin\Application\Queries\GetDashboardProductByIdQuery;
 use Modules\Admin\Application\Queries\GetDashboardProductsQuery;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\Admin\Presentation\Requests\UploadProductImageRequest;
 use Modules\Admin\Presentation\Resources\DashboardProductResource;
 use Modules\Product\Application\Commands\CreateProductCommand;
 use Modules\Product\Application\Commands\DeleteProductCommand;
@@ -78,12 +80,9 @@ final class DashboardProductController extends Controller
             CreateProductCommand::fromRequest($request, $managerId)
         );
 
-        $message = $managerId !== null
-            ? 'Mahsulot yaratildi, moderatsiya kutilmoqda'
-            : 'Mahsulot yaratildi';
-
+        // Kim yaratmasin — mahsulot moderatsiyaga tushadi, admin/super tasdiqlaydi.
         return DashboardProductResource::make($result->load(['manager', 'category']))
-            ->additional(['message' => $message])
+            ->additional(['message' => 'Mahsulot yaratildi, moderatsiya kutilmoqda'])
             ->response()
             ->setStatusCode(201);
     }
@@ -108,6 +107,18 @@ final class DashboardProductController extends Controller
         $this->deleteHandler->handle(new DeleteProductCommand($product));
 
         return response()->noContent();
+    }
+
+    public function uploadImage(UploadProductImageRequest $request, ImageUploadService $uploader): JsonResponse
+    {
+        // Umumiy rasm yuklash: products (default) yoki categories papkasiga.
+        $folder = $request->input('folder', 'products');
+        $url    = $uploader->store($request->file('image'), $folder);
+
+        return response()->json([
+            'data'    => ['url' => $url],
+            'message' => 'Rasm yuklandi',
+        ], 201);
     }
 
     private function managerScopeId(): ?int

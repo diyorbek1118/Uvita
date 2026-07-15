@@ -35,9 +35,11 @@ backend/
 │           │                           # Http::post Telegram Bot API; try/catch; Log::warning if empty
 │           ├── Settings/
 │           │   └── SettingService.php  # singleton; get/deliveryPrice/otpExpirySeconds/maxNotFoundAttempts etc; Cache::remember 24h
-│           └── Fee/
-│               ├── OrderFeeCalculator.php  # calculate(goods)→OrderFinancials; 15% platform + pog'onali courier; courierFeeSql() SQL CASE
-│               └── OrderFinancials.php      # readonly VO: seller/platformGross/courier/platformNet/customerTotal + toArray()
+│           ├── Fee/
+│           │   ├── OrderFeeCalculator.php  # calculate(goods)→OrderFinancials; 15% platform + pog'onali courier; courierFeeSql() SQL CASE
+│           │   └── OrderFinancials.php      # readonly VO: seller/platformGross/courier/platformNet/customerTotal + toArray()
+│           └── Upload/
+│               └── ImageUploadService.php   # store(UploadedFile,dir='products'):string — public diskka saqlaydi, to'liq URL qaytaradi
 │
 ├── Modules/
 │   │
@@ -450,7 +452,7 @@ backend/
 │   │       │   ├── AdminUserController.php       # index|show (read-only)
 │   │       │   ├── AdminTransactionController.php # index|stats
 │   │       │   ├── AdminSettingsController.php   # index|update|bulkUpdate
-│   │       │   ├── DashboardProductController.php   # index|lowStock|show|store|update|destroy (rolga qarab; stock+sold_count+revenue)
+│   │       │   ├── DashboardProductController.php   # index|lowStock|show|store|update|destroy|uploadImage (rolga qarab; stock+sold_count+revenue)
 │   │       │   ├── DashboardOrderController.php     # index|show (manager paid+; timeline + narx breakdown admin/super'ga)
 │   │       │   └── DashboardAnalyticsController.php # summary|orderStatus|topProducts (admin) | sales|revenue (super)
 │   │       ├── Requests/
@@ -458,6 +460,7 @@ backend/
 │   │       │   ├── RejectProductRequest.php      # reason(required, max:500)
 │   │       │   ├── CreateStaffRequest.php        # name,email,password,role validation
 │   │       │   ├── UpdateStaffRequest.php        # name,email,role; unique email ignore self
+│   │       │   ├── UploadProductImageRequest.php # image(required,image,mimes:jpeg,jpg,png,webp,max:5MB)
 │   │       │   ├── UpdateSettingRequest.php      # key(in SettingKey values), value(required)
 │   │       │   └── UpdateSettingsRequest.php     # settings[].key + settings[].value
 │   │       ├── Resources/
@@ -472,7 +475,7 @@ backend/
 │   │       │   ├── DashboardOrderResource.php       # ro'yxat: customer, courier, total/grand, items_count
 │   │       │   └── DashboardOrderDetailResource.php # items, timeline, financials(when admin/super)
 │   │       └── routes/
-│   │           └── api.php             # staff/login|logout | admin/*(role.admin) | dashboard/*(role.staff|admin|super_admin) | super/*(role.super_admin)
+│   │           └── api.php             # staff/login|logout | admin/*(role.admin) | dashboard/*(role.staff|admin|super_admin; products/upload-image) | super/*(role.super_admin)
 │   │
 │   │
 │   ├── Review/                         # ✅ DDD to'liq — sharh + moderatsiya
@@ -545,12 +548,12 @@ backend/
 │       │       └── PaymentRepositoryInterface.php     # findByOrderId, findByTransactionId, save
 │       ├── Application/
 │       │   ├── Commands/
-│       │   │   ├── CreatePaymentCommand.php           # orderId, amount(0=auto), provider
+│       │   │   ├── CreatePaymentCommand.php           # orderId, provider (summa order'dan hisoblanadi)
 │       │   │   └── MarkPaymentPaidCommand.php         # orderId, transactionId, amount, provider
 │       │   ├── DTOs/
-│       │   │   └── CreatePaymentDTO.php               # fromCommand(), fromOrder()
+│       │   │   └── CreatePaymentDTO.php               # fromOrder()
 │       │   └── Handlers/
-│       │       ├── CreatePaymentHandler.php           # checks PENDING status; existing payment reuse; URL builder (Payme base64, Click so'm, Uzum); → [payment_id, payment_url]
+│       │       ├── CreatePaymentHandler.php           # PENDING check; amount=grand_total*100; existing payment reuse+sync; URL builder config.checkout (Payme base64, Click so'm, Uzum); → [payment_id, payment_url]
 │       │       └── MarkPaymentPaidHandler.php         # idempotency(txId+PAID); amount check; DB::transaction(lockForUpdate order+products); SMS+Telegram dispatch
 │       ├── Infrastructure/
 │       │   ├── Persistence/
@@ -587,7 +590,7 @@ backend/
 ├── config/
 │   ├── auth.php                        # guards: api(users), sanctum+manager+courier+admin+super_admin(staff) + otp_ttl_seconds
 │   ├── cart.php                        # delivery_price ← DELIVERY_PRICE env
-│   ├── payment.php                     # test_mode, payme(id/key/test_key/urls), click(service_id/merchant_id/secret_key), uzum(service_id/username/password)
+│   ├── payment.php                     # test_mode; har provider: checkout URL test/prod avtomatik hal; payme(id/key/test_key), click(service_id/merchant_id/secret_key), uzum(service_id/username/password/UZUM_CHECKOUT_URL)
 │   └── telegram.php                    # bot_token; chat_ids.manager[]/admin[]/courier[] — array_filter(explode(',', env(...)))
 │
 ├── database/

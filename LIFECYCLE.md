@@ -82,7 +82,7 @@ delivered
 | Amal | Customer | Manager | Courier | Admin | Super Admin |
 |------|----------|---------|---------|-------|-------------|
 | Mahsulotlarni ko'rish (faol) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Mahsulot yaratish | ❌ | ✅ *(inactive → approval kerak)* | ❌ | ✅ *(active — to'g'ridan)* | ✅ *(active — to'g'ridan)* |
+| Mahsulot yaratish | ❌ | ✅ *(inactive → approval kerak)* | ❌ | ✅ *(inactive → approval kerak)* | ✅ *(inactive → approval kerak)* |
 | Mahsulot tasdiqlash → active | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Mahsulot tahrirlash | ❌ | ✅ *(o'ziniki)* | ❌ | ✅ | ✅ |
 | Mahsulot o'chirish | ❌ | ❌ | ❌ | ✅ | ✅ |
@@ -113,8 +113,8 @@ delivered
 ❌ To'lov tranzaksiyalari va moliyaviy ma'lumotlar
 ❌ Boshqa adminlar ma'lumotlari
 ✅ Buyurtmalar (faqat manzil + ism + telefon — yetkazish uchun zarur)
-✅ Mahsulot yaratish (yaratilishi bilanoq active — approval shart emas)
-✅ Mahsulotlarni tasdiqlash / rad etish (manager yaratganlarni)
+✅ Mahsulot yaratish (yaratilishi bilanoq inactive — moderatsiyaga tushadi)
+✅ Mahsulotlarni tasdiqlash / rad etish (barcha moderatsiyadagilarni)
 ✅ Sharhlarni moderatsiya qilish
 ✅ Kuryer tayinlash va boshqarish
 ```
@@ -145,35 +145,36 @@ delivered
 
 ## Mahsulot Approval Tizimi
 
-**Admin / Super Admin mahsulot yaratsa:**
+**Har qanday rol (manager / admin / super admin) mahsulot yaratsa:**
 ```
-1. Admin yoki Super Admin yangi mahsulot yaratadi
-   → status: active (darhol)
-   → Mahsulot saytda ko'rinadi va sotilishi mumkin
-```
+1. Yangi mahsulot yaratiladi
+   → status: inactive (moderatsiyada)
+   → Saytda ko'rinmaydi va sotilmaydi
 
-**Manager mahsulot yaratsa:**
-```
-1. Manager yangi mahsulot yaratadi
-   → status: inactive (pending_review)
-   → Faqat manager o'zi va adminlar ko'radi
-
-2. Admin / Super Admin yangi mahsulotlar ro'yxatini ko'radi
+2. Admin / Super Admin moderatsiyadagi mahsulotlarni ko'radi
    → Ko'rib chiqadi: nomi, narxi, tavsifi, rasmlari, kategoriyasi
 
 3. Tasdiqlaydi → status: active
    → Mahsulot saytda ko'rinadi va sotilishi mumkin
 
-   Rad etadi → status: rejected
-   → Manager ga Notification: "Mahsulot rad etildi. Sabab: [...]"
+   Rad etadi (block) → status: rejected + sabab
+   → Manager (agar manager yaratgan bo'lsa) ga Notification: "Mahsulot rad etildi. Sabab: [...]"
 
 4. Manager rejected mahsulotni tahrirlaydi
-   → Qayta pending_review ga o'tkazadi
+   → Qayta moderatsiyaga o'tkazadi
    → Admin yana ko'rib chiqadi
 ```
 
-> **Qoida:** Manager yaratgan mahsulot admin yoki super admin tasdiqisiz
-> saytda ko'rinmaydi. Admin/Super Admin yaratgan mahsulotlar approval talab qilmaydi.
+> **Qoida:** Har qanday mahsulot admin yoki super admin tasdiqisiz saytda ko'rinmaydi —
+> kim yaratganidan qat'i nazar (admin/super o'zi yaratgan mahsulotni ham tasdiqlashi kerak).
+>
+> **Status o'zgarishlari (faqat admin / super admin):**
+> ```
+> inactive  → active     (tasdiqlash)
+> rejected  → active     (blokdan chiqarish / qayta tasdiqlash)
+> inactive  → rejected   (moderatsiyada rad etish)
+> active    → rejected   (faol mahsulotni bloklash)
+> ```
 
 ---
 

@@ -35,11 +35,8 @@ final readonly class Product
         int $categoryId,
         ?int $managerId = null,
     ): self {
-        // Manager yaratsa → inactive (approval kerak), Admin/Super Admin yaratsa → active
-        $status = $managerId !== null
-            ? ProductStatusEnum::Inactive
-            : ProductStatusEnum::Active;
-
+        // Kim yaratmasin — mahsulot doim moderatsiyaga tushadi (inactive).
+        // Faqat admin/super admin uni approve qilib active ga o'tkazadi.
         return new self(
             id:              null,
             name:            $name,
@@ -47,7 +44,7 @@ final readonly class Product
             description:     $description,
             price:           $price,
             stock:           $stock,
-            status:          $status,
+            status:          ProductStatusEnum::Inactive,
             images:          $images,
             categoryId:      $categoryId,
             managerId:       $managerId,
