@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Presentation\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Modules\Auth\Domain\ValueObjects\PhoneNumber;
 
 final class VerifyOtpRequest extends FormRequest
 {
@@ -16,7 +17,7 @@ final class VerifyOtpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'regex:/^\+998[0-9]{9}$/'],
+            'phone' => ['required', 'string', 'regex:' . PhoneNumber::PATTERN],
             'code'  => ['required', 'string', 'digits:6'],
         ];
     }
@@ -25,7 +26,7 @@ final class VerifyOtpRequest extends FormRequest
     {
         return [
             'phone.required' => "Telefon raqam kiritilishi shart.",
-            'phone.regex'    => "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak.",
+            'phone.regex'    => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
             'code.required'  => "Tasdiqlash kodi kiritilishi shart.",
             'code.digits'    => "Tasdiqlash kodi 6 ta raqamdan iborat bo'lishi kerak.",
         ];

@@ -135,7 +135,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (ValidationException $e) {
             return response()->json([
-                'message' => "Ma'lumotlar noto'g'ri.",
+                'message' => collect($e->errors())->flatten()->first() ?? "Ma'lumotlar noto'g'ri.",
                 'errors'  => $e->errors(),
             ], 422);
         });

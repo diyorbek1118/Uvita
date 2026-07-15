@@ -60,6 +60,22 @@ class SendOtpTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_send_otp_rejects_unknown_operator_prefix(): void
+    {
+        Queue::fake();
+
+        // 44 — O'zbekistonda mavjud bo'lmagan operator kodi
+        $response = $this->postJson($this->endpoint, [
+            'phone' => '+998441234567',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('errors.phone', fn($v) => !empty($v));
+
+        $this->assertDatabaseCount('otp_attempts', 0);
+        Queue::assertNothingPushed();
+    }
+
     public function test_send_otp_does_not_resend_when_active_otp_exists(): void
     {
         Queue::fake();
