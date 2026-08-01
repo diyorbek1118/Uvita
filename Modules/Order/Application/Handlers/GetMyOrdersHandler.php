@@ -14,6 +14,7 @@ final class GetMyOrdersHandler
     {
         return OrderModel::with(['items.product'])
             ->where('user_id', $query->userId)
+            ->when($query->status, fn ($q) => $q->where('status', $query->status))
             ->orderByDesc('created_at')
             ->paginate(15);
     }

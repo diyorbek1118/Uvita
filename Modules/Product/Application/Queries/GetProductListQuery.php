@@ -15,7 +15,7 @@ final readonly class GetProductListQuery
     public static function fromRequest(Request $request): self
     {
         return new self(
-            perPage: (int) $request->input('per_page', 15),
+            perPage: (int) $request->input('per_page', 16),
         );
     }
 }

@@ -6,5 +6,5 @@ namespace Modules\Order\Application\Queries;
 
 final readonly class GetMyOrdersQuery
 {
-    public function __construct(public int $userId) {}
+    public function __construct(public int $userId, public ?string $status = null) {}
 }

@@ -71,7 +71,7 @@ final class OrderController extends Controller
     public function index(): JsonResponse
     {
         $orders = $this->getMyOrdersHandler->handle(
-            new GetMyOrdersQuery(auth()->id())
+            new GetMyOrdersQuery(userId: auth()->id(), status: request()->query('status'))
         );
         return OrderResource::collection($orders)->response();
     }
