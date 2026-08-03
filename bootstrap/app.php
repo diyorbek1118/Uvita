@@ -57,6 +57,11 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
 
+        // Kutilgan biznes-qoida xatolari (422 ga aylantiriladi) ERROR log'da shovqin qilmasligi uchun
+        $exceptions->dontReport([
+            DomainException::class,
+        ]);
+
         // --- Spetsifik domain exceptionlar ---
 
         $exceptions->render(function (InvalidOtpException $e) {
