@@ -6,6 +6,7 @@ namespace Tests\Feature\Order;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
@@ -29,6 +30,8 @@ class OrderLifecycleTest extends TestCase
     {
         parent::setUp();
         Queue::fake();
+        // Buyurtma yaratishda geokodlash tashqi so'rov yubormasligi uchun
+        Http::fake();
         $this->seedSettings();
 
         $this->customer = User::create(['phone' => '+998901234567', 'name' => 'Ali']);

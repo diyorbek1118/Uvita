@@ -39,4 +39,14 @@ return [
         'key' => env('PEXELS_API_KEY'),
     ],
 
+    'nominatim' => [
+        'url'        => env('NOMINATIM_URL', 'https://nominatim.openstreetmap.org/search'),
+        'user_agent' => env('NOMINATIM_USER_AGENT', 'UvitaMarket/1.0 (order geocoding)'),
+    ],
+
+    'firebase' => [
+        // Service account JSON kontenti yoki fayl yo'li (FCM HTTP v1 uchun)
+        'service_account_json' => env('FIREBASE_SERVICE_ACCOUNT_JSON'),
+    ],
+
 ];

@@ -1,0 +1,1 @@
+import{t as e}from"./axios-DwGToSMk.js";var t=(t={})=>e.get(`/categories`,{params:t}),n=t=>e.post(`/categories`,t),r=(t,n)=>e.put(`/categories/${t}`,n),i=t=>e.delete(`/categories/${t}`);export{r as i,i as n,t as r,n as t};

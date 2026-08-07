@@ -1,0 +1,1 @@
+import{t as e}from"./axios-DwGToSMk.js";var t=(t=1,n=``)=>e.get(`/orders`,{params:{page:t,...n?{status:n}:{}}}),n=t=>e.get(`/orders/${t}`),r=t=>e.post(`/orders`,t),i=t=>e.delete(`/orders/${t}`),a=t=>e.post(`/orders/${t}/pay/retry`);export{a,t as i,r as n,n as r,i as t};

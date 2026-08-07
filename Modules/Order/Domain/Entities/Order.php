@@ -32,6 +32,9 @@ class Order
         public readonly Money           $totalPrice,
         public readonly Money           $grandTotal,
         public readonly array           $items,
+        public readonly ?float          $lat = null,       // geokodlangan manzil
+        public readonly ?float          $lng = null,       // geokodlangan manzil
+        public readonly ?string         $geoLevel = null,  // 'address' | 'region'
         ?string                         $courierNote = null,
         ?int                            $courierId = null,
         int                             $notFoundCount = 0,

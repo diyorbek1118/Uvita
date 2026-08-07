@@ -58,17 +58,23 @@ class OrderSeeder extends Seeder
                 ? fake()->randomElement($courierIds ?: [null])
                 : null;
 
+            $region = fake()->randomElement(['Toshkent', 'Samarqand', 'Buxoro']);
+            [$lat, $lng] = $this->regionCoords($region);
+
             $order = new OrderModel([
                 'user_id'         => fake()->randomElement($userIds),
                 'courier_id'      => $courierId,
                 'status'          => $status,
                 'address'         => [
-                    'region'   => fake()->randomElement(['Toshkent', 'Samarqand', 'Buxoro']),
+                    'region'   => $region,
                     'district' => fake()->city(),
                     'street'   => fake()->streetName(),
                     'house'    => (string) fake()->buildingNumber(),
                     'landmark' => fake()->optional()->sentence(),
                 ],
+                'lat'             => $lat,
+                'lng'             => $lng,
+                'geo_level'       => 'address',
                 'phone'           => '+998' . fake()->numberBetween(900000000, 999999999),
                 'phone_secondary' => null,
                 'delivery_time'   => fake()->dateTimeBetween('-3 days', '+5 days')->format('Y-m-d H:i'),
@@ -126,6 +132,23 @@ class OrderSeeder extends Seeder
         }
 
         return [$lineItems, $goods];
+    }
+
+    /** @return array{0: float, 1: float} */
+    private function regionCoords(string $region): array
+    {
+        $coords = [
+            'Toshkent'  => [41.31, 69.28],
+            'Samarqand' => [39.65, 66.96],
+            'Buxoro'    => [39.77, 64.42],
+        ];
+
+        [$lat, $lng] = $coords[$region] ?? [41.31, 69.28];
+
+        return [
+            $lat + fake()->randomFloat(4, -0.03, 0.03),
+            $lng + fake()->randomFloat(4, -0.03, 0.03),
+        ];
     }
 
     /**

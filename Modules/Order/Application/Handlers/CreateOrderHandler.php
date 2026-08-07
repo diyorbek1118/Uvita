@@ -88,6 +88,9 @@ final class CreateOrderHandler
                 totalPrice:     new Money($totalAmount),
                 grandTotal:     new Money($financials->customerTotal),
                 items:          $orderItems,
+                lat:            $dto->lat,
+                lng:            $dto->lng,
+                geoLevel:       $dto->geoLevel,
                 courierNote:    $dto->courierNote,
             );
 

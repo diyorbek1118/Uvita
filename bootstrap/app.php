@@ -47,6 +47,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\ForceJsonResponse::class);
 
+        // ngrok kabi tashqi proxy orqali https bo'lib kirgan so'rovlarda
+        // X-Forwarded-Proto to'g'ri hisoblanishi uchun (dev muhit uchun).
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role.manager'    => EnsureIsManager::class,
             'role.courier'    => EnsureIsCourier::class,

@@ -15,11 +15,14 @@ use Modules\Admin\Presentation\Controllers\DashboardAnalyticsController;
 use Modules\Admin\Presentation\Controllers\DashboardOrderController;
 use Modules\Admin\Presentation\Controllers\DashboardProductController;
 use Modules\Admin\Presentation\Controllers\StaffAuthController;
+use Modules\Admin\Presentation\Controllers\StaffDeviceTokenController;
 
 Route::post('staff/login', [StaffAuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('staff/logout', [StaffAuthController::class, 'logout']);
+    Route::post('staff/device-token',       [StaffDeviceTokenController::class, 'store']);
+    Route::delete('staff/device-token',     [StaffDeviceTokenController::class, 'destroy']);
 });
 
 Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(function (): void {

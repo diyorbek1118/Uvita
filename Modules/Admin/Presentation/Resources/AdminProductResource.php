@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Presentation\Resources;
 
+use App\Shared\Services\Upload\ImageUrlNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ class AdminProductResource extends JsonResource
             'price'            => $this->price,
             'stock'            => $this->stock,
             'status'           => $this->status->value,
-            'images'           => $this->images,
+            'images'           => ImageUrlNormalizer::normalizeArray($this->images),
             'rating'           => $this->rating,
             'reviews_count'    => $this->reviews_count,
             'rejection_reason' => $this->rejection_reason,

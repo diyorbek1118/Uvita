@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Product\Presentation\Resources;
 
+use App\Shared\Services\Upload\ImageUrlNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,7 +22,7 @@ final class ProductResource extends JsonResource
             'rating'          => $this->rating ?? 0.0,
             'reviews_count'   => $this->reviews_count ?? 0,
             'status'          => $this->status->value,
-            'images'          => $this->images ?? [],
+            'images'          => ImageUrlNormalizer::normalizeArray($this->images ?? []),
             'category'        => $this->whenLoaded('category', fn () => [
                 'id'   => $this->category->id,
                 'name' => $this->category->name,

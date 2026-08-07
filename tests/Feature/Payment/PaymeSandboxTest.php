@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Payment;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
@@ -28,6 +29,8 @@ class PaymeSandboxTest extends TestCase
     {
         parent::setUp();
         Queue::fake();
+        // Buyurtma yaratish geokodlash uchun tashqi so'rov yubormasligi kerak
+        Http::fake();
         $this->seedSettings();
 
         config()->set('payment.test_mode', true);

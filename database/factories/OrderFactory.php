@@ -21,12 +21,15 @@ class OrderFactory extends Factory
             'courier_id' => null,
             'status' => $this->faker->randomElement(['pending', 'paid', 'confirmed', 'ready_to_deliver', 'delivering', 'delivered', 'cancelled', 'delivery_issue']),
             'address' => [
-                'region' => $this->faker->randomElement(['Toshkent', 'Samarqand', 'Buxoro', 'Navoiy', 'Qashqadaryo']),
+                'region' => $region = $this->faker->randomElement(['Toshkent', 'Samarqand', 'Buxoro', 'Navoiy', 'Qashqadaryo']),
                 'district' => $this->faker->city(),
                 'street' => $this->faker->streetName(),
                 'house' => $this->faker->buildingNumber(),
                 'landmark' => $this->faker->optional()->sentence(),
             ],
+            'lat' => $this->regionLat($region),
+            'lng' => $this->regionLng($region),
+            'geo_level' => 'address',
             'phone' => '+998' . $this->faker->numberBetween(900000000, 999999999),
             'phone_secondary' => $this->faker->optional()->phoneNumber(),
             'delivery_time' => $this->faker->dateTimeBetween('+1 day', '+7 days')->format('Y-m-d H:i'),
@@ -37,5 +40,17 @@ class OrderFactory extends Factory
             'grand_total' => $fin->customerTotal,
             'not_found_count' => 0,
         ];
+    }
+
+    private function regionLat(string $region): float
+    {
+        $coords = ['Toshkent' => 41.31, 'Samarqand' => 39.65, 'Buxoro' => 39.77, 'Navoiy' => 40.08, 'Qashqadaryo' => 38.85];
+        return ($coords[$region] ?? 41.31) + $this->faker->randomFloat(4, -0.03, 0.03);
+    }
+
+    private function regionLng(string $region): float
+    {
+        $coords = ['Toshkent' => 69.28, 'Samarqand' => 66.96, 'Buxoro' => 64.42, 'Navoiy' => 65.38, 'Qashqadaryo' => 66.28];
+        return ($coords[$region] ?? 69.28) + $this->faker->randomFloat(4, -0.03, 0.03);
     }
 }

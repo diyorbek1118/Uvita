@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Cart\Presentation\Resources;
 
 use App\Shared\Services\Fee\OrderFeeCalculator;
+use App\Shared\Services\Upload\ImageUrlNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\Cart\Infrastructure\Persistence\Models\CartItemModel;
@@ -31,7 +32,7 @@ final class CartResource extends JsonResource
             'name'        => $item->product->name,
             'price'       => $item->product->price,
             'quantity'    => $item->quantity,
-            'images'      => $item->product->images ?? [],
+            'images'      => ImageUrlNormalizer::normalizeArray($item->product->images ?? []),
             'category'    => $item->product->category ? [
                 'id'   => $item->product->category->id,
                 'name' => $item->product->category->name,
@@ -41,7 +42,7 @@ final class CartResource extends JsonResource
                 'name'  => $item->product->name,
                 'price' => $item->product->price,
                 'stock' => $item->product->stock,
-                'images' => $item->product->images ?? [],
+                'images' => ImageUrlNormalizer::normalizeArray($item->product->images ?? []),
                 'category' => $item->product->category ? [
                     'id'   => $item->product->category->id,
                     'name' => $item->product->category->name,

@@ -22,6 +22,9 @@ class OrderModel extends Model
         'courier_id',
         'status',
         'address',
+        'lat',
+        'lng',
+        'geo_level',
         'phone',
         'phone_secondary',
         'delivery_time',
@@ -43,6 +46,8 @@ class OrderModel extends Model
     protected $casts = [
         'status'            => OrderStatus::class,
         'address'           => 'array',
+        'lat'               => 'decimal:7',
+        'lng'               => 'decimal:7',
         'paid_at'           => 'datetime',
         'confirmed_at'      => 'datetime',
         'ready_at'          => 'datetime',
