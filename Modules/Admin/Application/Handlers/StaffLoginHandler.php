@@ -14,22 +14,23 @@ final class StaffLoginHandler
     {
         $staff = Staff::where('email', $dto->email)->first();
 
-        if ($staff === null || !Hash::check($dto->password, $staff->password)) {
+        if ($staff === null || ! Hash::check($dto->password, $staff->password)) {
             abort(401, "Email yoki parol noto'g'ri.");
         }
 
-        if (!$staff->is_active) {
+        if (! $staff->is_active) {
             abort(403, 'Akkaunt faol emas. Adminga murojaat qiling.');
         }
 
-        $token = $staff->createToken($staff->role->value)->plainTextToken;
+        $expiresAt = now()->addHours((int) config('auth.staff_token_expiration_hours', 12));
+        $token = $staff->createToken($staff->role->value, ['*'], $expiresAt)->plainTextToken;
 
         return [
             'staff' => [
-                'id'    => $staff->id,
-                'name'  => $staff->name,
+                'id' => $staff->id,
+                'name' => $staff->name,
                 'email' => $staff->email,
-                'role'  => $staff->role->value,
+                'role' => $staff->role->value,
             ],
             'token' => $token,
         ];

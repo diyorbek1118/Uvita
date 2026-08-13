@@ -13,7 +13,7 @@ final class GetPendingReviewsHandler
     public function handle(GetPendingReviewsQuery $query): LengthAwarePaginator
     {
         return ReviewModel::where('status', 'pending')
-            ->with('user')
+            ->with(['user', 'product'])
             ->latest()
             ->paginate(20);
     }

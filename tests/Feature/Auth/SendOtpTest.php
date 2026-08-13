@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
+use App\Jobs\SendSmsJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Modules\Auth\Infrastructure\Persistence\Models\OtpAttempt;
 use Tests\Feature\Concerns\SeedsSettings;
@@ -40,7 +42,24 @@ class SendOtpTest extends TestCase
 
         $this->postJson($this->endpoint, ['phone' => '+998901234567']);
 
-        Queue::assertPushed(\App\Jobs\SendSmsJob::class);
+        Queue::assertPushed(SendSmsJob::class);
+    }
+
+    public function test_send_otp_stores_only_a_hash_of_the_code(): void
+    {
+        Queue::fake();
+
+        $this->postJson($this->endpoint, ['phone' => '+998901234567'])
+            ->assertStatus(200);
+
+        $storedCode = OtpAttempt::query()->valueOrFail('code');
+
+        $this->assertDoesNotMatchRegularExpression('/^\d{4}$/', $storedCode);
+        Queue::assertPushed(SendSmsJob::class, function (SendSmsJob $job) use ($storedCode): bool {
+            preg_match('/Tasdiqlash kodi: (\d{4})/', $job->message, $matches);
+
+            return isset($matches[1]) && Hash::check($matches[1], $storedCode);
+        });
     }
 
     public function test_send_otp_requires_phone(): void
@@ -48,13 +67,13 @@ class SendOtpTest extends TestCase
         $response = $this->postJson($this->endpoint, []);
 
         $response->assertStatus(422)
-            ->assertJsonPath('errors.phone', fn($v) => !empty($v));
+            ->assertJsonPath('errors.phone', fn ($v) => ! empty($v));
     }
 
     public function test_send_otp_rejects_invalid_phone_format(): void
     {
         $response = $this->postJson($this->endpoint, [
-            'phone' => '9989012347',
+            'phone' => '998901234567',
         ]);
 
         $response->assertStatus(422);
@@ -70,7 +89,7 @@ class SendOtpTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonPath('errors.phone', fn($v) => !empty($v));
+            ->assertJsonPath('errors.phone', fn ($v) => ! empty($v));
 
         $this->assertDatabaseCount('otp_attempts', 0);
         Queue::assertNothingPushed();
@@ -81,11 +100,11 @@ class SendOtpTest extends TestCase
         Queue::fake();
 
         OtpAttempt::create([
-            'phone'          => '+998901234567',
-            'code'           => '1234',
-            'expires_at'     => now()->addSeconds(120),
+            'phone' => '+998901234567',
+            'code' => '123456',
+            'expires_at' => now()->addSeconds(120),
             'attempts_count' => 0,
-            'is_verified'    => false,
+            'is_verified' => false,
         ]);
 
         $this->postJson($this->endpoint, ['phone' => '+998901234567']);
@@ -100,16 +119,31 @@ class SendOtpTest extends TestCase
         Queue::fake();
 
         OtpAttempt::create([
-            'phone'          => '+998901234567',
-            'code'           => '1234',
-            'expires_at'     => now()->addSeconds(120),
+            'phone' => '+998901234567',
+            'code' => '123456',
+            'expires_at' => now()->addSeconds(120),
             'attempts_count' => 5,
-            'blocked_until'  => now()->addMinutes(10),
-            'is_verified'    => false,
+            'blocked_until' => now()->addMinutes(10),
+            'is_verified' => false,
         ]);
 
         $response = $this->postJson($this->endpoint, ['phone' => '+998901234567']);
 
         $response->assertStatus(429);
+    }
+
+    public function test_send_otp_endpoint_is_rate_limited_by_ip(): void
+    {
+        Queue::fake();
+
+        foreach (range(0, 4) as $suffix) {
+            $this->postJson($this->endpoint, [
+                'phone' => "+99890123456{$suffix}",
+            ])->assertStatus(200);
+        }
+
+        $this->postJson($this->endpoint, [
+            'phone' => '+998901234565',
+        ])->assertStatus(429);
     }
 }

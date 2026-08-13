@@ -12,13 +12,15 @@ class TransactionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'             => $this->id,
-            'order_id'       => $this->order_id,
-            'provider'       => $this->provider->value,
+            'id' => $this->id,
+            'order_id' => $this->order_id,
+            'provider' => $this->provider->value,
             'transaction_id' => $this->transaction_id,
-            'amount'         => $this->amount,
-            'status'         => $this->status->value,
-            'created_at'     => $this->created_at?->toISOString(),
+            'amount' => $this->amount,
+            'status' => $this->status->value,
+            'refund_requested_at' => $this->refund_requested_at?->toISOString(),
+            'refunded_at' => $this->refunded_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
         ];
     }
 }

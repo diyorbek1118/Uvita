@@ -22,8 +22,8 @@ final class ToggleStaffHandler
         $actor = auth('sanctum')->user();
         if ($actor instanceof Staff
             && $actor->role === StaffRole::ADMIN
-            && !in_array($staff->role, [StaffRole::MANAGER, StaffRole::COURIER], true)) {
-            abort(403, "Admin faqat menejer yoki kuryerni boshqarishi mumkin");
+            && !in_array($staff->role, [StaffRole::SELLER, StaffRole::MANAGER, StaffRole::COURIER], true)) {
+            abort(403, "Admin faqat sotuvchi, menejer yoki kuryerni boshqarishi mumkin");
         }
 
         $staff->update(['is_active' => ! $staff->is_active]);

@@ -27,8 +27,8 @@ final class GetCourierStatsHandler
 
         return new CourierStats(
             totalDelivered: $totalDelivered,
-            totalNotFound:  $totalNotFound,
-            totalActive:    $totalActive,
+            totalNotFound: $totalNotFound,
+            totalActive: $totalActive,
         );
     }
 }

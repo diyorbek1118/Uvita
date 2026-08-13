@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('role'); // manager | courier | admin | super_admin
+            $table->string('role'); // seller | manager | courier | admin | super_admin
             $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();

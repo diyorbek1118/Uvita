@@ -19,6 +19,7 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
     public function findById(int $id): ?Order
     {
         $model = OrderModel::with('items')->find($id);
+
         return $model ? $this->toDomain($model) : null;
     }
 
@@ -57,40 +58,44 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         if ($order->id === null) {
             return $this->create($order);
         }
+
         return $this->update($order);
     }
 
     private function create(Order $order): Order
     {
         $model = OrderModel::create([
-            'user_id'         => $order->userId,
-            'courier_id'      => $order->courierId,
-            'status'          => $order->status->value,
-            'address'         => $order->address->toArray(),
-            'lat'             => $order->lat,
-            'lng'             => $order->lng,
-            'geo_level'       => $order->geoLevel,
-            'phone'           => $order->phone,
+            'user_id' => $order->userId,
+            'courier_id' => $order->courierId,
+            'status' => $order->status->value,
+            'address' => $order->address->toArray(),
+            'delivery_latitude' => $order->deliveryLatitude,
+            'delivery_longitude' => $order->deliveryLongitude,
+            'lat' => $order->deliveryLatitude,
+            'lng' => $order->deliveryLongitude,
+            'geo_level' => $order->geoLevel,
+            'phone' => $order->phone,
             'phone_secondary' => $order->phoneSecondary,
-            'delivery_time'   => $order->deliveryTime->value,
-            'courier_note'    => $order->courierNote,
-            'total_price'     => $order->totalPrice->amount,
-            'service_fee'     => $order->serviceFee->amount,
-            'courier_fee'     => $order->courierFee->amount,
-            'grand_total'     => $order->grandTotal->amount,
+            'delivery_time' => $order->deliveryTime->value,
+            'courier_note' => $order->courierNote,
+            'total_price' => $order->totalPrice->amount,
+            'service_fee' => $order->serviceFee->amount,
+            'courier_fee' => $order->courierFee->amount,
+            'grand_total' => $order->grandTotal->amount,
             'not_found_count' => $order->notFoundCount,
         ]);
 
         foreach ($order->items as $item) {
             OrderItemModel::create([
-                'order_id'   => $model->id,
+                'order_id' => $model->id,
                 'product_id' => $item->productId,
-                'quantity'   => $item->quantity,
-                'price'      => $item->price->amount,
+                'quantity' => $item->quantity,
+                'price' => $item->price->amount,
             ]);
         }
 
         $model->load('items');
+
         return $this->toDomain($model);
     }
 
@@ -99,9 +104,10 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
         $model = OrderModel::findOrFail($order->id);
 
         $attributes = [
-            'courier_id'      => $order->courierId,
-            'status'          => $order->status->value,
-            'courier_note'    => $order->courierNote,
+            'courier_id' => $order->courierId,
+            'status' => $order->status->value,
+            'delivery_time' => $order->deliveryTime->value,
+            'courier_note' => $order->courierNote,
             'not_found_count' => $order->notFoundCount,
         ];
 
@@ -113,52 +119,53 @@ final class EloquentOrderRepository implements OrderRepositoryInterface
 
         $model->update($attributes);
         $model->load('items');
+
         return $this->toDomain($model);
     }
 
     private function milestoneColumn(OrderStatus $status): ?string
     {
         return match ($status) {
-            OrderStatus::PAID             => 'paid_at',
-            OrderStatus::CONFIRMED        => 'confirmed_at',
+            OrderStatus::PAID => 'paid_at',
+            OrderStatus::CONFIRMED => 'confirmed_at',
             OrderStatus::READY_TO_DELIVER => 'ready_at',
-            OrderStatus::DELIVERING       => 'delivering_at',
-            OrderStatus::DELIVERED        => 'delivered_at',
-            OrderStatus::DELIVERY_ISSUE   => 'delivery_issue_at',
-            OrderStatus::CANCELLED        => 'cancelled_at',
-            default                       => null,
+            OrderStatus::DELIVERING => 'delivering_at',
+            OrderStatus::DELIVERED => 'delivered_at',
+            OrderStatus::DELIVERY_ISSUE => 'delivery_issue_at',
+            OrderStatus::CANCELLED => 'cancelled_at',
+            default => null,
         };
     }
 
     private function toDomain(OrderModel $model): Order
     {
         $items = $model->items->map(fn (OrderItemModel $item) => new OrderItem(
-            id:        $item->id,
-            orderId:   $item->order_id,
+            id: $item->id,
+            orderId: $item->order_id,
             productId: $item->product_id,
-            quantity:  $item->quantity,
-            price:     new Money($item->price),
+            quantity: $item->quantity,
+            price: new Money($item->price),
         ))->all();
 
         return new Order(
-            id:             $model->id,
-            userId:         $model->user_id,
-            status:         $model->status,
-            address:        DeliveryAddress::fromArray($model->address),
-            phone:          $model->phone,
+            id: $model->id,
+            userId: $model->user_id,
+            status: $model->status,
+            address: DeliveryAddress::fromArray($model->address),
+            deliveryLatitude: $model->delivery_latitude !== null ? (float) $model->delivery_latitude : null,
+            deliveryLongitude: $model->delivery_longitude !== null ? (float) $model->delivery_longitude : null,
+            geoLevel: $model->geo_level,
+            phone: $model->phone,
             phoneSecondary: $model->phone_secondary,
-            deliveryTime:   new DeliveryTime($model->delivery_time),
-            serviceFee:     new Money($model->service_fee),
-            courierFee:     new Money($model->courier_fee),
-            totalPrice:     new Money($model->total_price),
-            grandTotal:     new Money($model->grand_total),
-            items:          $items,
-            lat:            $model->lat !== null ? (float) $model->lat : null,
-            lng:            $model->lng !== null ? (float) $model->lng : null,
-            geoLevel:       $model->geo_level,
-            courierNote:    $model->courier_note,
-            courierId:      $model->courier_id,
-            notFoundCount:  $model->not_found_count,
+            deliveryTime: new DeliveryTime($model->delivery_time),
+            serviceFee: new Money($model->service_fee),
+            courierFee: new Money($model->courier_fee),
+            totalPrice: new Money($model->total_price),
+            grandTotal: new Money($model->grand_total),
+            items: $items,
+            courierNote: $model->courier_note,
+            courierId: $model->courier_id,
+            notFoundCount: $model->not_found_count,
         );
     }
 }

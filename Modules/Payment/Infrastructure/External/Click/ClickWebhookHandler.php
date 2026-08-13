@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Payment\Infrastructure\External\Click;
 
 use Illuminate\Http\Request;
+use Modules\Order\Domain\Enums\OrderStatus;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 use Modules\Payment\Application\Commands\MarkPaymentPaidCommand;
 use Modules\Payment\Application\Handlers\MarkPaymentPaidHandler;
@@ -22,7 +23,7 @@ final class ClickWebhookHandler
         $action = (int) $request->input('action', -1);
 
         // Signature test rejimda tekshirilmaydi (keys bo'sh)
-        if (!config('payment.test_mode')) {
+        if (! config('payment.test_mode')) {
             $this->verifySignature($request, $action);
         }
 
@@ -37,13 +38,13 @@ final class ClickWebhookHandler
 
     private function prepare(Request $request): array
     {
-        $orderId      = (int) $request->input('merchant_trans_id');
+        $orderId = (int) $request->input('merchant_trans_id');
         $clickTransId = (string) $request->input('click_trans_id');
-        $amountSom    = (float) $request->input('amount'); // Click so'm yuboradi
+        $amountSom = (float) $request->input('amount'); // Click so'm yuboradi
 
         $order = OrderModel::find($orderId);
 
-        if ($order === null) {
+        if ($order === null || $order->status !== OrderStatus::PENDING) {
             return $this->error(-5009, 'Order not found', $clickTransId, $orderId);
         }
 
@@ -59,11 +60,11 @@ final class ClickWebhookHandler
         );
 
         return [
-            'click_trans_id'      => $clickTransId,
-            'merchant_trans_id'   => $orderId,
+            'click_trans_id' => $clickTransId,
+            'merchant_trans_id' => $orderId,
             'merchant_prepare_id' => $payment->id,
-            'error'               => 0,
-            'error_note'          => 'Success',
+            'error' => 0,
+            'error_note' => 'Success',
         ];
     }
 
@@ -72,14 +73,18 @@ final class ClickWebhookHandler
     private function complete(Request $request): array
     {
         $merchantPrepareId = (int) $request->input('merchant_prepare_id');
-        $clickTransId      = (string) $request->input('click_trans_id');
-        $orderId           = (int) $request->input('merchant_trans_id');
-        $error             = (int) $request->input('error', 0);
+        $clickTransId = (string) $request->input('click_trans_id');
+        $orderId = (int) $request->input('merchant_trans_id');
+        $error = (int) $request->input('error', 0);
 
         $payment = PaymentModel::find($merchantPrepareId);
 
         if ($payment === null) {
             return $this->error(-5010, 'Prepare not found', $clickTransId, $orderId);
+        }
+
+        if ($payment->order_id !== $orderId || $payment->provider->value !== 'click') {
+            return $this->error(-5010, 'Prepare does not match order', $clickTransId, $orderId);
         }
 
         // Idempotency
@@ -96,14 +101,14 @@ final class ClickWebhookHandler
 
         // To'lovni amalga oshiramiz
         $this->markPaidHandler->handle(new MarkPaymentPaidCommand(
-            orderId:       $orderId,
+            orderId: $orderId,
             transactionId: $clickTransId,
-            amount:        $payment->amount,
-            provider:      'click',
+            amount: $payment->amount,
+            provider: 'click',
         ));
 
         $payment->update([
-            'transaction_id'          => $clickTransId,
+            'transaction_id' => $clickTransId,
             'provider_transaction_id' => $clickTransId,
         ]);
 
@@ -114,21 +119,30 @@ final class ClickWebhookHandler
 
     private function verifySignature(Request $request, int $action): void
     {
-        $secretKey    = (string) config('payment.click.secret_key', '');
-        $serviceId    = (string) $request->input('service_id');
+        $secretKey = (string) config('payment.click.secret_key', '');
+        $configuredServiceId = (string) config('payment.click.service_id', '');
+        $serviceId = (string) $request->input('service_id');
         $clickTransId = (string) $request->input('click_trans_id');
-        $merchantId   = (string) $request->input('merchant_trans_id');
-        $amount       = (string) $request->input('amount');
-        $signTime     = (string) $request->input('sign_time');
+        $merchantId = (string) $request->input('merchant_trans_id');
+        $amount = (string) $request->input('amount');
+        $signTime = (string) $request->input('sign_time');
 
-        if ($action === 0) {
-            $expected = md5($clickTransId . $serviceId . $secretKey . $merchantId . $amount . $action . $signTime);
-        } else {
-            $prepareId = (string) $request->input('merchant_prepare_id');
-            $expected  = md5($clickTransId . $serviceId . $secretKey . $merchantId . $prepareId . $amount . $action . $signTime);
+        if ($secretKey === '' || $configuredServiceId === '') {
+            abort(401, 'Click production credentials are not configured');
         }
 
-        if ($expected !== $request->input('sign_string')) {
+        if (! hash_equals($configuredServiceId, $serviceId)) {
+            abort(401, 'Invalid Click service_id');
+        }
+
+        if ($action === 0) {
+            $expected = md5($clickTransId.$serviceId.$secretKey.$merchantId.$amount.$action.$signTime);
+        } else {
+            $prepareId = (string) $request->input('merchant_prepare_id');
+            $expected = md5($clickTransId.$serviceId.$secretKey.$merchantId.$prepareId.$amount.$action.$signTime);
+        }
+
+        if (! hash_equals($expected, (string) $request->input('sign_string'))) {
             abort(401, 'Invalid signature');
         }
     }
@@ -138,21 +152,21 @@ final class ClickWebhookHandler
     private function success(string $clickTransId, int $orderId, int $paymentId): array
     {
         return [
-            'click_trans_id'     => $clickTransId,
-            'merchant_trans_id'  => $orderId,
+            'click_trans_id' => $clickTransId,
+            'merchant_trans_id' => $orderId,
             'merchant_confirm_id' => $paymentId,
-            'error'              => 0,
-            'error_note'         => 'Success',
+            'error' => 0,
+            'error_note' => 'Success',
         ];
     }
 
     private function error(int $code, string $note, string $clickTransId = '', int $orderId = 0): array
     {
         return [
-            'click_trans_id'    => $clickTransId,
+            'click_trans_id' => $clickTransId,
             'merchant_trans_id' => $orderId,
-            'error'             => $code,
-            'error_note'        => $note,
+            'error' => $code,
+            'error_note' => $note,
         ];
     }
 }

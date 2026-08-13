@@ -17,7 +17,7 @@ final class GetDashboardOrderDetailHandler
     public function handle(GetDashboardOrderDetailQuery $query): OrderModel
     {
         $builder = OrderModel::query()
-            ->with(['items.product', 'user', 'courier'])
+            ->with(['items.product', 'user', 'courier', 'latestPayment'])
             ->where('id', $query->id);
 
         if ($query->managerScope) {

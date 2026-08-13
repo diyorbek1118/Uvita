@@ -12,6 +12,7 @@ class ResolveIssueRequest extends FormRequest
     {
         return [
             'action' => ['required', 'string', 'in:reschedule,cancel'],
+            'delivery_time' => ['nullable', 'required_if:action,reschedule', 'string', 'max:100'],
         ];
     }
 }

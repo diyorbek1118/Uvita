@@ -13,7 +13,9 @@ final class GetCourierByIdHandler
 {
     public function handle(GetCourierByIdQuery $query): Staff
     {
-        $courier = Staff::where('role', StaffRole::COURIER)->findOrFail($query->courierId);
+        $courier = Staff::where('role', StaffRole::COURIER)
+            ->with('courierProfile')
+            ->findOrFail($query->courierId);
 
         $delivered   = OrderModel::where('courier_id', $courier->id)->where('status', 'delivered')->count();
         $notFound    = (int) OrderModel::where('courier_id', $courier->id)->sum('not_found_count');

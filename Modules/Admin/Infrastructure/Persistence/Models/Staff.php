@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Admin\Domain\Enums\StaffRole;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierProfile;
 
 class Staff extends Authenticatable
 {
@@ -33,4 +35,9 @@ class Staff extends Authenticatable
         'is_active' => 'boolean',
         'password'  => 'hashed',
     ];
+
+    public function courierProfile(): HasOne
+    {
+        return $this->hasOne(CourierProfile::class, 'courier_id');
+    }
 }

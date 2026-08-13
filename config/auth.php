@@ -1,47 +1,49 @@
 <?php
 
 declare(strict_types=1);
+use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\User\Infrastructure\Persistence\Models\User;
 
 return [
 
     'defaults' => [
-        'guard'     => 'api',
+        'guard' => 'api',
         'passwords' => 'users',
     ],
 
     'guards' => [
         'web' => [
-            'driver'   => 'session',
+            'driver' => 'session',
             'provider' => 'users',
         ],
 
         'api' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
 
         'sanctum' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'staff',
         ],
 
         'manager' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'staff',
         ],
 
         'courier' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'staff',
         ],
 
         'admin' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'staff',
         ],
 
         'super_admin' => [
-            'driver'   => 'sanctum',
+            'driver' => 'sanctum',
             'provider' => 'staff',
         ],
     ],
@@ -49,20 +51,20 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model'  => Modules\User\Infrastructure\Persistence\Models\User::class,
+            'model' => User::class,
         ],
 
         'staff' => [
             'driver' => 'eloquent',
-            'model'  => Modules\Admin\Infrastructure\Persistence\Models\Staff::class,
+            'model' => Staff::class,
         ],
     ],
 
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table'    => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire'   => 60,
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
             'throttle' => 60,
         ],
     ],
@@ -71,5 +73,8 @@ return [
 
     // OTP muddati (soniyalarda). Production: 120. Local test uchun .env da oshirish mumkin.
     'otp_ttl_seconds' => (int) env('OTP_TTL_SECONDS', 120),
+
+    'customer_token_expiration_days' => (int) env('CUSTOMER_TOKEN_EXPIRATION_DAYS', 30),
+    'staff_token_expiration_hours' => (int) env('STAFF_TOKEN_EXPIRATION_HOURS', 12),
 
 ];

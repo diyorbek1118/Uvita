@@ -6,7 +6,11 @@ namespace Modules\Product\Presentation\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Modules\Admin\Application\Handlers\UpdateDashboardProductHandler;
+use Modules\Admin\Domain\Enums\StaffRole;
+use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Product\Application\Commands\ApproveProductCommand;
 use Modules\Product\Application\Commands\CreateProductCommand;
 use Modules\Product\Application\Commands\DeleteProductCommand;
@@ -18,7 +22,6 @@ use Modules\Product\Application\Handlers\DeleteProductHandler;
 use Modules\Product\Application\Handlers\GetProductByIdHandler;
 use Modules\Product\Application\Handlers\GetProductListHandler;
 use Modules\Product\Application\Handlers\RejectProductHandler;
-use Modules\Product\Application\Handlers\UpdateProductHandler;
 use Modules\Product\Application\Queries\GetProductByIdQuery;
 use Modules\Product\Application\Queries\GetProductListQuery;
 use Modules\Product\Presentation\Requests\CreateProductRequest;
@@ -29,13 +32,13 @@ use Modules\Product\Presentation\Resources\ProductResource;
 final class ProductController extends Controller
 {
     public function __construct(
-        private readonly GetProductListHandler  $listHandler,
-        private readonly GetProductByIdHandler  $byIdHandler,
-        private readonly CreateProductHandler   $createHandler,
-        private readonly UpdateProductHandler   $updateHandler,
-        private readonly DeleteProductHandler   $deleteHandler,
-        private readonly ApproveProductHandler  $approveHandler,
-        private readonly RejectProductHandler   $rejectHandler,
+        private readonly GetProductListHandler $listHandler,
+        private readonly GetProductByIdHandler $byIdHandler,
+        private readonly CreateProductHandler $createHandler,
+        private readonly UpdateDashboardProductHandler $updateHandler,
+        private readonly DeleteProductHandler $deleteHandler,
+        private readonly ApproveProductHandler $approveHandler,
+        private readonly RejectProductHandler $rejectHandler,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -56,7 +59,9 @@ final class ProductController extends Controller
 
     public function store(CreateProductRequest $request): JsonResponse
     {
-        $managerId = auth('sanctum')->id();
+        /** @var Staff $actor */
+        $actor = auth('sanctum')->user();
+        $managerId = $actor->role === StaffRole::MANAGER ? $actor->id : null;
 
         $result = $this->createHandler->handle(
             CreateProductCommand::fromRequest($request, $managerId)
@@ -74,16 +79,24 @@ final class ProductController extends Controller
 
     public function update(UpdateProductRequest $request, int $product): JsonResponse
     {
+        /** @var Staff $actor */
+        $actor = auth('sanctum')->user();
+
         $result = $this->updateHandler->handle(
-            UpdateProductCommand::fromRequest($request, $product)
+            UpdateProductCommand::fromRequest($request, $product),
+            $actor
         );
 
+        $message = $actor->role === StaffRole::MANAGER
+            ? 'Mahsulot yangilandi va moderatsiyaga yuborildi'
+            : 'Mahsulot yangilandi';
+
         return ProductResource::make($result)
-            ->additional(['message' => 'Mahsulot yangilandi'])
+            ->additional(['message' => $message])
             ->response();
     }
 
-    public function destroy(int $product): \Illuminate\Http\Response
+    public function destroy(int $product): Response
     {
         $this->deleteHandler->handle(new DeleteProductCommand($product));
 

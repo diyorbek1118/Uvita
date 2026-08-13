@@ -11,12 +11,19 @@ class AdminCourierResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $profile = $this->relationLoaded('courierProfile') ? $this->courierProfile : null;
+
         return [
             'id'        => $this->id,
             'name'      => $this->name,
             'email'     => $this->email,
             'role'      => $this->role->value,
             'is_active' => $this->is_active,
+            'is_online' => (bool) ($profile?->is_online ?? false),
+            'phone' => $profile?->phone,
+            'vehicle_type' => $profile?->vehicle_type,
+            'vehicle_number' => $profile?->vehicle_number,
+            'last_seen_at' => $profile?->last_seen_at?->toISOString(),
             'delivering_count' => $this->when(
                 $this->getAttribute('delivering_count') !== null,
                 fn () => $this->getAttribute('delivering_count')

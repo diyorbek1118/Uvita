@@ -11,6 +11,7 @@ Route::middleware('auth:api')->group(function (): void {
     Route::post('orders',                 [OrderController::class, 'store']);
     Route::get('orders/{id}',             [OrderController::class, 'show']);
     Route::delete('orders/{id}',          [OrderController::class, 'cancel']);
+    Route::get('orders/{id}/delivery-code', [OrderController::class, 'deliveryCode']);
     Route::post('orders/{id}/pay/retry',  [OrderController::class, 'payRetry']);
 });
 
@@ -31,10 +32,11 @@ Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(functi
 });
 
 // ─── Courier ─────────────────────────────────────────────────────────────────
-Route::middleware(['auth:sanctum', 'role.courier'])->prefix('courier')->group(function (): void {
+Route::middleware(['auth:sanctum', 'role.courier', 'throttle:courier-actions'])->prefix('courier')->group(function (): void {
     Route::get('orders',                [OrderController::class, 'courierOrders']);
     Route::get('orders/{id}',           [OrderController::class, 'courierShow']);
     Route::put('orders/{id}/accept',    [OrderController::class, 'accept']);
+    Route::put('orders/{id}/reject',    [OrderController::class, 'rejectAssignment']);
     Route::put('orders/{id}/delivered', [OrderController::class, 'markDelivered']);
     Route::put('orders/{id}/not-found', [OrderController::class, 'notFound']);
 });

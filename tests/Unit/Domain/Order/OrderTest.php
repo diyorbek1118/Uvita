@@ -18,21 +18,21 @@ class OrderTest extends TestCase
     private function makeOrder(OrderStatus $status = OrderStatus::PENDING, int $notFoundCount = 0, ?int $courierId = null): Order
     {
         return new Order(
-            id:             1,
-            userId:         10,
-            status:         $status,
-            address:        new DeliveryAddress('Toshkent', 'Yunusobod', 'Navoiy', '1'),
-            phone:          '+998901234567',
+            id: 1,
+            userId: 10,
+            status: $status,
+            address: new DeliveryAddress('Toshkent', 'Yunusobod', 'Navoiy', '1'),
+            phone: '+998901234567',
             phoneSecondary: null,
-            deliveryTime:   new DeliveryTime('Ertaga 14:00-18:00'),
-            serviceFee:     new Money(15000),
-            courierFee:     new Money(10000),
-            totalPrice:     new Money(100000),
-            grandTotal:     new Money(115000),
-            items:          [],
-            courierNote:    null,
-            courierId:      $courierId,
-            notFoundCount:  $notFoundCount,
+            deliveryTime: new DeliveryTime('Ertaga 14:00-18:00'),
+            serviceFee: new Money(15000),
+            courierFee: new Money(10000),
+            totalPrice: new Money(100000),
+            grandTotal: new Money(115000),
+            items: [],
+            courierNote: null,
+            courierId: $courierId,
+            notFoundCount: $notFoundCount,
         );
     }
 
@@ -106,12 +106,11 @@ class OrderTest extends TestCase
         $this->assertSame(5, $order->courierId);
     }
 
-    public function test_delivering_from_delivery_issue(): void
+    public function test_delivering_from_delivery_issue_throws(): void
     {
-        $order = $this->makeOrder(OrderStatus::DELIVERY_ISSUE);
-        $order->markDelivering();
+        $this->expectException(InvalidStatusTransitionException::class);
 
-        $this->assertSame(OrderStatus::DELIVERING, $order->status);
+        $this->makeOrder(OrderStatus::DELIVERY_ISSUE)->markDelivering();
     }
 
     public function test_delivering_from_invalid_status_throws(): void
@@ -169,12 +168,21 @@ class OrderTest extends TestCase
 
     // ─── resolveDeliveryIssue ─────────────────────────────────────────────────
 
-    public function test_resolve_reschedule_changes_to_delivering(): void
+    public function test_resolve_reschedule_returns_to_ready_for_new_assignment(): void
     {
         $order = $this->makeOrder(OrderStatus::DELIVERY_ISSUE);
-        $order->resolveDeliveryIssue('reschedule');
+        $order->resolveDeliveryIssue('reschedule', new DeliveryTime('2026-07-25 16:00'));
 
-        $this->assertSame(OrderStatus::DELIVERING, $order->status);
+        $this->assertSame(OrderStatus::READY_TO_DELIVER, $order->status);
+        $this->assertSame('2026-07-25 16:00', $order->deliveryTime->value);
+        $this->assertSame(0, $order->notFoundCount);
+    }
+
+    public function test_reschedule_requires_new_delivery_time(): void
+    {
+        $this->expectException(InvalidStatusTransitionException::class);
+
+        $this->makeOrder(OrderStatus::DELIVERY_ISSUE)->resolveDeliveryIssue('reschedule');
     }
 
     public function test_resolve_cancel_changes_to_cancelled(): void
@@ -196,7 +204,8 @@ class OrderTest extends TestCase
     {
         $this->expectException(InvalidStatusTransitionException::class);
 
-        $this->makeOrder(OrderStatus::DELIVERING)->resolveDeliveryIssue('reschedule');
+        $this->makeOrder(OrderStatus::DELIVERING)
+            ->resolveDeliveryIssue('reschedule', new DeliveryTime('2026-07-25 16:00'));
     }
 
     // ─── cancel ───────────────────────────────────────────────────────────────

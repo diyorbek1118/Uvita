@@ -7,6 +7,7 @@ namespace Modules\Payment\Application\Handlers;
 use Modules\Order\Domain\Enums\OrderStatus;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 use Modules\Payment\Application\Commands\CreatePaymentCommand;
+use Modules\Payment\Domain\Enums\PaymentProvider;
 use Modules\Payment\Domain\Enums\PaymentStatus;
 use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 
@@ -17,6 +18,14 @@ final class CreatePaymentHandler
     {
         // 1. Order topamiz
         $order = OrderModel::findOrFail($command->orderId);
+
+        if ($command->userId !== null && $order->user_id !== $command->userId) {
+            abort(404, 'Buyurtma topilmadi.');
+        }
+
+        if (PaymentProvider::tryFrom($command->provider) === null) {
+            abort(422, "Noto'g'ri to'lov usuli.");
+        }
 
         // 2. Status pending bo'lishi kerak
         if ($order->status !== OrderStatus::PENDING) {
@@ -39,7 +48,7 @@ final class CreatePaymentHandler
             }
 
             return [
-                'payment_id'  => $existing->id,
+                'payment_id' => $existing->id,
                 'payment_url' => $this->buildUrl($existing->provider->value, $command->orderId, $amount),
             ];
         }
@@ -48,8 +57,8 @@ final class CreatePaymentHandler
         $payment = PaymentModel::create([
             'order_id' => $command->orderId,
             'provider' => $command->provider,
-            'amount'   => $amount,
-            'status'   => PaymentStatus::PENDING->value,
+            'amount' => $amount,
+            'status' => PaymentStatus::PENDING->value,
         ]);
 
         // 6. URL generatsiya
@@ -63,33 +72,33 @@ final class CreatePaymentHandler
         return match ($provider) {
             'payme' => $this->buildPaymeUrl($orderId, $amount),
             'click' => $this->buildClickUrl($orderId, $amount),
-            'uzum'  => $this->buildUzumUrl($orderId, $amount),
+            'uzum' => $this->buildUzumUrl($orderId, $amount),
             default => '',
         };
     }
 
     private function buildPaymeUrl(int $orderId, int $amount): string
     {
-        $id     = (string) config('payment.payme.id', '');
-        $base   = (string) config('payment.payme.checkout', 'https://checkout.test.paycom.uz');
+        $id = (string) config('payment.payme.id', '');
+        $base = (string) config('payment.payme.checkout', 'https://checkout.test.paycom.uz');
         $params = "m={$id};ac.order_id={$orderId};a={$amount}";
 
-        return rtrim($base, '/') . '/' . base64_encode($params);
+        return rtrim($base, '/').'/'.base64_encode($params);
     }
 
     private function buildClickUrl(int $orderId, int $amount): string
     {
-        $base       = (string) config('payment.click.checkout', 'https://my.click.uz/services/pay');
-        $serviceId  = (string) config('payment.click.service_id', '');
+        $base = (string) config('payment.click.checkout', 'https://my.click.uz/services/pay');
+        $serviceId = (string) config('payment.click.service_id', '');
         $merchantId = (string) config('payment.click.merchant_id', '');
-        $amountSom  = $amount / 100; // tiyins → so'm (Click so'm qabul qiladi)
+        $amountSom = $amount / 100; // tiyins → so'm (Click so'm qabul qiladi)
 
         return "{$base}?service_id={$serviceId}&merchant_id={$merchantId}&amount={$amountSom}&transaction_param={$orderId}";
     }
 
     private function buildUzumUrl(int $orderId, int $amount): string
     {
-        $base      = (string) config('payment.uzum.checkout', 'https://secure.apelsin.uz/open-services/checkout');
+        $base = (string) config('payment.uzum.checkout', 'https://secure.apelsin.uz/open-services/checkout');
         $serviceId = (string) config('payment.uzum.service_id', '');
 
         return "{$base}?serviceId={$serviceId}&orderId={$orderId}&amount={$amount}";

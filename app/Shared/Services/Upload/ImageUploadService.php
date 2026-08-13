@@ -16,9 +16,10 @@ final class ImageUploadService
     public function store(UploadedFile $file, string $directory = 'products'): string
     {
         $name = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
+        $disk = (string) config('uploads.disk', 'public');
 
-        $path = $file->storeAs($directory, $name, 'public');
+        $path = $file->storeAs($directory, $name, $disk);
 
-        return Storage::disk('public')->url($path);
+        return Storage::disk($disk)->url($path);
     }
 }

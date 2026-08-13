@@ -15,8 +15,18 @@ final class GetAllStaffHandler
     {
         $builder = Staff::query()->latest();
 
+        $actor = auth('sanctum')->user();
+        if ($actor instanceof Staff && $actor->role === StaffRole::ADMIN) {
+            $builder->whereIn('role', [StaffRole::SELLER, StaffRole::MANAGER, StaffRole::COURIER]);
+        }
+
         if ($query->role !== null) {
-            $builder->where('role', StaffRole::from($query->role));
+            $role = StaffRole::tryFrom($query->role);
+            if ($role === null) {
+                abort(422, "Noto'g'ri xodim roli");
+            }
+
+            $builder->where('role', $role);
         }
 
         return $builder->paginate(20);

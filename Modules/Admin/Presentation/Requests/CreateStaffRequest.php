@@ -14,7 +14,7 @@ class CreateStaffRequest extends FormRequest
             'name'     => ['required', 'string', 'min:2', 'max:100'],
             'email'    => ['required', 'email', 'unique:staff,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role'     => ['required', 'in:manager,courier,admin,super_admin'],
+            'role'     => ['required', 'in:seller,manager,courier,admin,super_admin'],
         ];
     }
 }

@@ -5,8 +5,11 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureIsAdmin;
 use App\Http\Middleware\EnsureIsCourier;
 use App\Http\Middleware\EnsureIsManager;
+use App\Http\Middleware\EnsureIsSeller;
+use App\Http\Middleware\EnsureVerifiedSeller;
 use App\Http\Middleware\EnsureIsStaff;
 use App\Http\Middleware\EnsureIsSuperAdmin;
+use App\Http\Middleware\ForceJsonResponse;
 use App\Shared\Exceptions\DomainException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -23,18 +26,18 @@ use Modules\Payment\Domain\Exceptions\DuplicateTransactionException;
 use Modules\Payment\Domain\Exceptions\InvalidPaymentAmountException;
 use Modules\Payment\Domain\Exceptions\InvalidSignatureException;
 use Modules\Payment\Domain\Exceptions\PaymentNotFoundException;
+use Modules\Product\Domain\Exceptions\InsufficientStockException;
 use Modules\Review\Domain\Exceptions\OrderNotDeliveredException;
 use Modules\Review\Domain\Exceptions\ReviewAlreadyExistsException;
 use Modules\Review\Domain\Exceptions\ReviewNotFoundException;
-use Modules\Product\Domain\Exceptions\InsufficientStockException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web:      __DIR__ . '/../routes/web.php',
-        commands: __DIR__ . '/../routes/console.php',
-        health:   '/up',
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
         then: function (): void {
             // DDD modullari: Modules/*/Presentation/routes/api.php
             foreach (glob(base_path('Modules/*/Presentation/routes/api.php')) as $routeFile) {
@@ -45,18 +48,21 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->append(\App\Http\Middleware\ForceJsonResponse::class);
+        $middleware->append(ForceJsonResponse::class);
+        $middleware->api(append: ['throttle:api']);
 
         // ngrok kabi tashqi proxy orqali https bo'lib kirgan so'rovlarda
         // X-Forwarded-Proto to'g'ri hisoblanishi uchun (dev muhit uchun).
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'role.manager'    => EnsureIsManager::class,
-            'role.courier'    => EnsureIsCourier::class,
-            'role.admin'      => EnsureIsAdmin::class,
+            'role.manager' => EnsureIsManager::class,
+            'role.seller' => EnsureIsSeller::class,
+            'seller.verified' => EnsureVerifiedSeller::class,
+            'role.courier' => EnsureIsCourier::class,
+            'role.admin' => EnsureIsAdmin::class,
             'role.super_admin' => EnsureIsSuperAdmin::class,
-            'role.staff'      => EnsureIsStaff::class,
+            'role.staff' => EnsureIsStaff::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -118,10 +124,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (QueryException $e) {
             if (config('app.debug')) {
                 return response()->json([
-                    'message'   => $e->getMessage(),
+                    'message' => $e->getMessage(),
                     'exception' => get_class($e),
-                    'file'      => $e->getFile(),
-                    'line'      => $e->getLine(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ], 500);
             }
 
@@ -145,7 +151,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (ValidationException $e) {
             return response()->json([
                 'message' => collect($e->errors())->flatten()->first() ?? "Ma'lumotlar noto'g'ri.",
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
         });
 
@@ -162,13 +168,13 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Kutilmagan har qanday xatolik
-        $exceptions->render(function (\Throwable $e) {
+        $exceptions->render(function (Throwable $e) {
             if (config('app.debug')) {
                 return response()->json([
-                    'message'   => $e->getMessage(),
+                    'message' => $e->getMessage(),
                     'exception' => get_class($e),
-                    'file'      => $e->getFile(),
-                    'line'      => $e->getLine(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ], 500);
             }
 

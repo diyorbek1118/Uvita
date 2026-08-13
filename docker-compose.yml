@@ -1,33 +1,51 @@
+x-app-environment: &app-environment
+  QUEUE_CONNECTION: redis
+  QUEUE_AFTER_COMMIT: "true"
+  REDIS_HOST: redis
+  CACHE_STORE: redis
+
 services:
   app:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    container_name: app
     restart: unless-stopped
     working_dir: /var/www
-    # Bind-mount tufayli host fayllari www-data'ga tegishli emas —
-    # har boshlanishda storage'ni yoziladigan qilib qo'yamiz
-    command:
-      - sh
-      - -c
-      - "chmod -R 777 /var/www/storage /var/www/bootstrap/cache && exec php-fpm"
     volumes:
       - .:/var/www
-      # PHP upload hajm limitlarini bevosita container'ga ulaymiz (rebuild shart emas)
-      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+    environment: *app-environment
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan queue:work redis --sleep=1 --tries=3 --timeout=60 --max-time=3600
+    stop_grace_period: 70s
+    volumes:
+      - .:/var/www
+    environment: *app-environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 
   nginx:
     image: nginx:alpine
-    container_name: nginx
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "127.0.0.1:8000:80"
     volumes:
       - .:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
@@ -38,28 +56,33 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: mysql
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_USER: ${DB_USERNAME}
-    ports:
-      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - app-network
 
   redis:
     image: redis:alpine
-    container_name: redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - app-network
 

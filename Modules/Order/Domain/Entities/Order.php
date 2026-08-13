@@ -14,35 +14,41 @@ use Modules\Order\Domain\ValueObjects\Money;
 class Order
 {
     public private(set) OrderStatus $status;
-    public private(set) ?int        $courierId;
-    public private(set) int         $notFoundCount;
-    public private(set) ?string     $courierNote;
+
+    public private(set) ?int $courierId;
+
+    public private(set) int $notFoundCount;
+
+    public private(set) ?string $courierNote;
+
+    public private(set) DeliveryTime $deliveryTime;
 
     /** @param OrderItem[] $items */
     public function __construct(
-        public readonly ?int            $id,
-        public readonly int             $userId,
-        OrderStatus                     $status,
+        public readonly ?int $id,
+        public readonly int $userId,
+        OrderStatus $status,
         public readonly DeliveryAddress $address,
-        public readonly string          $phone,
-        public readonly ?string         $phoneSecondary,
-        public readonly DeliveryTime    $deliveryTime,
-        public readonly Money           $serviceFee,   // 15% xizmat haqi (mijoz to'laydi)
-        public readonly Money           $courierFee,   // pog'onali kuryer haqi (ichki; mijozga ko'rinmaydi)
-        public readonly Money           $totalPrice,
-        public readonly Money           $grandTotal,
-        public readonly array           $items,
-        public readonly ?float          $lat = null,       // geokodlangan manzil
-        public readonly ?float          $lng = null,       // geokodlangan manzil
-        public readonly ?string         $geoLevel = null,  // 'address' | 'region'
-        ?string                         $courierNote = null,
-        ?int                            $courierId = null,
-        int                             $notFoundCount = 0,
+        public readonly string $phone,
+        public readonly ?string $phoneSecondary,
+        DeliveryTime $deliveryTime,
+        public readonly Money $serviceFee,   // 15% xizmat haqi (mijoz to'laydi)
+        public readonly Money $courierFee,   // pog'onali kuryer haqi (ichki; mijozga ko'rinmaydi)
+        public readonly Money $totalPrice,
+        public readonly Money $grandTotal,
+        public readonly array $items,
+        ?string $courierNote = null,
+        ?int $courierId = null,
+        int $notFoundCount = 0,
+        public readonly ?float $deliveryLatitude = null,
+        public readonly ?float $deliveryLongitude = null,
+        public readonly ?string $geoLevel = null,
     ) {
-        $this->status        = $status;
-        $this->courierId     = $courierId;
+        $this->status = $status;
+        $this->courierId = $courierId;
         $this->notFoundCount = $notFoundCount;
-        $this->courierNote   = $courierNote;
+        $this->courierNote = $courierNote;
+        $this->deliveryTime = $deliveryTime;
     }
 
     public function markAsPaid(): void
@@ -80,9 +86,9 @@ class Order
 
     public function markDelivering(?int $courierId = null): void
     {
-        if (!in_array($this->status, [OrderStatus::READY_TO_DELIVER, OrderStatus::DELIVERY_ISSUE], true)) {
+        if ($this->status !== OrderStatus::READY_TO_DELIVER) {
             throw new InvalidStatusTransitionException(
-                "Yetkazish faqat 'ready_to_deliver' yoki 'delivery_issue' statusda boshlanadi."
+                "Yetkazish faqat 'ready_to_deliver' statusda boshlanadi."
             );
         }
         if ($courierId !== null) {
@@ -103,6 +109,12 @@ class Order
 
     public function incrementNotFound(int $maxAttempts = 3): void
     {
+        if ($this->status !== OrderStatus::DELIVERING) {
+            throw new InvalidStatusTransitionException(
+                "Topilmadi faqat 'delivering' statusda belgilanadi."
+            );
+        }
+
         $this->notFoundCount++;
         if ($this->notFoundCount >= $maxAttempts) {
             $this->markDeliveryIssue();
@@ -121,10 +133,27 @@ class Order
 
     public function assignCourier(int $courierId): void
     {
+        if ($this->status !== OrderStatus::READY_TO_DELIVER) {
+            throw new InvalidStatusTransitionException(
+                "Kuryer faqat 'ready_to_deliver' statusdagi buyurtmaga tayinlanadi."
+            );
+        }
+
         $this->courierId = $courierId;
     }
 
-    public function resolveDeliveryIssue(string $action): void
+    public function unassignCourier(int $courierId): void
+    {
+        if ($this->status !== OrderStatus::READY_TO_DELIVER || $this->courierId !== $courierId) {
+            throw new InvalidStatusTransitionException(
+                "Tayinlovni faqat tayyor buyurtmaning o'z kuryeri rad eta oladi."
+            );
+        }
+
+        $this->courierId = null;
+    }
+
+    public function resolveDeliveryIssue(string $action, ?DeliveryTime $deliveryTime = null): void
     {
         if ($this->status !== OrderStatus::DELIVERY_ISSUE) {
             throw new InvalidStatusTransitionException(
@@ -132,10 +161,23 @@ class Order
             );
         }
         $this->status = match ($action) {
-            'reschedule' => OrderStatus::DELIVERING,
-            'cancel'     => OrderStatus::CANCELLED,
-            default      => throw new InvalidStatusTransitionException("Noto'g'ri amal: {$action}"),
+            'reschedule' => $this->reschedule($deliveryTime),
+            'cancel' => OrderStatus::CANCELLED,
+            default => throw new InvalidStatusTransitionException("Noto'g'ri amal: {$action}"),
         };
+    }
+
+    private function reschedule(?DeliveryTime $deliveryTime): OrderStatus
+    {
+        if ($deliveryTime === null) {
+            throw new InvalidStatusTransitionException('Qayta yetkazish vaqti majburiy.');
+        }
+
+        $this->deliveryTime = $deliveryTime;
+        $this->notFoundCount = 0;
+        $this->courierId = null;
+
+        return OrderStatus::READY_TO_DELIVER;
     }
 
     public function cancel(): void

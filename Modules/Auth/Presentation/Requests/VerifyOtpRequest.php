@@ -18,7 +18,7 @@ final class VerifyOtpRequest extends FormRequest
     {
         return [
             'phone' => ['required', 'string', 'regex:' . PhoneNumber::PATTERN],
-            'code'  => ['required', 'string', 'digits:4'],
+            'code'  => ['required', 'string', 'regex:/^(?:\d{4}|\d{6})$/'],
         ];
     }
 
@@ -28,7 +28,7 @@ final class VerifyOtpRequest extends FormRequest
             'phone.required' => "Telefon raqam kiritilishi shart.",
             'phone.regex'    => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
             'code.required'  => "Tasdiqlash kodi kiritilishi shart.",
-            'code.digits'    => "Tasdiqlash kodi 4 ta raqamdan iborat bo'lishi kerak.",
+            'code.regex'     => "Tasdiqlash kodi 4 yoki 6 ta raqamdan iborat bo'lishi kerak.",
         ];
     }
 }

@@ -22,6 +22,6 @@ final class GetCourierProfileHandler
             abort(403, 'Bu foydalanuvchi kuryer emas.');
         }
 
-        return $courier;
+        return $courier->load('courierProfile');
     }
 }

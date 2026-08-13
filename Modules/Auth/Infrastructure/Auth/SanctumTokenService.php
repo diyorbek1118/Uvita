@@ -14,6 +14,8 @@ final class SanctumTokenService implements TokenServiceInterface
     {
         $model = UserModel::findOrFail($user->id);
 
-        return $model->createToken('auth_token')->plainTextToken;
+        $expiresAt = now()->addDays((int) config('auth.customer_token_expiration_days', 30));
+
+        return $model->createToken('auth_token', ['*'], $expiresAt)->plainTextToken;
     }
 }

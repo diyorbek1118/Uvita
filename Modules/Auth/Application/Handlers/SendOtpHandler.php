@@ -21,8 +21,8 @@ final class SendOtpHandler
 
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
-        private readonly UserRepositoryInterface       $userRepository,
-        private readonly SettingService                $settingService,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly SettingService $settingService,
     ) {}
 
     public function handle(SendOtpCommand $command): void
@@ -30,7 +30,6 @@ final class SendOtpHandler
         // 1. PhoneNumber VO formatni tekshiradi
         $phone = new PhoneNumber($command->dto->phone);
 
-        // 1b. Purpose bo'yicha oldindan tekshirish
         $existingUser = $this->userRepository->findByPhone($phone->value);
         if (in_array($command->dto->purpose, ['register', 'change_phone'], true) && $existingUser !== null) {
             throw new DomainException("Bu raqam allaqachon ro'yxatdan o'tgan. Tizimga parol bilan kiring.");
@@ -61,8 +60,8 @@ final class SendOtpHandler
 
         // 5. OtpAttempt entity yaratish
         $attempt = OtpAttempt::create(
-            phone:     $phone->value,
-            code:      $code,
+            phone: $phone->value,
+            code: $code,
             expiresAt: new DateTimeImmutable("+{$ttl} seconds"),
         );
 
@@ -71,9 +70,7 @@ final class SendOtpHandler
 
         // 7. SMS ni queue orqali async yuborish
         $message = "Tasdiqlash kodi: {$code}. {$ttl} soniya ichida foydalaning.";
-        
-        \Illuminate\Support\Facades\Log::channel('single')->info("OTP yuborildi - Raqam: {$phone->value}, Kod: {$code}");
-        
+
         dispatch(new SendSmsJob($phone->value, $message));
     }
 }

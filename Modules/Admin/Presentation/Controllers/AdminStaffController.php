@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Admin\Presentation\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Admin\Application\Commands\CreateStaffCommand;
 use Modules\Admin\Application\Commands\DeleteStaffCommand;
@@ -27,12 +28,12 @@ use Modules\Admin\Presentation\Resources\StaffResource;
 final class AdminStaffController extends Controller
 {
     public function __construct(
-        private readonly GetAllStaffHandler   $getAllHandler,
-        private readonly GetStaffByIdHandler  $getByIdHandler,
-        private readonly CreateStaffHandler   $createHandler,
-        private readonly UpdateStaffHandler   $updateHandler,
-        private readonly DeleteStaffHandler   $deleteHandler,
-        private readonly ToggleStaffHandler   $toggleHandler,
+        private readonly GetAllStaffHandler $getAllHandler,
+        private readonly GetStaffByIdHandler $getByIdHandler,
+        private readonly CreateStaffHandler $createHandler,
+        private readonly UpdateStaffHandler $updateHandler,
+        private readonly DeleteStaffHandler $deleteHandler,
+        private readonly ToggleStaffHandler $toggleHandler,
     ) {}
 
     public function index(): JsonResponse
@@ -74,7 +75,7 @@ final class AdminStaffController extends Controller
             ->response();
     }
 
-    public function destroy(int $id): \Illuminate\Http\Response
+    public function destroy(int $id): Response
     {
         $this->deleteHandler->handle(new DeleteStaffCommand($id));
 
@@ -83,7 +84,7 @@ final class AdminStaffController extends Controller
 
     public function toggleActive(int $id): JsonResponse
     {
-        $staff   = $this->toggleHandler->handle(new ToggleStaffCommand($id));
+        $staff = $this->toggleHandler->handle(new ToggleStaffCommand($id));
         $message = $staff->is_active ? 'Xodim faollashtirildi' : 'Xodim bloklandi';
 
         return StaffResource::make($staff)

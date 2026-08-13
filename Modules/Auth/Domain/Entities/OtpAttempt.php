@@ -9,40 +9,40 @@ use DateTimeImmutable;
 final class OtpAttempt
 {
     public function __construct(
-        public readonly ?int               $id,
-        public readonly string             $phone,
-        public readonly string             $code,
-        public private(set) int            $attemptsCount,
+        public readonly ?int $id,
+        public readonly string $phone,
+        public readonly string $code,
+        public private(set) int $attemptsCount,
         public private(set) ?DateTimeImmutable $blockedUntil,
-        public readonly DateTimeImmutable  $expiresAt,
-        public private(set) bool           $isVerified,
+        public readonly DateTimeImmutable $expiresAt,
+        public private(set) bool $isVerified,
     ) {}
 
     public static function create(
-        string            $phone,
-        string            $code,
+        string $phone,
+        string $code,
         DateTimeImmutable $expiresAt,
     ): self {
         return new self(
-            id:            null,
-            phone:         $phone,
-            code:          $code,
+            id: null,
+            phone: $phone,
+            code: $code,
             attemptsCount: 0,
-            blockedUntil:  null,
-            expiresAt:     $expiresAt,
-            isVerified:    false,
+            blockedUntil: null,
+            expiresAt: $expiresAt,
+            isVerified: false,
         );
     }
 
     public function isBlocked(): bool
     {
         return $this->blockedUntil !== null
-            && $this->blockedUntil > new DateTimeImmutable();
+            && $this->blockedUntil > new DateTimeImmutable;
     }
 
     public function isExpired(): bool
     {
-        return $this->expiresAt < new DateTimeImmutable();
+        return $this->expiresAt < new DateTimeImmutable;
     }
 
     public function isValid(string $code): bool
@@ -50,7 +50,17 @@ final class OtpAttempt
         return ! $this->isExpired()
             && ! $this->isBlocked()
             && ! $this->isVerified
-            && hash_equals($this->code, $code);
+            && $this->matchesCode($code);
+    }
+
+    private function matchesCode(string $code): bool
+    {
+        if (password_get_info($this->code)['algo'] !== null) {
+            return password_verify($code, $this->code);
+        }
+
+        // Eski, muddati hali tugamagan OTP yozuvlari uchun moslik.
+        return hash_equals($this->code, $code);
     }
 
     public function incrementAttempts(int $maxAttempts = 5, int $blockMinutes = 10): void

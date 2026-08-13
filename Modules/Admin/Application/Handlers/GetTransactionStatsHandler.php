@@ -10,10 +10,12 @@ final class GetTransactionStatsHandler
 {
     public function handle(): array
     {
-        $totals    = DB::table('payments')->selectRaw('SUM(amount) as total_amount, COUNT(*) as total_count')->first();
-        $paid      = DB::table('payments')->where('status', 'paid')->selectRaw('SUM(amount) as paid_amount, COUNT(*) as paid_count')->first();
-        $failed    = DB::table('payments')->where('status', 'failed')->count();
+        $totals = DB::table('payments')->selectRaw('SUM(amount) as total_amount, COUNT(*) as total_count')->first();
+        $paid = DB::table('payments')->where('status', 'paid')->selectRaw('SUM(amount) as paid_amount, COUNT(*) as paid_count')->first();
+        $failed = DB::table('payments')->where('status', 'failed')->count();
         $cancelled = DB::table('payments')->where('status', 'cancelled')->count();
+        $refundPending = DB::table('payments')->where('status', 'refund_pending')->count();
+        $refunded = DB::table('payments')->where('status', 'refunded')->count();
 
         $byProviderRaw = DB::table('payments')
             ->where('status', 'paid')
@@ -26,19 +28,21 @@ final class GetTransactionStatsHandler
         foreach (['payme', 'click', 'uzum'] as $provider) {
             $row = $byProviderRaw->get($provider);
             $byProvider[$provider] = [
-                'count'  => (int) ($row?->count  ?? 0),
+                'count' => (int) ($row?->count ?? 0),
                 'amount' => (int) ($row?->amount ?? 0),
             ];
         }
 
         return [
-            'total_amount'    => (int) ($totals?->total_amount ?? 0),
-            'total_count'     => (int) ($totals?->total_count  ?? 0),
-            'paid_amount'     => (int) ($paid?->paid_amount    ?? 0),
-            'paid_count'      => (int) ($paid?->paid_count     ?? 0),
-            'failed_count'    => $failed,
+            'total_amount' => (int) ($totals?->total_amount ?? 0),
+            'total_count' => (int) ($totals?->total_count ?? 0),
+            'paid_amount' => (int) ($paid?->paid_amount ?? 0),
+            'paid_count' => (int) ($paid?->paid_count ?? 0),
+            'failed_count' => $failed,
             'cancelled_count' => $cancelled,
-            'by_provider'     => $byProvider,
+            'refund_pending_count' => $refundPending,
+            'refunded_count' => $refunded,
+            'by_provider' => $byProvider,
         ];
     }
 }

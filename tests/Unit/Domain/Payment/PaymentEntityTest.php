@@ -14,12 +14,12 @@ class PaymentEntityTest extends TestCase
     private function makePayment(PaymentStatus $status = PaymentStatus::PENDING): Payment
     {
         return new Payment(
-            id:            1,
-            orderId:       10,
-            provider:      PaymentProvider::PAYME,
+            id: 1,
+            orderId: 10,
+            provider: PaymentProvider::PAYME,
             transactionId: null,
-            amount:        150000,
-            status:        $status,
+            amount: 150000,
+            status: $status,
         );
     }
 
@@ -77,16 +77,32 @@ class PaymentEntityTest extends TestCase
         $this->assertSame(PaymentStatus::CANCELLED, $payment->status);
     }
 
+    public function test_request_refund_sets_refund_pending_status(): void
+    {
+        $payment = $this->makePayment(PaymentStatus::PAID);
+        $payment->requestRefund();
+
+        $this->assertSame(PaymentStatus::REFUND_PENDING, $payment->status);
+    }
+
+    public function test_mark_as_refunded_sets_refunded_status(): void
+    {
+        $payment = $this->makePayment(PaymentStatus::REFUND_PENDING);
+        $payment->markAsRefunded();
+
+        $this->assertSame(PaymentStatus::REFUNDED, $payment->status);
+    }
+
     // ─── provider / amount ────────────────────────────────────────────────────
 
     public function test_provider_and_amount_are_stored(): void
     {
         $payment = new Payment(
-            id:            null,
-            orderId:       5,
-            provider:      PaymentProvider::CLICK,
+            id: null,
+            orderId: 5,
+            provider: PaymentProvider::CLICK,
             transactionId: null,
-            amount:        200000,
+            amount: 200000,
         );
 
         $this->assertSame(PaymentProvider::CLICK, $payment->provider);

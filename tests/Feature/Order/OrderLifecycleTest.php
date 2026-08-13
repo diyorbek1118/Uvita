@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Order;
 
+use App\Jobs\ClearCartJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,6 @@ use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
-use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\User\Infrastructure\Persistence\Models\User;
 use Tests\Feature\Concerns\SeedsSettings;
@@ -22,9 +22,11 @@ class OrderLifecycleTest extends TestCase
 {
     use RefreshDatabase, SeedsSettings;
 
-    private User     $customer;
+    private User $customer;
+
     private Category $category;
-    private Product  $product;
+
+    private Product $product;
 
     protected function setUp(): void
     {
@@ -36,14 +38,14 @@ class OrderLifecycleTest extends TestCase
 
         $this->customer = User::create(['phone' => '+998901234567', 'name' => 'Ali']);
         $this->category = Category::create(['name' => 'Test', 'slug' => 'test']);
-        $this->product  = Product::create([
-            'name'        => 'Mahsulot',
-            'slug'        => 'mahsulot',
+        $this->product = Product::create([
+            'name' => 'Mahsulot',
+            'slug' => 'mahsulot',
             'description' => 'Tavsif',
-            'price'       => 30000,
-            'stock'       => 10,
-            'status'      => 'active',
-            'images'      => [],
+            'price' => 30000,
+            'stock' => 10,
+            'status' => 'active',
+            'images' => [],
             'category_id' => $this->category->id,
         ]);
     }
@@ -58,10 +60,10 @@ class OrderLifecycleTest extends TestCase
     private function asStaff(StaffRole $role): static
     {
         $staff = Staff::create([
-            'name'      => $role->value,
-            'email'     => "{$role->value}@uvita.uz",
-            'password'  => Hash::make('password'),
-            'role'      => $role->value,
+            'name' => $role->value,
+            'email' => "{$role->value}@uvita.uz",
+            'password' => Hash::make('password'),
+            'role' => $role->value,
             'is_active' => true,
         ]);
         $token = $staff->createToken('test')->plainTextToken;
@@ -72,16 +74,16 @@ class OrderLifecycleTest extends TestCase
     private function validOrderPayload(): array
     {
         return [
-            'items'           => [['product_id' => $this->product->id, 'quantity' => 2]],
-            'address'         => [
-                'region'   => 'Toshkent',
+            'items' => [['product_id' => $this->product->id, 'quantity' => 2]],
+            'address' => [
+                'region' => 'Toshkent',
                 'district' => 'Yunusobod',
-                'street'   => 'Navoiy',
-                'house'    => '1',
+                'street' => 'Navoiy',
+                'house' => '1',
             ],
-            'phone'           => '+998901234567',
-            'delivery_time'   => 'Ertaga 14:00-18:00',
-            'payment_method'  => 'payme',
+            'phone' => '+998901234567',
+            'delivery_time' => 'Ertaga 14:00-18:00',
+            'payment_method' => 'payme',
         ];
     }
 
@@ -100,7 +102,7 @@ class OrderLifecycleTest extends TestCase
         $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
 
         $this->assertDatabaseHas('products', [
-            'id'    => $this->product->id,
+            'id' => $this->product->id,
             'stock' => 10,
         ]);
     }
@@ -109,13 +111,13 @@ class OrderLifecycleTest extends TestCase
     {
         $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
 
-        Queue::assertPushed(\App\Jobs\ClearCartJob::class);
+        Queue::assertPushed(ClearCartJob::class);
     }
 
     public function test_create_order_requires_items(): void
     {
-        $payload           = $this->validOrderPayload();
-        $payload['items']  = [];
+        $payload = $this->validOrderPayload();
+        $payload['items'] = [];
 
         $response = $this->asCustomer()->postJson('/api/orders', $payload);
 
@@ -124,7 +126,7 @@ class OrderLifecycleTest extends TestCase
 
     public function test_create_order_with_insufficient_stock_returns_422(): void
     {
-        $payload                    = $this->validOrderPayload();
+        $payload = $this->validOrderPayload();
         $payload['items'][0]['quantity'] = 100;
 
         $response = $this->asCustomer()->postJson('/api/orders', $payload);
@@ -142,8 +144,8 @@ class OrderLifecycleTest extends TestCase
     public function test_order_below_minimum_amount_is_rejected(): void
     {
         // 1 x 30 000 = 30 000 < 50 000 (min_order_amount)
-        $payload                          = $this->validOrderPayload();
-        $payload['items'][0]['quantity']  = 1;
+        $payload = $this->validOrderPayload();
+        $payload['items'][0]['quantity'] = 1;
 
         $response = $this->asCustomer()->postJson('/api/orders', $payload);
 
@@ -187,6 +189,10 @@ class OrderLifecycleTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'status' => 'cancelled',
+        ]);
     }
 
     public function test_customer_cannot_cancel_paid_order(): void
@@ -205,7 +211,7 @@ class OrderLifecycleTest extends TestCase
         $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
         $order = OrderModel::first();
 
-        $other    = User::create(['phone' => '+998901234568', 'name' => 'Vali']);
+        $other = User::create(['phone' => '+998901234568', 'name' => 'Vali']);
         $response = $this->actingAs($other, 'api')
             ->deleteJson("/api/orders/{$order->id}");
 
@@ -262,10 +268,31 @@ class OrderLifecycleTest extends TestCase
         $order->update(['status' => 'delivery_issue']);
 
         $response = $this->asStaff(StaffRole::ADMIN)
-            ->putJson("/api/admin/orders/{$order->id}/resolve-issue", ['action' => 'reschedule']);
+            ->putJson("/api/admin/orders/{$order->id}/resolve-issue", [
+                'action' => 'reschedule',
+                'delivery_time' => '2026-07-25 16:00',
+            ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'delivering']);
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'ready_to_deliver',
+            'courier_id' => null,
+            'delivery_time' => '2026-07-25 16:00',
+            'not_found_count' => 0,
+        ]);
+    }
+
+    public function test_reschedule_requires_new_delivery_time(): void
+    {
+        $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
+        $order = OrderModel::firstOrFail();
+        $order->update(['status' => 'delivery_issue']);
+
+        $this->asStaff(StaffRole::ADMIN)
+            ->putJson("/api/admin/orders/{$order->id}/resolve-issue", ['action' => 'reschedule'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('delivery_time');
     }
 
     public function test_admin_can_resolve_delivery_issue_cancel(): void

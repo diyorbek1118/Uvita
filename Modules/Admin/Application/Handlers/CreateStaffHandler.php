@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Modules\Admin\Application\Commands\CreateStaffCommand;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierProfile;
 
 final class CreateStaffHandler
 {
@@ -19,7 +20,7 @@ final class CreateStaffHandler
         $actor = auth('sanctum')->user();
         if ($actor instanceof Staff
             && $actor->role === StaffRole::ADMIN
-            && !in_array($dto->role, [StaffRole::MANAGER, StaffRole::COURIER], true)) {
+            && !in_array($dto->role, [StaffRole::SELLER, StaffRole::MANAGER, StaffRole::COURIER], true)) {
             abort(403, "Admin faqat menejer yoki kuryer yarata oladi");
         }
 
@@ -27,12 +28,18 @@ final class CreateStaffHandler
             abort(422, "Bu email allaqachon ro'yxatdan o'tgan");
         }
 
-        return Staff::create([
+        $staff = Staff::create([
             'name'      => $dto->name,
             'email'     => $dto->email,
             'password'  => Hash::make($dto->password),
             'role'      => $dto->role,
             'is_active' => true,
         ]);
+
+        if ($staff->role === StaffRole::COURIER) {
+            CourierProfile::firstOrCreate(['courier_id' => $staff->id]);
+        }
+
+        return $staff->load('courierProfile');
     }
 }

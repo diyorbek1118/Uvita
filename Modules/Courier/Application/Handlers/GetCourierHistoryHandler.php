@@ -14,8 +14,8 @@ final class GetCourierHistoryHandler
     {
         return OrderModel::where('courier_id', $query->courierId)
             ->where('status', 'delivered')
-            ->with(['items.product'])
-            ->latest()
+            ->with(['items.product', 'deliveryAssignments', 'deliveryAttempts'])
+            ->latest('delivered_at')
             ->paginate(15);
     }
 }

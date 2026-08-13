@@ -77,6 +77,7 @@ final class EloquentProductRepository implements ProductRepositoryInterface
             rejectionReason: $model->rejection_reason,
             createdAt:       $model->created_at?->toDateTimeImmutable(),
             updatedAt:       $model->updated_at?->toDateTimeImmutable(),
+            minimumOrderQuantity: $model->minimum_order_quantity ?? 1,
         );
     }
 }

@@ -7,6 +7,7 @@ namespace Modules\Admin\Presentation\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Modules\Admin\Application\Handlers\GetDashboardOrderDetailHandler;
 use Modules\Admin\Application\Handlers\GetDashboardOrdersHandler;
 use Modules\Admin\Application\Queries\GetDashboardOrderDetailQuery;
@@ -15,23 +16,32 @@ use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Admin\Presentation\Resources\DashboardOrderDetailResource;
 use Modules\Admin\Presentation\Resources\DashboardOrderResource;
+use Modules\Order\Domain\Enums\OrderStatus;
 
 final class DashboardOrderController extends Controller
 {
     public function __construct(
-        private readonly GetDashboardOrdersHandler       $listHandler,
-        private readonly GetDashboardOrderDetailHandler  $detailHandler,
+        private readonly GetDashboardOrdersHandler $listHandler,
+        private readonly GetDashboardOrderDetailHandler $detailHandler,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'status' => ['nullable', Rule::enum(OrderStatus::class)],
+            'search' => ['nullable', 'string', 'max:100'],
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'per_page' => ['nullable', 'integer', 'between:1,100'],
+        ]);
+
         $orders = $this->listHandler->handle(new GetDashboardOrdersQuery(
             managerScope: $this->isManager(),
-            status:       $request->query('status'),
-            search:       $request->query('search'),
-            dateFrom:     $request->query('date_from'),
-            dateTo:       $request->query('date_to'),
-            perPage:      (int) $request->query('per_page', 20),
+            status: $request->query('status'),
+            search: $request->query('search'),
+            dateFrom: $request->query('date_from'),
+            dateTo: $request->query('date_to'),
+            perPage: (int) $request->query('per_page', 20),
         ));
 
         return DashboardOrderResource::collection($orders)->response();
@@ -40,7 +50,7 @@ final class DashboardOrderController extends Controller
     public function show(int $order): JsonResponse
     {
         $result = $this->detailHandler->handle(new GetDashboardOrderDetailQuery(
-            id:           $order,
+            id: $order,
             managerScope: $this->isManager(),
         ));
 

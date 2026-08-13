@@ -1,0 +1,104 @@
+x-app-environment: &app-environment
+  APP_ENV: production
+  APP_DEBUG: "false"
+  QUEUE_CONNECTION: redis
+  QUEUE_AFTER_COMMIT: "true"
+  REDIS_HOST: redis
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+
+x-app-base: &app-base
+  image: uvita-backend:${APP_IMAGE_TAG:-latest}
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile.prod
+  env_file:
+    - ${PRODUCTION_ENV_FILE:-.env.production}
+  environment: *app-environment
+  restart: unless-stopped
+  working_dir: /var/www
+  volumes:
+    - app-storage:/var/www/storage
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - app-network
+
+services:
+  app:
+    <<: *app-base
+
+  queue:
+    <<: *app-base
+    command: php artisan queue:work redis --sleep=1 --tries=3 --timeout=60 --max-time=3600
+    stop_grace_period: 70s
+
+  scheduler:
+    <<: *app-base
+    command: php artisan schedule:work
+
+  nginx:
+    image: uvita-nginx:${APP_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile.prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:80"
+    volumes:
+      - app-storage:/var/www/storage:ro
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - ${PRODUCTION_ENV_FILE:-.env.production}
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  app-storage:
+  mysql-data:
+  redis-data:

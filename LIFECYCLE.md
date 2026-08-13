@@ -1,10 +1,87 @@
-# Uvita — To'liq Buyurtma Life Cycle (v2)
+# Uvita — B2B va B2B2C Marketplace Life Cycle (v4)
 
 > Ushbu hujjat platformadagi barcha ishtirokchilarning harakatlari,
 > tizim ichidagi oqimlar, status o'zgarishlari va ruxsatlar tizimini
 > to'liq va aniq tasvirlaydi.
 >
-> **Versiya:** 2.0
+> **Versiya:** 4.0
+>
+> **v3 yangilanishi:** kuryer smenasi, tayinlovni qabul/rad etish,
+> GPS nuqtasi, yetkazish PIN tasdig'i, urinishlar auditi va qayta
+> tayinlash oqimi aniq belgilandi.
+
+> **v4 yangilanishi:** platforma fermer/dehqon mahsulotlarini professional
+> sotuvchilar orqali biznes xaridorlar va customerlarga yetkazadigan B2B/B2B2C
+> modeliga o'tdi. Seller profili, mahsulot media talablari, komissiya kalkulyatori
+> va versiyalangan moderatsiya qo'shildi.
+
+---
+
+## B2B / B2B2C Yo'nalishi
+
+```
+Dehqon / fermer → Seller → Uvita moderatsiya → Market
+                                             ├── B2B xaridor
+                                             └── B2C customer
+```
+
+- `Seller` — mahsulot manbasi, narxi, qoldig'i va haqiqiy mediasini boshqaradi.
+- `Manager` — buyurtmani operatsion qabul qilish va yig'ishni davom ettiradi.
+- `Admin / Super Admin` — seller profilini va har bir mahsulot versiyasini tasdiqlaydi.
+- Seller profili tasdiqlanmaguncha mahsulot moderatsiyasiga yubora olmaydi.
+
+### Seller mahsulot qo'shish formasi
+
+Majburiy maydonlar:
+
+```
+Mahsulot nomi, kategoriya, batafsil tavsif
+Fermer/xo'jalik nomi va kelib chiqish hududi
+O'lchov birligi: kg | tonna | dona | quti | bog'
+Ombordagi qoldiq va minimal buyurtma miqdori
+Sotuv narxi
+4–10 ta haqiqiy rasm; bittasi asosiy
+Kamida 1 ta haqiqiy video
+Komissiya va moderatsiya shartlariga rozilik
+```
+
+Media cheklovlari:
+
+```
+Rasm: JPG/JPEG/PNG/WEBP, har biri max 5 MB, kamida 800×800 px
+Video: MP4/MOV/WEBM, max 50 MB
+```
+
+### Seller narxi va sof tushumi
+
+Seller kiritgan narxdan server quyidagi snapshotni hisoblaydi:
+
+```
+Platforma fee: 10%
+Kuryer fee:     5%
+Soliq:          1%
+To'lov tizimi:  3%
+Seller net:    81%
+```
+
+Masalan, narx `100 000 so'm` bo'lsa seller sof `81 000 so'm` oladi.
+Foizlar `config/seller.php` va environment orqali boshqariladi; har moderatsiya
+versiyasida hisob snapshot sifatida saqlanadi.
+
+### Versiyalangan moderatsiya
+
+```
+Yangi mahsulot → inactive + revision:pending
+Admin approve  → revision:approved + product:active → marketda ko'rinadi
+Admin reject   → revision:rejected + sabab → sellerga ko'rinadi
+
+Active mahsulot tahriri → yangi revision:pending
+Market                  → avvalgi approved_version ko'rinishda qoladi
+Admin approve           → yangi versiya atomik tarzda marketga chiqadi
+```
+
+Shu sabab seller tahriri moderatsiyadan o'tmaguncha customer va B2B xaridor
+tasdiqlanmagan narx, media yoki tavsifni ko'rmaydi.
 
 ---
 
@@ -13,6 +90,7 @@
 | Rol | Kim | Kirish usuli |
 |-----|-----|-------------|
 | **Customer** | Xaridor | OTP (telefon) |
+| **Seller** | Fermer mahsulotini marketga chiqaruvchi sotuvchi | Email + parol |
 | **Manager** | Do'kon xodimi | Email + parol |
 | **Courier** | Yetkazuvchi | Email + parol |
 | **Admin** | Tizim boshqaruvchisi | Email + parol |
@@ -48,7 +126,7 @@ confirmed
    │
    │ [manager yig'adi va "Kuryerga topshirish" bosadi]
    ▼
-ready_to_deliver ◄── [kuryer rad etsa → admin boshqa kuryer tayinlaydi]
+ready_to_deliver ◄── [kuryer rad etsa → tayinlov yopiladi, admin boshqa kuryer tayinlaydi]
    │
    │ [admin kuryer tayinlaydi → kuryer qabul qiladi]
    ▼
@@ -61,7 +139,7 @@ delivering
 delivery_issue
    │
    ├──► Admin mijoz bilan bog'lanadi:
-   │         ├──► Yangi vaqt kelishiladi → delivering (yana uriniladi)
+   │         ├──► Yangi vaqt kelishiladi → ready_to_deliver (kuryer qayta qabul qiladi)
    │         └──► Bekor + refund (agar mijoz xohlasa) → cancelled
    │
    │ [Kuryer muvaffaqiyatli topshiradi]
@@ -473,13 +551,16 @@ Status paid va undan keyin:
 
 ```
 1. Admin ready_to_deliver buyurtmalar ro'yxatini ko'radi
-2. Bo'sh kuryerlar ro'yxatini ko'radi
+2. Faol kuryerlar ro'yxatini ko'radi; smenadagi kuryerlar birinchi chiqadi
 3. Mos kuryerni tanlaydi va tayinlaydi
-4. Kuryer ga Push Notification: "Sizga #123 buyurtma tayinlandi!"
+4. Tizim alohida tayinlov yozuvini yaratadi (assigned)
+5. Kuryer ga Push + ilova ichidagi Notification:
+   "Sizga #123 buyurtma tayinlandi!"
 ```
 
 > Kuryer tayinlanmasa — buyurtma ready_to_deliver da qoladi.
 > Admin qayta tayinlashi mumkin.
+> `is_active` akkaunt ruxsatini, `is_online` esa kuryerning ish smenasini bildiradi.
 
 ---
 
@@ -492,13 +573,17 @@ Status paid va undan keyin:
    - Yetkazish manzili va vaqti
    - Customer asosiy va qo'shimcha telefoni
    - Manager uchun izoh
-4. Do'kondan buyurtmani oladi
-5. "Qabul qilish" tugmasini bosadi
+4. Kuryer qaror qiladi:
+   - "Qabul qilish" → tayinlov accepted
+   - "Rad etish" → sabab majburiy; tayinlov rejected, order tayinlovsiz qoladi
+5. Qabul qilsa, do'kondan buyurtmani oladi
+6. "Qabul qilish" tugmasini bosadi
    → status: ready_to_deliver → delivering
-6. Yo'lga chiqishdan AVVAL customer ga qo'ng'iroq qiladi:
+7. Yo'lga chiqishdan AVVAL customer ga qo'ng'iroq qiladi:
    - Manzilni aniqlashtiradi
    - Kelish vaqtini kelishadi
-7. Customer ga SMS: "Kuryer yo'lda, tez orada yetkazadi!"
+8. Customer ga SMS: "Kuryer yo'lda, tez orada yetkazadi!"
+9. GPS faqat delivering davrida va faqat shu order uchun yoziladi
 ```
 
 ---
@@ -508,10 +593,13 @@ Status paid va undan keyin:
 ```
 1. Kuryer manzilga boradi
 2. Buyurtmani topshiradi
-3. "Yetkazildi" tugmasini bosadi
+3. Customer ilovasi/SMS dagi 4 xonali PIN ni oladi
+4. PIN ni kiritadi (5 noto'g'ri urinish → 10 daqiqa blok)
+5. PIN to'g'ri bo'lsa "Yetkazildi" tasdiqlanadi
    → status: delivering → delivered
-4. Customer ga SMS: "Buyurtmangiz #123 yetkazildi! Iltimos baholang."
-5. Kuryerning yetkazish tarixi yangilanadi
+6. Yetkazish isboti saqlanadi: vaqt, kuryer, usul, GPS (mavjud bo'lsa)
+7. Customer ga SMS: "Buyurtmangiz #123 yetkazildi! Iltimos baholang."
+8. Kuryerning yetkazish tarixi va daromadi yangilanadi
 ```
 
 ---
@@ -523,7 +611,8 @@ Status paid va undan keyin:
 ```
 1. Kuryer customer bilan bog'lana olmaydi yoki topib bo'lmaydi
 2. "Topilmadi" tugmasini bosadi
-3. Sabab kiritadi: "Telefonga chiqmadi" / "Manzil noto'g'ri" / boshqa
+3. Sabab tanlaydi va izoh kiritadi:
+   `no_answer` / `wrong_address` / `customer_unavailable` / `other`
 4. Tizim: not_found_count + 1 (1 yoki 2 bo'ladi)
 5. Status o'zgarmaydi (delivering qoladi)
 6. Customer ga SMS:
@@ -532,6 +621,8 @@ Status paid va undan keyin:
 7. Admin ga Notification: "Buyurtma #123 — topilmadi (urinish #N)"
 8. Yetkazish vaqti yangilanadi (admin qayta belgilaydi)
 9. Kuryer keyingi belgilangan vaqtda yana urinadi
+10. Har bir urinish alohida audit yozuvi sifatida saqlanadi:
+    kuryer, sabab, izoh, vaqt, GPS va urinish raqami
 ```
 
 **3-chi marta (delivery_issue):**
@@ -547,9 +638,10 @@ Status paid va undan keyin:
 5. Admin mijoz bilan bog'lanadi va holat aniqlanadi:
 
    Variant A — Yangi vaqt kelishiladi:
-   → status: delivery_issue → delivering
-   → Yana kuryer tayinlanadi (xuddi shu yoki boshqa)
-   → Jarayon davom etadi
+   → status: delivery_issue → ready_to_deliver
+   → not_found_count = 0
+   → Xuddi shu yoki boshqa kuryer tayinlanadi
+   → Kuryer qayta qabul qilgandan keyin delivering bo'ladi
 
    Variant B — Mijoz buyurtmani bekor qilishni xohlaydi:
    → status: delivery_issue → cancelled
@@ -583,12 +675,13 @@ Eslatma: delivery_issue holatlari juda kam bo'ladi.
 
 ### BOSQICH 11: Kuryer Hisob-Kitobi
 
-> ⚠️ Bu qism keyinroq aniqlanadi
-
 ```
 Har bir delivered buyurtma uchun kuryerga belgilangan haq qo'shiladi.
-Hisob-kitob haftalik yoki oylik amalga oshiriladi.
-Super Admin tomonidan boshqariladi.
+Kuryer ilovada bugungi, haftalik, oylik va jami daromadini ko'radi.
+Super Admin sana oralig'ini tanlab hisob-kitob yaratadi.
+Summa requestdan olinmaydi — delivered orderlarning courier_fee qiymatidan server hisoblaydi.
+Bir kuryer va bir xil davr uchun takroriy hisob-kitob yaratilmaydi.
+Hisob-kitob pending → paid bo'lganda vaqt saqlanadi va kuryerga notification yuboriladi.
 ```
 
 ---
@@ -621,7 +714,7 @@ delivery_issue — noyob holat, admin hal qiladi
 | To'lov muvaffaqiyatsiz | SMS ✅ | — | — | — |
 | Buyurtma qabul qilindi (confirmed) | SMS ✅ | — | — | — |
 | Yig'ildi (ready_to_deliver) | — | — | Notification ✅ | — |
-| Kuryer tayinlandi | — | — | — | Push ✅ |
+| Kuryer tayinlandi | — | — | — | Push + In-app ✅ |
 | Kuryer yo'lda (delivering) | SMS ✅ | — | — | — |
 | Yetkazildi (delivered) | SMS ✅ | — | — | — |
 | Topilmadi — 1/2 marta | SMS ✅ | — | Notification ✅ | — |
@@ -644,7 +737,7 @@ delivery_issue — noyob holat, admin hal qiladi
 | `Order` | `api` / `admin` | Buyurtma oqimi + status boshqarish |
 | `Payment` | — | To'lov + webhook + idempotency (transaction_id) |
 | `Review` | `api` / `admin` | Sharh, baholash, moderatsiya queue |
-| `Courier` | `courier` | Kuryer auth + buyurtma qabul + yetkazish + topilmadi |
+| `Courier` | `courier` | Profil/smena + tayinlov + PIN yetkazish + GPS + topilmadi audit + support + daromad |
 | `Admin/Auth` | `admin` | Manager, Admin, Super Admin login |
 | `Admin/Order` | `admin` | Buyurtmalarni ko'rish, boshqarish, delivery_issue |
 | `Admin/Product` | `admin` | Mahsulot approval / reject |
@@ -657,7 +750,7 @@ delivery_issue — noyob holat, admin hal qiladi
 
 ---
 
-## Tizim Chegaralari (Hozirgi Versiya v2)
+## Tizim Chegaralari (Hozirgi Versiya v3)
 
 ```
 Yetkazish hududi:     Bitta shahar (Super Admin tomonidan belgilanadi)
@@ -670,7 +763,7 @@ Kuryer "Topilmadi":   3 marta → delivery_issue → admin hal qiladi
 OTP blok:             5 noto'g'ri urinish → 10 daqiqa blok
 Sharh moderatsiya:    Admin / Super Admin tomonidan
 Mahsulot tasdiqlash:  Admin / Super Admin tomonidan
-Kuryer hisob-kitobi:  Keyinroq aniqlanadi
+Kuryer hisob-kitobi:  Sana oralig'i bo'yicha Super Admin; summa serverda hisoblanadi
 ```
 
 ---
@@ -678,4 +771,4 @@ Kuryer hisob-kitobi:  Keyinroq aniqlanadi
 > **Eslatma:**
 > Bu hujjat loyiha rivojlanishi bilan yangilanadi.
 > Har qanday oqim o'zgarishi avval shu yerda muhokama qilinadi.
-> v2 — barcha muhokamalar va yechimlar kiritilgan versiya.
+> v4 — seller va fermer mahsulotlari uchun B2B/B2B2C oqimi kiritilgan versiya.

@@ -6,6 +6,8 @@ backend/
 │   │   ├── Controllers/
 │   │   │   └── Controller.php
 │   │   ├── Middleware/
+│   │   │   ├── EnsureIsSeller.php      # role.seller — seller|super_admin
+│   │   │   ├── EnsureVerifiedSeller.php # seller.verified — mahsulot joylashdan oldin profil tasdig'i
 │   │   │   ├── ForceJsonResponse.php
 │   │   │   ├── EnsureIsManager.php     # role.manager — auth('sanctum')->check() → role → is_active
 │   │   │   ├── EnsureIsCourier.php     # role.courier
@@ -15,12 +17,14 @@ backend/
 │   │   └── Requests/
 │   │       └── BaseRequest.php
 │   ├── Jobs/
+│   │   ├── SendCourierPushJob.php      # ShouldQueue — FCM HTTP v1 orqali kuryer qurilmalariga push
 │   │   ├── SendSmsJob.php              # ShouldQueue — SmsService::send() async
 │   │   ├── SendTelegramJob.php         # ShouldQueue — role('manager'|'admin'|'courier') + message; TelegramService::sendTo{Role}()
 │   │   └── ClearCartJob.php            # ShouldQueue — buyurtma yaratilganda savatni tozalaydi
 │   ├── Providers/
 │   │   └── AppServiceProvider.php      # loadModuleMigrations() glob
-│   │                                   # Bindings: User, OtpAttempt, TokenService, Category, Product, Cart, Order, Payment, Review, Setting
+│   │                                   # Bindings: User, OtpAttempt, TokenService, Category, Product, Cart, Order, CourierNotifier, Payment, Review, Setting
+│   │                                   # Rate limiters: api, otp, staff-login, courier-actions, courier-location
 │   │                                   # Singleton: SettingService
 │   └── Shared/
 │       ├── Exceptions/
@@ -39,7 +43,8 @@ backend/
 │           │   ├── OrderFeeCalculator.php  # calculate(goods)→OrderFinancials; 15% platform + pog'onali courier; courierFeeSql() SQL CASE
 │           │   └── OrderFinancials.php      # readonly VO: seller/platformGross/courier/platformNet/customerTotal + toArray()
 │           └── Upload/
-│               └── ImageUploadService.php   # store(UploadedFile,dir='products'):string — public diskka saqlaydi, to'liq URL qaytaradi
+│               ├── ImageUploadService.php   # umumiy rasm upload
+│               └── ProductMediaUploadService.php # seller rasmlari va videosi
 │
 ├── Modules/
 │   │
@@ -271,10 +276,11 @@ backend/
 │   │   │   │   ├── ConfirmOrderCommand.php       # orderId
 │   │   │   │   ├── ReadyToDeliverCommand.php     # orderId, courierNote(nullable)
 │   │   │   │   ├── MarkDeliveringCommand.php     # orderId, courierId
-│   │   │   │   ├── MarkDeliveredCommand.php      # orderId
-│   │   │   │   ├── NotFoundCommand.php           # orderId, reason
+│   │   │   │   ├── MarkDeliveredCommand.php      # orderId,courierId,PIN,recipientName,GPS
+│   │   │   │   ├── NotFoundCommand.php           # orderId,courierId,reasonCode,note,GPS
 │   │   │   │   ├── CancelOrderCommand.php        # orderId, userId
-│   │   │   │   ├── AssignCourierCommand.php      # orderId, courierId (admin)
+│   │   │   │   ├── AssignCourierCommand.php      # orderId,courierId,assignedById (admin)
+│   │   │   │   ├── RejectCourierAssignmentCommand.php # orderId,courierId,reason
 │   │   │   │   └── DeliveryIssueResolveCommand.php  # orderId, action('reschedule'|'cancel')
 │   │   │   ├── Queries/
 │   │   │   │   ├── GetOrderByIdQuery.php         # orderId, userId (customer)
@@ -286,12 +292,13 @@ backend/
 │   │   │       ├── CreateOrderHandler.php        # lockForUpdate; CreatePaymentHandler(sync); ClearCartJob; SMS+Telegram; setAttribute(payment_url); → OrderModel (201)
 │   │   │       ├── ConfirmOrderHandler.php       # PAID→CONFIRMED; SMS; → OrderModel
 │   │   │       ├── ReadyToDeliverHandler.php     # CONFIRMED→READY_TO_DELIVER; Telegram; → OrderModel
-│   │   │       ├── MarkDeliveringHandler.php     # courierId set; READY/ISSUE→DELIVERING; SMS; → OrderModel
-│   │   │       ├── MarkDeliveredHandler.php      # DELIVERING→DELIVERED; SMS+Telegram; → OrderModel
-│   │   │       ├── NotFoundHandler.php           # incrementNotFound (3→DELIVERY_ISSUE); SMS+Telegram; → OrderModel
+│   │   │       ├── MarkDeliveringHandler.php     # assigned→accepted; READY→DELIVERING; PIN ensure; SMS
+│   │   │       ├── MarkDeliveredHandler.php      # PIN+ownership; DELIVERING→DELIVERED; proof; SMS+Telegram
+│   │   │       ├── NotFoundHandler.php           # reason/GPS audit; 3→DELIVERY_ISSUE; SMS+Telegram
 │   │   │       ├── CancelOrderHandler.php        # PENDING→CANCELLED; ownership check; SMS; → OrderModel
-│   │   │       ├── AssignCourierHandler.php      # courierId set; Telegram; → OrderModel (admin)
-│   │   │       ├── ResolveIssueHandler.php       # DELIVERY_ISSUE→DELIVERING|CANCELLED; SMS; → OrderModel
+│   │   │       ├── AssignCourierHandler.php      # assignment audit + PIN + in-app/push + Telegram
+│   │   │       ├── RejectCourierAssignmentHandler.php # assignment rejected; order tayinlovsiz READY holatda
+│   │   │       ├── ResolveIssueHandler.php       # DELIVERY_ISSUE→READY_TO_DELIVER|CANCELLED; tayinlovni yopadi
 │   │   │       ├── GetOrderByIdHandler.php       # user_id filter; → OrderModel (customer)
 │   │   │       ├── GetAnyOrderByIdHandler.php    # no user filter; → OrderModel (manager/admin)
 │   │   │       ├── GetMyOrdersHandler.php        # → paginator (customer)
@@ -303,7 +310,8 @@ backend/
 │   │   │   └── Persistence/
 │   │   │       ├── Migrations/
 │   │   │       │   ├── 2026_06_23_000003_create_orders_table.php  # total_price+service_fee+courier_fee+grand_total; *_at milestone vaqtlari (delivery_price YO'Q)
-│   │   │       │   └── 2026_06_23_000004_create_order_items_table.php
+│   │   │       │   ├── 2026_06_23_000004_create_order_items_table.php
+│   │   │       │   └── 2026_07_21_000001_fix_orders_courier_foreign_key.php # courier_id → staff
 │   │   │       ├── Models/
 │   │   │       │   ├── OrderModel.php            # status→OrderStatus cast, address→array cast; *_at milestone castlari
 │   │   │       │   └── OrderItemModel.php        # belongsTo Order+Product
@@ -311,40 +319,99 @@ backend/
 │   │   │           └── EloquentOrderRepository.php  # toDomain(); create/update split; update() status milestone vaqtini yozadi
 │   │   └── Presentation/
 │   │       ├── Controllers/
-│   │       │   └── OrderController.php           # index|show|store|cancel|paidOrders|confirm|readyToDeliver|markDelivering|markDelivered|notFound
+│   │       │   └── OrderController.php           # customer PIN | admin assign/resolve | courier accept/reject/deliver/not-found
 │   │       ├── Requests/
 │   │       │   ├── CreateOrderRequest.php        # items,address,phone,delivery_time,payment_method
-│   │       │   ├── AssignCourierRequest.php      # courier_id(exists:users)
+│   │       │   ├── AssignCourierRequest.php      # courier_id(active staff courier)
+│   │       │   ├── CompleteDeliveryRequest.php   # 4 xonali PIN, recipient, GPS
+│   │       │   ├── RejectCourierAssignmentRequest.php # reason(required)
 │   │       │   ├── ResolveIssueRequest.php       # action(reschedule|cancel)
-│   │       │   └── NotFoundRequest.php           # reason(required)
+│   │       │   └── NotFoundRequest.php           # reason_code/note/GPS; eski reason bilan mos
 │   │       ├── Resources/
 │   │       │   └── OrderResource.php             # status.value, address, items(product_name,subtotal), payment_url(virtual)
 │   │       └── routes/
-│   │           └── api.php                       # 18 endpoint: Customer(auth:api)|Manager(auth:sanctum,role.manager)|Admin(role.admin)|Courier(role.courier)
+│   │           └── api.php                       # Customer delivery-code | Admin assign/resolve | Courier accept/reject/deliver/not-found
 │   │
-│   ├── Courier/                        # ✅ DDD to'liq — profil, tarix, statistika
+│   ├── Courier/                        # ✅ Lifecycle v3 — mobil kuryer operatsiyalari
 │   │   ├── Domain/
+│   │   │   ├── Enums/
+│   │   │   │   ├── DeliveryAssignmentStatus.php # assigned|accepted|rejected|cancelled
+│   │   │   │   ├── DeliveryAttemptReason.php    # no_answer|wrong_address|customer_unavailable|other
+│   │   │   │   ├── SupportTicketStatus.php      # open|in_progress|resolved
+│   │   │   │   └── CourierPayoutStatus.php      # pending|paid
 │   │   │   ├── ValueObjects/
 │   │   │   │   └── CourierStats.php    # readonly: totalDelivered, totalNotFound, totalActive, successRate(auto)
 │   │   │   └── Exceptions/
 │   │   │       └── CourierNotFoundException.php
 │   │   ├── Application/
+│   │   │   ├── Commands/
+│   │   │   │   ├── UpdateCourierProfileCommand.php
+│   │   │   │   ├── SetCourierAvailabilityCommand.php
+│   │   │   │   ├── RegisterCourierDeviceCommand.php
+│   │   │   │   ├── SaveCourierLocationCommand.php
+│   │   │   │   ├── CreateSupportTicketCommand.php
+│   │   │   │   ├── ResolveSupportTicketCommand.php
+│   │   │   │   └── CreateCourierPayoutCommand.php
+│   │   │   ├── Contracts/
+│   │   │   │   └── CourierNotifierInterface.php # in-app + push notification porti
 │   │   │   ├── Queries/
-│   │   │   │   ├── GetCourierProfileQuery.php  # courierId
-│   │   │   │   ├── GetCourierHistoryQuery.php  # courierId
-│   │   │   │   └── GetCourierStatsQuery.php    # courierId
+│   │   │   │   ├── GetCourierProfileQuery.php
+│   │   │   │   ├── GetCourierHistoryQuery.php
+│   │   │   │   └── GetCourierStatsQuery.php
+│   │   │   ├── Services/
+│   │   │   │   └── DeliveryConfirmationService.php # PIN yaratish/ochish/tekshirish/bloklash
 │   │   │   └── Handlers/
-│   │   │       ├── GetCourierProfileHandler.php  # Staff::find + role check → Staff model
-│   │   │       ├── GetCourierHistoryHandler.php  # delivered orders, paginate(15) → OrderModel paginator
-│   │   │       └── GetCourierStatsHandler.php    # count queries → CourierStats VO
+│   │   │       ├── GetCourierProfileHandler.php
+│   │   │       ├── GetCourierHistoryHandler.php
+│   │   │       ├── GetCourierStatsHandler.php
+│   │   │       ├── UpdateCourierProfileHandler.php
+│   │   │       ├── SetCourierAvailabilityHandler.php # delivering bo‘lsa offline taqiqlanadi
+│   │   │       ├── RegisterCourierDeviceHandler.php
+│   │   │       ├── RemoveCourierDeviceHandler.php
+│   │   │       ├── GetCourierNotificationsHandler.php
+│   │   │       ├── MarkCourierNotificationReadHandler.php
+│   │   │       ├── SaveCourierLocationHandler.php # faqat o‘zining DELIVERING orderi
+│   │   │       ├── GetLatestCourierLocationHandler.php
+│   │   │       ├── GetDeliveryCodeHandler.php    # faqat order egasi
+│   │   │       ├── GetCourierEarningsHandler.php
+│   │   │       ├── CreateCourierSupportTicketHandler.php
+│   │   │       ├── GetCourierSupportTicketsHandler.php
+│   │   │       ├── GetAdminCourierSupportTicketsHandler.php
+│   │   │       ├── ResolveCourierSupportTicketHandler.php
+│   │   │       ├── CreateCourierPayoutHandler.php # summa delivered orderlardan serverda
+│   │   │       ├── GetCourierPayoutsHandler.php
+│   │   │       └── MarkCourierPayoutPaidHandler.php
+│   │   ├── Infrastructure/
+│   │   │   ├── Persistence/
+│   │   │   │   ├── Migrations/         # 10 migratsiya: profil,qurilma,notification,GPS,support,assignment,attempt,proof,order GPS,payout
+│   │   │   │   └── Models/
+│   │   │   │       ├── CourierProfile.php
+│   │   │   │       ├── CourierDevice.php
+│   │   │   │       ├── CourierNotification.php
+│   │   │   │       ├── CourierLocation.php
+│   │   │   │       ├── CourierSupportTicket.php
+│   │   │   │       ├── DeliveryAssignment.php
+│   │   │   │       ├── DeliveryAttempt.php
+│   │   │   │       ├── DeliveryProof.php
+│   │   │   │       └── CourierPayout.php
+│   │   │   └── Services/
+│   │   │       ├── EloquentCourierNotifier.php  # DB notification + queued push
+│   │   │       └── FirebaseCloudMessagingService.php # FCM HTTP v1 OAuth service account
 │   │   └── Presentation/
 │   │       ├── Controllers/
-│   │       │   └── CourierController.php  # profile|history|stats
+│   │       │   ├── CourierController.php  # profil,smena,stat,daromad,qurilma,notification,GPS,support
+│   │       │   └── AdminCourierOperationsController.php # support,GPS,payout
+│   │       ├── Requests/                 # profil,smena,qurilma,GPS,support,payout validatsiyasi
 │   │       ├── Resources/
-│   │       │   ├── CourierProfileResource.php  # id, name, email, role, is_active, created_at
-│   │       │   └── CourierStatsResource.php    # total_delivered, total_not_found, total_active, success_rate
+│   │       │   ├── CourierProfileResource.php
+│   │       │   ├── CourierStatsResource.php
+│   │       │   ├── CourierOrderResource.php    # faol ma’lumot; tarixda telefon/manzil maxfiylashtiriladi
+│   │       │   ├── CourierNotificationResource.php
+│   │       │   ├── CourierLocationResource.php
+│   │       │   ├── CourierSupportTicketResource.php
+│   │       │   └── CourierPayoutResource.php
 │   │       └── routes/
-│   │           └── api.php              # GET courier/profile|history|stats (auth:sanctum + role.courier)
+│   │           └── api.php              # Courier API | Admin support/GPS | Super Admin payout
 │   │
 │   ├── Admin/                          # ✅ Staff auth + Admin/* + Super/* + Settings
 │   │   ├── Domain/
@@ -590,6 +657,7 @@ backend/
 ├── config/
 │   ├── auth.php                        # guards: api(users), sanctum+manager+courier+admin+super_admin(staff) + otp_ttl_seconds
 │   ├── cart.php                        # delivery_price ← DELIVERY_PRICE env
+│   ├── courier.php                     # delivery PIN limiti + Firebase/FCM service account sozlamalari
 │   ├── payment.php                     # test_mode; har provider: checkout URL test/prod avtomatik hal; payme(id/key/test_key), click(service_id/merchant_id/secret_key), uzum(service_id/username/password/UZUM_CHECKOUT_URL)
 │   └── telegram.php                    # bot_token; chat_ids.manager[]/admin[]/courier[] — array_filter(explode(',', env(...)))
 │
@@ -614,5 +682,78 @@ backend/
 │   ├── console.php
 │   └── web.php
 │
-├── docker/
+├── tests/
+│   ├── Feature/Courier/
+│   │   ├── CourierPanelTest.php        # eski panel, ownership, status va statistika regressiyasi
+│   │   └── CourierLifecycleV3Test.php  # smena, assignment, PIN, GPS, audit, support, payout, RBAC
+│   ├── Feature/Order/OrderLifecycleTest.php # API lifecycle, shu jumladan issue→ready qayta tayinlash
+│   ├── Feature/Order/SectionSixCriticalFlowTest.php # to‘liq order/delivery_issue oqimi
+│   └── Unit/Domain/Order/OrderTest.php  # Order status mashinasi
+│
+├── Modules/Seller/                    # ✅ Seller profil/KYB va alohida panel API
+│   ├── Domain/Entities/SellerProfile.php
+│   ├── Domain/Repositories/SellerOrderReadRepositoryInterface.php
+│   ├── Application/
+│   │   ├── DTOs/UpdateSellerProfileDTO.php
+│   │   ├── Queries/GetSellerOrdersQuery.php
+│   │   └── Handlers/
+│   │       ├── UpdateSellerProfileHandler.php
+│   │       └── GetSellerOrdersHandler.php
+│   ├── Infrastructure/Persistence/
+│   │   ├── Migrations/2026_08_13_000002_create_seller_profiles_table.php
+│   │   ├── Models/SellerProfileModel.php
+│   │   └── Repositories/EloquentSellerOrderReadRepository.php
+│   └── Presentation/
+│       ├── Controllers/SellerProfileController.php
+│       ├── Controllers/AdminSellerController.php
+│       ├── Controllers/SellerOrderController.php
+│       ├── Requests/UpdateSellerProfileRequest.php
+│       ├── Resources/SellerProfileResource.php
+│       └── routes/api.php             # seller/profile, seller/orders | admin/sellers verify
+│
+├── Modules/Product/                   # v4 seller qo'shimchalari
+│   ├── Domain/
+│   │   ├── Enums/ProductRevisionStatusEnum.php
+│   │   ├── Services/ProductFeeCalculator.php
+│   │   └── ValueObjects/ProductPriceBreakdown.php
+│   ├── Application/
+│   │   ├── DTOs/SellerProductDraftDTO.php
+│   │   └── Handlers/
+│   │       ├── SaveSellerProductDraftHandler.php
+│   │       └── ReviewSellerProductRevisionHandler.php
+│   ├── Infrastructure/Persistence/
+│   │   ├── Migrations/2026_08_13_000001_add_seller_marketplace_fields.php
+│   │   └── Models/ProductRevision.php
+│   └── Presentation/
+│       ├── Controllers/SellerProductController.php
+│       ├── Controllers/ProductRevisionModerationController.php
+│       ├── Requests/CreateSellerProductRequest.php
+│       └── Resources/ProductRevisionResource.php
+│
 └── docker-compose.yml
+
+## Alohida frontend loyihalari
+
+Frontendlar backend repository ichida saqlanmaydi. Ular `uvita_backend` bilan bir
+darajadagi mustaqil loyihalardir:
+
+```text
+uvita/
+├── uvita_backend/                     # Laravel API
+├── uvita_frontend/                    # Customer + B2B buyer market
+├── uvita_frontend_dashboard/          # Manager/admin/super-admin panel
+└── uvita_frontend_seller/             # Seller dashboard (Next/Vinext)
+    ├── app/page.tsx                   # overview, mahsulot formasi, fee kalkulyator
+    ├── app/globals.css                # responsive seller UI
+    ├── app/layout.tsx                 # metadata + social preview
+    ├── lib/api.ts                     # Laravel seller API client
+    ├── public/og.png                  # Uvita Seller social card
+    └── .openai/hosting.json
+```
+
+## v4 testlari
+
+```
+tests/Feature/Seller/SellerProductLifecycleTest.php
+tests/Unit/Domain/Product/ProductFeeCalculatorTest.php
+```

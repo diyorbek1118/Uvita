@@ -6,6 +6,7 @@ namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Sanctum\PersonalAccessToken;
 use Modules\Auth\Infrastructure\Persistence\Models\OtpAttempt;
 use Modules\User\Infrastructure\Persistence\Models\User;
 use Tests\Feature\Concerns\SeedsSettings;
@@ -23,29 +24,33 @@ class VerifyOtpTest extends TestCase
         $this->seedSettings();
     }
 
-    private function createValidOtp(string $phone = '+998901234567', string $code = '1234'): void
+    private function createValidOtp(string $phone = '+998901234567', string $code = '123456'): void
     {
         OtpAttempt::create([
-            'phone'          => $phone,
-            'code'           => $code,
-            'expires_at'     => now()->addSeconds(120),
+            'phone' => $phone,
+            'code' => $code,
+            'expires_at' => now()->addSeconds(120),
             'attempts_count' => 0,
-            'is_verified'    => false,
+            'is_verified' => false,
         ]);
     }
 
     public function test_verify_correct_otp_returns_token(): void
     {
         Queue::fake();
-        $this->createValidOtp(phone: '+998901234567', code: '6543');
+        $this->createValidOtp(phone: '+998901234567', code: '654321');
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '6543',
+            'code' => '654321',
         ]);
 
         $response->assertStatus(201)
             ->assertJsonStructure(['data' => ['token', 'user'], 'isNew']);
+
+        $this->assertNotNull(
+            PersonalAccessToken::query()->latest('id')->value('expires_at')
+        );
     }
 
     public function test_verify_creates_new_user_when_not_exists(): void
@@ -55,7 +60,7 @@ class VerifyOtpTest extends TestCase
 
         $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '1234',
+            'code' => '123456',
         ]);
 
         $this->assertDatabaseHas('users', ['phone' => '+998901234567']);
@@ -68,7 +73,7 @@ class VerifyOtpTest extends TestCase
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '1234',
+            'code' => '123456',
         ]);
 
         $response->assertStatus(201)
@@ -84,7 +89,7 @@ class VerifyOtpTest extends TestCase
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '1234',
+            'code' => '123456',
         ]);
 
         $response->assertStatus(200)
@@ -93,11 +98,11 @@ class VerifyOtpTest extends TestCase
 
     public function test_wrong_code_returns_422(): void
     {
-        $this->createValidOtp(code: '1234');
+        $this->createValidOtp(code: '123456');
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '9999',
+            'code' => '999999',
         ]);
 
         $response->assertStatus(422);
@@ -107,7 +112,7 @@ class VerifyOtpTest extends TestCase
     {
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '1234',
+            'code' => '123456',
         ]);
 
         $response->assertStatus(422);
@@ -116,16 +121,16 @@ class VerifyOtpTest extends TestCase
     public function test_expired_otp_returns_422(): void
     {
         OtpAttempt::create([
-            'phone'          => '+998901234567',
-            'code'           => '1234',
-            'expires_at'     => now()->subSeconds(1),
+            'phone' => '+998901234567',
+            'code' => '123456',
+            'expires_at' => now()->subSeconds(1),
             'attempts_count' => 0,
-            'is_verified'    => false,
+            'is_verified' => false,
         ]);
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '1234',
+            'code' => '123456',
         ]);
 
         $response->assertStatus(422);
@@ -134,17 +139,17 @@ class VerifyOtpTest extends TestCase
     public function test_blocked_user_returns_429(): void
     {
         OtpAttempt::create([
-            'phone'          => '+998901234567',
-            'code'           => '1234',
-            'expires_at'     => now()->addSeconds(120),
+            'phone' => '+998901234567',
+            'code' => '123456',
+            'expires_at' => now()->addSeconds(120),
             'attempts_count' => 5,
-            'blocked_until'  => now()->addMinutes(10),
-            'is_verified'    => false,
+            'blocked_until' => now()->addMinutes(10),
+            'is_verified' => false,
         ]);
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '1234',
+            'code' => '123456',
         ]);
 
         $response->assertStatus(429);
@@ -152,15 +157,15 @@ class VerifyOtpTest extends TestCase
 
     public function test_wrong_code_increments_attempts(): void
     {
-        $this->createValidOtp(code: '1234');
+        $this->createValidOtp(code: '123456');
 
         $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '0000',
+            'code' => '000000',
         ]);
 
         $this->assertDatabaseHas('otp_attempts', [
-            'phone'          => '+998901234567',
+            'phone' => '+998901234567',
             'attempts_count' => 1,
         ]);
     }
@@ -170,7 +175,7 @@ class VerifyOtpTest extends TestCase
         $response = $this->postJson($this->endpoint, []);
 
         $response->assertStatus(422)
-            ->assertJsonPath('errors.phone', fn($v) => !empty($v))
-            ->assertJsonPath('errors.code', fn($v) => !empty($v));
+            ->assertJsonPath('errors.phone', fn ($v) => ! empty($v))
+            ->assertJsonPath('errors.code', fn ($v) => ! empty($v));
     }
 }

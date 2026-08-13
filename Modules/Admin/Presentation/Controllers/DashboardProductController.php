@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Modules\Admin\Application\Handlers\GetDashboardProductByIdHandler;
 use Modules\Admin\Application\Handlers\GetDashboardProductsHandler;
 use Modules\Admin\Application\Handlers\UpdateDashboardProductHandler;
@@ -23,27 +24,35 @@ use Modules\Product\Application\Commands\DeleteProductCommand;
 use Modules\Product\Application\Commands\UpdateProductCommand;
 use Modules\Product\Application\Handlers\CreateProductHandler;
 use Modules\Product\Application\Handlers\DeleteProductHandler;
+use Modules\Product\Domain\Enums\ProductStatusEnum;
 use Modules\Product\Presentation\Requests\CreateProductRequest;
 use Modules\Product\Presentation\Requests\UpdateProductRequest;
 
 final class DashboardProductController extends Controller
 {
     public function __construct(
-        private readonly GetDashboardProductsHandler    $listHandler,
-        private readonly GetDashboardProductByIdHandler  $byIdHandler,
-        private readonly CreateProductHandler            $createHandler,
-        private readonly UpdateDashboardProductHandler   $updateHandler,
-        private readonly DeleteProductHandler            $deleteHandler,
+        private readonly GetDashboardProductsHandler $listHandler,
+        private readonly GetDashboardProductByIdHandler $byIdHandler,
+        private readonly CreateProductHandler $createHandler,
+        private readonly UpdateDashboardProductHandler $updateHandler,
+        private readonly DeleteProductHandler $deleteHandler,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'status' => ['nullable', Rule::in(['pending', ...array_column(ProductStatusEnum::cases(), 'value')])],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'per_page' => ['nullable', 'integer', 'between:1,100'],
+        ]);
+
         $products = $this->listHandler->handle(new GetDashboardProductsQuery(
-            managerId:  $this->managerScopeId(),
-            status:     $request->query('status'),
+            managerId: $this->managerScopeId(),
+            status: $request->query('status'),
             categoryId: $request->filled('category_id') ? (int) $request->query('category_id') : null,
-            search:     $request->query('search'),
-            perPage:    (int) $request->query('per_page', 20),
+            search: $request->query('search'),
+            perPage: (int) $request->query('per_page', 20),
         ));
 
         return DashboardProductResource::collection($products)->response();
@@ -51,10 +60,15 @@ final class DashboardProductController extends Controller
 
     public function lowStock(Request $request): JsonResponse
     {
+        $request->validate([
+            'threshold' => ['nullable', 'integer', 'between:0,1000000'],
+            'per_page' => ['nullable', 'integer', 'between:1,100'],
+        ]);
+
         $products = $this->listHandler->handle(new GetDashboardProductsQuery(
             managerId: $this->managerScopeId(),
-            maxStock:  (int) $request->query('threshold', 10),
-            perPage:   (int) $request->query('per_page', 20),
+            maxStock: (int) $request->query('threshold', 10),
+            perPage: (int) $request->query('per_page', 20),
         ));
 
         return DashboardProductResource::collection($products)->response();
@@ -63,7 +77,7 @@ final class DashboardProductController extends Controller
     public function show(int $product): JsonResponse
     {
         $result = $this->byIdHandler->handle(new GetDashboardProductByIdQuery(
-            id:        $product,
+            id: $product,
             managerId: $this->managerScopeId(),
         ));
 
@@ -73,7 +87,7 @@ final class DashboardProductController extends Controller
     public function store(CreateProductRequest $request): JsonResponse
     {
         /** @var Staff $user */
-        $user      = auth('sanctum')->user();
+        $user = auth('sanctum')->user();
         $managerId = $user->role === StaffRole::MANAGER ? $user->id : null;
 
         $result = $this->createHandler->handle(
@@ -97,8 +111,12 @@ final class DashboardProductController extends Controller
             $user
         );
 
+        $message = $user->role === StaffRole::MANAGER
+            ? 'Mahsulot yangilandi va moderatsiyaga yuborildi'
+            : 'Mahsulot yangilandi';
+
         return DashboardProductResource::make($result->load(['manager', 'category']))
-            ->additional(['message' => 'Mahsulot yangilandi'])
+            ->additional(['message' => $message])
             ->response();
     }
 
@@ -113,10 +131,10 @@ final class DashboardProductController extends Controller
     {
         // Umumiy rasm yuklash: products (default) yoki categories papkasiga.
         $folder = $request->input('folder', 'products');
-        $url    = $uploader->store($request->file('image'), $folder);
+        $url = $uploader->store($request->file('image'), $folder);
 
         return response()->json([
-            'data'    => ['url' => $url],
+            'data' => ['url' => $url],
             'message' => 'Rasm yuklandi',
         ], 201);
     }

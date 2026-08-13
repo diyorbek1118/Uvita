@@ -7,7 +7,8 @@ namespace Modules\Payment\Application\Commands;
 final readonly class CreatePaymentCommand
 {
     public function __construct(
-        public int    $orderId,
+        public int $orderId,
         public string $provider, // 'payme' | 'click' | 'uzum'
+        public ?int $userId = null,
     ) {}
 }

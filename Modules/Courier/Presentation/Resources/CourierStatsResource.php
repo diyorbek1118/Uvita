@@ -17,8 +17,8 @@ class CourierStatsResource extends JsonResource
         return [
             'total_delivered' => $this->stats->totalDelivered,
             'total_not_found' => $this->stats->totalNotFound,
-            'total_active'    => $this->stats->totalActive,
-            'success_rate'    => $this->stats->successRate,
+            'total_active' => $this->stats->totalActive,
+            'success_rate' => $this->stats->successRate,
         ];
     }
 }

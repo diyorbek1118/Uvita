@@ -12,16 +12,20 @@ class ReviewResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this->id,
-            'order_id'   => $this->order_id,
+            'id' => $this->id,
+            'order_id' => $this->order_id,
             'product_id' => $this->product_id,
-            'rating'     => $this->rating,
-            'comment'    => $this->comment,
-            'status'     => $this->status->value,
-            'user'       => $this->whenLoaded('user', fn () => [
-                'id'   => $this->user->id,
+            'rating' => $this->rating,
+            'comment' => $this->comment,
+            'status' => $this->status->value,
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user->id,
                 'name' => $this->user->name,
             ]),
+            'product' => $this->whenLoaded('product', fn () => $this->product ? [
+                'id' => $this->product->id,
+                'name' => $this->product->name,
+            ] : null),
             'admin_note' => $this->when(
                 $this->relationLoaded('user'),
                 $this->admin_note

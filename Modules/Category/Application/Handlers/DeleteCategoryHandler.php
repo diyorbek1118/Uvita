@@ -7,6 +7,7 @@ namespace Modules\Category\Application\Handlers;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Modules\Category\Application\Commands\DeleteCategoryCommand;
 use Modules\Category\Domain\Repositories\CategoryRepositoryInterface;
+use Modules\Product\Infrastructure\Persistence\Models\Product;
 
 final class DeleteCategoryHandler
 {
@@ -17,7 +18,11 @@ final class DeleteCategoryHandler
     public function handle(DeleteCategoryCommand $command): void
     {
         if ($this->categories->findById($command->id) === null) {
-            throw new ModelNotFoundException();
+            throw new ModelNotFoundException;
+        }
+
+        if (Product::withTrashed()->where('category_id', $command->id)->exists()) {
+            abort(422, "Mahsulot bog'langan kategoriyani o'chirib bo'lmaydi");
         }
 
         $this->categories->delete($command->id);

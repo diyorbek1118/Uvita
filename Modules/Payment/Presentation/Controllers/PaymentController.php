@@ -19,12 +19,13 @@ class PaymentController extends Controller
     public function create(CreatePaymentRequest $request): JsonResponse
     {
         $result = $this->createHandler->handle(new CreatePaymentCommand(
-            orderId:  (int) $request->validated('order_id'),
+            orderId: (int) $request->validated('order_id'),
             provider: (string) $request->validated('provider'),
+            userId: auth()->id(),
         ));
 
         return response()->json([
-            'data'    => $result,
+            'data' => $result,
             'message' => "To'lov sahifasi tayyor",
         ], 200);
     }

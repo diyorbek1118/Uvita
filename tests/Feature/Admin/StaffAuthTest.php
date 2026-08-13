@@ -6,6 +6,7 @@ namespace Tests\Feature\Admin;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Tests\TestCase;
@@ -17,10 +18,10 @@ class StaffAuthTest extends TestCase
     private function createStaff(StaffRole $role = StaffRole::ADMIN, bool $isActive = true): Staff
     {
         return Staff::create([
-            'name'      => 'Test Staff',
-            'email'     => 'test@uvita.uz',
-            'password'  => Hash::make('password123'),
-            'role'      => $role->value,
+            'name' => 'Test Staff',
+            'email' => 'test@uvita.uz',
+            'password' => Hash::make('password123'),
+            'role' => $role->value,
             'is_active' => $isActive,
         ]);
     }
@@ -32,12 +33,16 @@ class StaffAuthTest extends TestCase
         $this->createStaff();
 
         $response = $this->postJson('/api/staff/login', [
-            'email'    => 'test@uvita.uz',
+            'email' => 'test@uvita.uz',
             'password' => 'password123',
         ]);
 
         $response->assertStatus(200)
             ->assertJsonStructure(['data' => ['token']]);
+
+        $this->assertNotNull(
+            PersonalAccessToken::query()->latest('id')->value('expires_at')
+        );
     }
 
     public function test_login_with_wrong_password_returns_401(): void
@@ -45,7 +50,7 @@ class StaffAuthTest extends TestCase
         $this->createStaff();
 
         $response = $this->postJson('/api/staff/login', [
-            'email'    => 'test@uvita.uz',
+            'email' => 'test@uvita.uz',
             'password' => 'wrong-password',
         ]);
 
@@ -55,7 +60,7 @@ class StaffAuthTest extends TestCase
     public function test_login_with_nonexistent_email_returns_401(): void
     {
         $response = $this->postJson('/api/staff/login', [
-            'email'    => 'nobody@uvita.uz',
+            'email' => 'nobody@uvita.uz',
             'password' => 'password123',
         ]);
 
@@ -67,7 +72,7 @@ class StaffAuthTest extends TestCase
         $this->createStaff(isActive: false);
 
         $response = $this->postJson('/api/staff/login', [
-            'email'    => 'test@uvita.uz',
+            'email' => 'test@uvita.uz',
             'password' => 'password123',
         ]);
 
@@ -79,8 +84,25 @@ class StaffAuthTest extends TestCase
         $response = $this->postJson('/api/staff/login', []);
 
         $response->assertStatus(422)
-            ->assertJsonPath('errors.email', fn($v) => !empty($v))
-            ->assertJsonPath('errors.password', fn($v) => !empty($v));
+            ->assertJsonPath('errors.email', fn ($v) => ! empty($v))
+            ->assertJsonPath('errors.password', fn ($v) => ! empty($v));
+    }
+
+    public function test_staff_login_is_rate_limited(): void
+    {
+        $this->createStaff();
+
+        foreach (range(1, 5) as $attempt) {
+            $this->postJson('/api/staff/login', [
+                'email' => 'test@uvita.uz',
+                'password' => 'wrong-password',
+            ])->assertStatus(401);
+        }
+
+        $this->postJson('/api/staff/login', [
+            'email' => 'test@uvita.uz',
+            'password' => 'wrong-password',
+        ])->assertStatus(429);
     }
 
     // ─── POST /api/staff/logout ───────────────────────────────────────────────
@@ -108,10 +130,10 @@ class StaffAuthTest extends TestCase
     public function test_manager_cannot_access_admin_endpoints(): void
     {
         $manager = Staff::create([
-            'name'      => 'Manager',
-            'email'     => 'manager@uvita.uz',
-            'password'  => Hash::make('password'),
-            'role'      => StaffRole::MANAGER->value,
+            'name' => 'Manager',
+            'email' => 'manager@uvita.uz',
+            'password' => Hash::make('password'),
+            'role' => StaffRole::MANAGER->value,
             'is_active' => true,
         ]);
         $token = $manager->createToken('test')->plainTextToken;
@@ -125,10 +147,10 @@ class StaffAuthTest extends TestCase
     public function test_courier_cannot_access_admin_endpoints(): void
     {
         $courier = Staff::create([
-            'name'      => 'Courier',
-            'email'     => 'courier@uvita.uz',
-            'password'  => Hash::make('password'),
-            'role'      => StaffRole::COURIER->value,
+            'name' => 'Courier',
+            'email' => 'courier@uvita.uz',
+            'password' => Hash::make('password'),
+            'role' => StaffRole::COURIER->value,
             'is_active' => true,
         ]);
         $token = $courier->createToken('test')->plainTextToken;
@@ -153,10 +175,10 @@ class StaffAuthTest extends TestCase
     public function test_super_admin_can_access_admin_endpoints(): void
     {
         $superAdmin = Staff::create([
-            'name'      => 'Super Admin',
-            'email'     => 'super@uvita.uz',
-            'password'  => Hash::make('password'),
-            'role'      => StaffRole::SUPER_ADMIN->value,
+            'name' => 'Super Admin',
+            'email' => 'super@uvita.uz',
+            'password' => Hash::make('password'),
+            'role' => StaffRole::SUPER_ADMIN->value,
             'is_active' => true,
         ]);
         $token = $superAdmin->createToken('test')->plainTextToken;

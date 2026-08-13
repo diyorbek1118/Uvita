@@ -12,12 +12,14 @@ class PaymentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'order_id'    => $this->order_id,
-            'provider'    => $this->provider->value,
-            'status'      => $this->status->value,
-            'amount'      => $this->amount,
-            'created_at'  => $this->created_at?->toISOString(),
+            'id' => $this->id,
+            'order_id' => $this->order_id,
+            'provider' => $this->provider->value,
+            'status' => $this->status->value,
+            'amount' => $this->amount,
+            'refund_requested_at' => $this->refund_requested_at?->toISOString(),
+            'refunded_at' => $this->refunded_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
         ];
     }
 }

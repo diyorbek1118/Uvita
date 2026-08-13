@@ -13,7 +13,7 @@ final class GetAllCouriersHandler
 {
     public function handle(): Collection
     {
-        $couriers = Staff::where('role', StaffRole::COURIER)->get();
+        $couriers = Staff::where('role', StaffRole::COURIER)->with('courierProfile')->get();
 
         foreach ($couriers as $courier) {
             $delivered   = OrderModel::where('courier_id', $courier->id)->where('status', 'delivered')->count();

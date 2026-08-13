@@ -23,6 +23,7 @@ final readonly class Product
         public ?string            $rejectionReason,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
+        public int                $minimumOrderQuantity = 1,
     ) {}
 
     public static function create(

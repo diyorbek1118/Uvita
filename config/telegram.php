@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+    'required' => (bool) env('TELEGRAM_REQUIRED', false),
 
     'chat_ids' => [
         'manager' => array_filter(

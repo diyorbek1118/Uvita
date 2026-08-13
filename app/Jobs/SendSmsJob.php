@@ -15,6 +15,13 @@ final class SendSmsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $tries = 3;
+
+    public int $timeout = 30;
+
+    /** @var int[] */
+    public array $backoff = [10, 60, 300];
+
     public function __construct(
         public readonly string $phone,
         public readonly string $message,

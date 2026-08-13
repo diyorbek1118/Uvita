@@ -9,5 +9,6 @@ final readonly class AssignCourierCommand
     public function __construct(
         public int $orderId,
         public int $courierId,
+        public ?int $assignedById = null,
     ) {}
 }

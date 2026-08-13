@@ -6,8 +6,10 @@ namespace Modules\Payment\Domain\Enums;
 
 enum PaymentStatus: string
 {
-    case PENDING   = 'pending';
-    case PAID      = 'paid';
-    case FAILED    = 'failed';
+    case PENDING = 'pending';
+    case PAID = 'paid';
+    case FAILED = 'failed';
     case CANCELLED = 'cancelled';
+    case REFUND_PENDING = 'refund_pending';
+    case REFUNDED = 'refunded';
 }

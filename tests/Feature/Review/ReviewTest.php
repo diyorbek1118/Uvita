@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Queue;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
+use Modules\Order\Infrastructure\Persistence\Models\OrderItemModel;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\Review\Infrastructure\Persistence\Models\ReviewModel;
@@ -20,8 +21,10 @@ class ReviewTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User     $customer;
-    private Product  $product;
+    private User $customer;
+
+    private Product $product;
+
     private Category $category;
 
     protected function setUp(): void
@@ -31,14 +34,14 @@ class ReviewTest extends TestCase
 
         $this->customer = User::create(['phone' => '+998901234567', 'name' => 'Ali']);
         $this->category = Category::create(['name' => 'Test', 'slug' => 'test']);
-        $this->product  = Product::create([
-            'name'        => 'Mahsulot',
-            'slug'        => 'mahsulot',
+        $this->product = Product::create([
+            'name' => 'Mahsulot',
+            'slug' => 'mahsulot',
             'description' => 'Tavsif',
-            'price'       => 30000,
-            'stock'       => 10,
-            'status'      => 'active',
-            'images'      => [],
+            'price' => 30000,
+            'stock' => 10,
+            'status' => 'active',
+            'images' => [],
             'category_id' => $this->category->id,
         ]);
     }
@@ -53,10 +56,10 @@ class ReviewTest extends TestCase
     private function asAdmin(): static
     {
         $admin = Staff::create([
-            'name'      => 'Admin',
-            'email'     => 'admin@uvita.uz',
-            'password'  => Hash::make('password'),
-            'role'      => StaffRole::ADMIN->value,
+            'name' => 'Admin',
+            'email' => 'admin@uvita.uz',
+            'password' => Hash::make('password'),
+            'role' => StaffRole::ADMIN->value,
             'is_active' => true,
         ]);
         $token = $admin->createToken('test')->plainTextToken;
@@ -66,28 +69,37 @@ class ReviewTest extends TestCase
 
     private function createDeliveredOrder(): OrderModel
     {
-        return OrderModel::create([
-            'user_id'        => $this->customer->id,
-            'status'         => 'delivered',
-            'address'        => json_encode(['region' => 'T', 'district' => 'Y', 'street' => 'N', 'house' => '1']),
-            'phone'          => '+998901234567',
-            'delivery_time'  => 'Ertaga',
-            'total_price'    => 30000,
-            'service_fee'    => 4500,
-            'courier_fee'    => 10000,
-            'grand_total'    => 34500,
+        $order = OrderModel::create([
+            'user_id' => $this->customer->id,
+            'status' => 'delivered',
+            'address' => json_encode(['region' => 'T', 'district' => 'Y', 'street' => 'N', 'house' => '1']),
+            'phone' => '+998901234567',
+            'delivery_time' => 'Ertaga',
+            'total_price' => 30000,
+            'service_fee' => 4500,
+            'courier_fee' => 10000,
+            'grand_total' => 34500,
         ]);
+
+        OrderItemModel::create([
+            'order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+            'price' => 30000,
+        ]);
+
+        return $order;
     }
 
     private function createPendingReview(OrderModel $order): ReviewModel
     {
         return ReviewModel::create([
-            'order_id'   => $order->id,
-            'user_id'    => $this->customer->id,
+            'order_id' => $order->id,
+            'user_id' => $this->customer->id,
             'product_id' => $this->product->id,
-            'rating'     => 4,
-            'comment'    => 'Yaxshi',
-            'status'     => 'pending',
+            'rating' => 4,
+            'comment' => 'Yaxshi',
+            'status' => 'pending',
             'is_visible' => false,
         ]);
     }
@@ -96,14 +108,14 @@ class ReviewTest extends TestCase
 
     public function test_public_can_get_approved_product_reviews(): void
     {
-        $order  = $this->createDeliveredOrder();
+        $order = $this->createDeliveredOrder();
         ReviewModel::create([
-            'order_id'   => $order->id,
-            'user_id'    => $this->customer->id,
+            'order_id' => $order->id,
+            'user_id' => $this->customer->id,
             'product_id' => $this->product->id,
-            'rating'     => 5,
-            'comment'    => 'Ajoyib',
-            'status'     => 'approved',
+            'rating' => 5,
+            'comment' => 'Ajoyib',
+            'status' => 'approved',
             'is_visible' => true,
         ]);
 
@@ -131,38 +143,38 @@ class ReviewTest extends TestCase
         $order = $this->createDeliveredOrder();
 
         $response = $this->asCustomer()->postJson('/api/reviews', [
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'rating'     => 5,
-            'comment'    => 'Juda yaxshi',
+            'rating' => 5,
+            'comment' => 'Juda yaxshi',
         ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('reviews', [
             'order_id' => $order->id,
-            'rating'   => 5,
-            'status'   => 'pending',
+            'rating' => 5,
+            'status' => 'pending',
         ]);
     }
 
     public function test_cannot_review_non_delivered_order(): void
     {
         $order = OrderModel::create([
-            'user_id'        => $this->customer->id,
-            'status'         => 'confirmed',
-            'address'        => json_encode(['region' => 'T', 'district' => 'Y', 'street' => 'N', 'house' => '1']),
-            'phone'          => '+998901234567',
-            'delivery_time'  => 'Ertaga',
-            'total_price'    => 30000,
-            'service_fee'    => 4500,
-            'courier_fee'    => 10000,
-            'grand_total'    => 34500,
+            'user_id' => $this->customer->id,
+            'status' => 'confirmed',
+            'address' => json_encode(['region' => 'T', 'district' => 'Y', 'street' => 'N', 'house' => '1']),
+            'phone' => '+998901234567',
+            'delivery_time' => 'Ertaga',
+            'total_price' => 30000,
+            'service_fee' => 4500,
+            'courier_fee' => 10000,
+            'grand_total' => 34500,
         ]);
 
         $response = $this->asCustomer()->postJson('/api/reviews', [
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'rating'     => 5,
+            'rating' => 5,
         ]);
 
         $response->assertStatus(422);
@@ -174,9 +186,9 @@ class ReviewTest extends TestCase
         $this->createPendingReview($order);
 
         $response = $this->asCustomer()->postJson('/api/reviews', [
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'rating'     => 4,
+            'rating' => 4,
         ]);
 
         $response->assertStatus(422);
@@ -187,9 +199,9 @@ class ReviewTest extends TestCase
         $order = $this->createDeliveredOrder();
 
         $response = $this->asCustomer()->postJson('/api/reviews', [
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'rating'     => 6,
+            'rating' => 6,
         ]);
 
         $response->assertStatus(422);
@@ -200,27 +212,111 @@ class ReviewTest extends TestCase
         $order = $this->createDeliveredOrder();
 
         $response = $this->postJson('/api/reviews', [
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'rating'     => 4,
+            'rating' => 4,
         ]);
 
         $response->assertStatus(401);
+    }
+
+    public function test_cannot_review_product_that_is_not_in_delivered_order(): void
+    {
+        $order = $this->createDeliveredOrder();
+        $other = Product::create([
+            'name' => 'Boshqa',
+            'slug' => 'boshqa',
+            'description' => 'Tavsif',
+            'price' => 10000,
+            'stock' => 5,
+            'status' => 'active',
+            'images' => [],
+            'category_id' => $this->category->id,
+        ]);
+
+        $this->asCustomer()->postJson('/api/reviews', [
+            'order_id' => $order->id,
+            'product_id' => $other->id,
+            'rating' => 5,
+        ])->assertUnprocessable()
+            ->assertJsonPath('message', "Bu mahsulot ushbu buyurtmada yo'q.");
+    }
+
+    public function test_customer_can_review_each_product_in_same_delivered_order(): void
+    {
+        $order = $this->createDeliveredOrder();
+        $other = Product::create([
+            'name' => 'Ikkinchi',
+            'slug' => 'ikkinchi',
+            'description' => 'Tavsif',
+            'price' => 20000,
+            'stock' => 5,
+            'status' => 'active',
+            'images' => [],
+            'category_id' => $this->category->id,
+        ]);
+        OrderItemModel::create([
+            'order_id' => $order->id,
+            'product_id' => $other->id,
+            'quantity' => 1,
+            'price' => 20000,
+        ]);
+
+        foreach ([$this->product, $other] as $product) {
+            $this->asCustomer()->postJson('/api/reviews', [
+                'order_id' => $order->id,
+                'product_id' => $product->id,
+                'rating' => 5,
+            ])->assertCreated();
+        }
+
+        $this->assertDatabaseCount('reviews', 2);
+    }
+
+    public function test_editing_approved_review_returns_it_to_pending_moderation(): void
+    {
+        $review = $this->createPendingReview($this->createDeliveredOrder());
+        $review->update(['status' => 'approved', 'is_visible' => true]);
+
+        $this->asCustomer()->putJson("/api/reviews/{$review->id}", [
+            'rating' => 3,
+            'comment' => 'Yangilangan sharh',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'pending');
+
+        $this->assertDatabaseHas('reviews', [
+            'id' => $review->id,
+            'rating' => 3,
+            'status' => 'pending',
+            'is_visible' => false,
+        ]);
+    }
+
+    public function test_delivered_order_detail_contains_its_product_review(): void
+    {
+        $order = $this->createDeliveredOrder();
+        $review = $this->createPendingReview($order);
+
+        $this->asCustomer()->getJson("/api/orders/{$order->id}")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.review.id', $review->id)
+            ->assertJsonPath('data.items.0.review.rating', 4)
+            ->assertJsonPath('data.items.0.review.status', 'pending');
     }
 
     // ─── Admin: PUT /api/admin/reviews/{id}/approve ───────────────────────────
 
     public function test_admin_can_approve_review(): void
     {
-        $order  = $this->createDeliveredOrder();
+        $order = $this->createDeliveredOrder();
         $review = $this->createPendingReview($order);
 
         $response = $this->asAdmin()->putJson("/api/admin/reviews/{$review->id}/approve");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('reviews', [
-            'id'         => $review->id,
-            'status'     => 'approved',
+            'id' => $review->id,
+            'status' => 'approved',
             'is_visible' => true,
         ]);
     }
@@ -229,7 +325,7 @@ class ReviewTest extends TestCase
 
     public function test_admin_can_reject_review_with_reason(): void
     {
-        $order  = $this->createDeliveredOrder();
+        $order = $this->createDeliveredOrder();
         $review = $this->createPendingReview($order);
 
         $response = $this->asAdmin()->putJson("/api/admin/reviews/{$review->id}/reject", [
@@ -238,8 +334,8 @@ class ReviewTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('reviews', [
-            'id'         => $review->id,
-            'status'     => 'rejected',
+            'id' => $review->id,
+            'status' => 'rejected',
             'is_visible' => false,
         ]);
     }
@@ -255,5 +351,50 @@ class ReviewTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data');
+    }
+
+    public function test_reject_review_requires_reason(): void
+    {
+        $order = $this->createDeliveredOrder();
+        $review = $this->createPendingReview($order);
+
+        $this->asAdmin()->putJson("/api/admin/reviews/{$review->id}/reject", [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('reason');
+    }
+
+    public function test_approved_review_disappears_from_pending_and_updates_product_rating(): void
+    {
+        $order = $this->createDeliveredOrder();
+        $review = $this->createPendingReview($order);
+
+        $this->asAdmin()->putJson("/api/admin/reviews/{$review->id}/approve")
+            ->assertStatus(200);
+
+        $this->getJson('/api/admin/reviews/pending')
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+
+        $this->assertDatabaseHas('products', [
+            'id' => $this->product->id,
+            'rating' => 4,
+            'reviews_count' => 1,
+        ]);
+    }
+
+    public function test_manager_cannot_moderate_reviews(): void
+    {
+        $manager = Staff::create([
+            'name' => 'Manager',
+            'email' => 'manager-review@uvita.uz',
+            'password' => Hash::make('password'),
+            'role' => StaffRole::MANAGER->value,
+            'is_active' => true,
+        ]);
+        $review = $this->createPendingReview($this->createDeliveredOrder());
+
+        $this->withToken($manager->createToken('test')->plainTextToken)
+            ->putJson("/api/admin/reviews/{$review->id}/approve")
+            ->assertStatus(403);
     }
 }

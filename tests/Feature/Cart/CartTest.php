@@ -14,24 +14,26 @@ class CartTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User     $user;
+    private User $user;
+
     private Category $category;
-    private Product  $product;
+
+    private Product $product;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user     = User::create(['phone' => '+998901234567', 'name' => 'Ali']);
+        $this->user = User::create(['phone' => '+998901234567', 'name' => 'Ali']);
         $this->category = Category::create(['name' => 'Test', 'slug' => 'test']);
-        $this->product  = Product::create([
-            'name'        => 'Mahsulot',
-            'slug'        => 'mahsulot',
+        $this->product = Product::create([
+            'name' => 'Mahsulot',
+            'slug' => 'mahsulot',
             'description' => 'Tavsif',
-            'price'       => 20000,
-            'stock'       => 10,
-            'status'      => 'active',
-            'images'      => [],
+            'price' => 20000,
+            'stock' => 10,
+            'status' => 'active',
+            'images' => [],
             'category_id' => $this->category->id,
         ]);
     }
@@ -49,7 +51,11 @@ class CartTest extends TestCase
     {
         $response = $this->asUser()->getJson('/api/cart');
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertJsonPath('data.items', [])
+            ->assertJsonPath('data.total', 0)
+            ->assertJsonPath('data.service_fee', 0)
+            ->assertJsonPath('data.grand_total', 0);
     }
 
     public function test_unauthenticated_cannot_get_cart(): void
@@ -65,13 +71,17 @@ class CartTest extends TestCase
     {
         $response = $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $this->product->id,
-            'quantity'   => 2,
+            'quantity' => 2,
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertJsonPath('data.items.0.quantity', 2)
+            ->assertJsonPath('data.total', 40000)
+            ->assertJsonPath('data.service_fee', 6000)
+            ->assertJsonPath('data.grand_total', 46000);
         $this->assertDatabaseHas('cart_items', [
             'product_id' => $this->product->id,
-            'quantity'   => 2,
+            'quantity' => 2,
         ]);
     }
 
@@ -79,17 +89,17 @@ class CartTest extends TestCase
     {
         $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $this->product->id,
-            'quantity'   => 3,
+            'quantity' => 3,
         ]);
 
         $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $this->product->id,
-            'quantity'   => 2,
+            'quantity' => 2,
         ]);
 
         $this->assertDatabaseHas('cart_items', [
             'product_id' => $this->product->id,
-            'quantity'   => 5,
+            'quantity' => 5,
         ]);
     }
 
@@ -97,10 +107,39 @@ class CartTest extends TestCase
     {
         $response = $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $this->product->id,
-            'quantity'   => 100,
+            'quantity' => 100,
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_add_zero_stock_product_returns_422(): void
+    {
+        $this->product->update(['stock' => 0]);
+
+        $this->asUser()->postJson('/api/cart/items', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'Mahsulot tugagan.');
+    }
+
+    public function test_merged_quantity_cannot_exceed_stock(): void
+    {
+        $this->asUser()->postJson('/api/cart/items', [
+            'product_id' => $this->product->id,
+            'quantity' => 8,
+        ])->assertOk();
+
+        $this->asUser()->postJson('/api/cart/items', [
+            'product_id' => $this->product->id,
+            'quantity' => 3,
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseHas('cart_items', [
+            'product_id' => $this->product->id,
+            'quantity' => 8,
+        ]);
     }
 
     public function test_add_item_requires_product_id_and_quantity(): void
@@ -108,26 +147,26 @@ class CartTest extends TestCase
         $response = $this->asUser()->postJson('/api/cart/items', []);
 
         $response->assertStatus(422)
-            ->assertJsonPath('errors.product_id', fn($v) => !empty($v))
-            ->assertJsonPath('errors.quantity', fn($v) => !empty($v));
+            ->assertJsonPath('errors.product_id', fn ($v) => ! empty($v))
+            ->assertJsonPath('errors.quantity', fn ($v) => ! empty($v));
     }
 
     public function test_add_inactive_product_returns_422(): void
     {
         $inactive = Product::create([
-            'name'        => 'Inactive',
-            'slug'        => 'inactive',
+            'name' => 'Inactive',
+            'slug' => 'inactive',
             'description' => 'D',
-            'price'       => 1000,
-            'stock'       => 5,
-            'status'      => 'inactive',
-            'images'      => [],
+            'price' => 1000,
+            'stock' => 5,
+            'status' => 'inactive',
+            'images' => [],
             'category_id' => $this->category->id,
         ]);
 
         $response = $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $inactive->id,
-            'quantity'   => 1,
+            'quantity' => 1,
         ]);
 
         $response->assertStatus(422);
@@ -139,7 +178,7 @@ class CartTest extends TestCase
     {
         $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $this->product->id,
-            'quantity'   => 2,
+            'quantity' => 2,
         ]);
 
         $response = $this->asUser()->deleteJson('/api/cart/items', [
@@ -147,6 +186,10 @@ class CartTest extends TestCase
         ]);
 
         $response->assertStatus(200);
+        $response
+            ->assertJsonPath('data.total', 0)
+            ->assertJsonPath('data.service_fee', 0)
+            ->assertJsonPath('data.grand_total', 0);
         $this->assertDatabaseMissing('cart_items', [
             'product_id' => $this->product->id,
         ]);
@@ -167,12 +210,15 @@ class CartTest extends TestCase
     {
         $this->asUser()->postJson('/api/cart/items', [
             'product_id' => $this->product->id,
-            'quantity'   => 2,
+            'quantity' => 2,
         ]);
 
         $response = $this->asUser()->deleteJson('/api/cart');
 
         $response->assertStatus(200);
+        $response
+            ->assertJsonPath('data.items', [])
+            ->assertJsonPath('data.grand_total', 0);
         $this->assertDatabaseMissing('cart_items', [
             'product_id' => $this->product->id,
         ]);

@@ -6,6 +6,7 @@ namespace Modules\Category\Presentation\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Category\Application\Commands\CreateCategoryCommand;
 use Modules\Category\Application\Commands\DeleteCategoryCommand;
@@ -26,13 +27,18 @@ final class CategoryController extends Controller
     public function __construct(
         private readonly GetCategoryListHandler $listHandler,
         private readonly GetCategoryByIdHandler $byIdHandler,
-        private readonly CreateCategoryHandler  $createHandler,
-        private readonly UpdateCategoryHandler  $updateHandler,
-        private readonly DeleteCategoryHandler  $deleteHandler,
+        private readonly CreateCategoryHandler $createHandler,
+        private readonly UpdateCategoryHandler $updateHandler,
+        private readonly DeleteCategoryHandler $deleteHandler,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'per_page' => ['nullable', 'integer', 'between:1,100'],
+            'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
+        ]);
+
         $categories = $this->listHandler->handle(
             GetCategoryListQuery::fromRequest($request)
         );
@@ -70,7 +76,7 @@ final class CategoryController extends Controller
             ->response();
     }
 
-    public function destroy(int $category): \Illuminate\Http\Response
+    public function destroy(int $category): Response
     {
         $this->deleteHandler->handle(new DeleteCategoryCommand($category));
 

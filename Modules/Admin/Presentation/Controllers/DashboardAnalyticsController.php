@@ -19,11 +19,11 @@ use Modules\Admin\Application\Queries\GetTopProductsQuery;
 final class DashboardAnalyticsController extends Controller
 {
     public function __construct(
-        private readonly GetDashboardSummaryHandler   $summaryHandler,
-        private readonly GetOrderStatsHandler         $orderStatsHandler,
-        private readonly GetTopProductsHandler        $topProductsHandler,
-        private readonly GetSalesTimeSeriesHandler    $salesHandler,
-        private readonly GetRevenueBreakdownHandler   $revenueHandler,
+        private readonly GetDashboardSummaryHandler $summaryHandler,
+        private readonly GetOrderStatsHandler $orderStatsHandler,
+        private readonly GetTopProductsHandler $topProductsHandler,
+        private readonly GetSalesTimeSeriesHandler $salesHandler,
+        private readonly GetRevenueBreakdownHandler $revenueHandler,
     ) {}
 
     // --- Operatsion (admin + super) ---
@@ -40,6 +40,10 @@ final class DashboardAnalyticsController extends Controller
 
     public function topProducts(Request $request): JsonResponse
     {
+        $request->validate([
+            'limit' => ['nullable', 'integer', 'between:1,50'],
+        ]);
+
         $result = $this->topProductsHandler->handle(
             new GetTopProductsQuery(limit: (int) $request->query('limit', 10))
         );
@@ -51,10 +55,16 @@ final class DashboardAnalyticsController extends Controller
 
     public function sales(Request $request): JsonResponse
     {
+        $request->validate([
+            'period' => ['nullable', 'in:daily,weekly,monthly'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
         $result = $this->salesHandler->handle(new GetSalesTimeSeriesQuery(
             period: $request->query('period', 'daily'),
-            from:   $request->query('from'),
-            to:     $request->query('to'),
+            from: $request->query('from'),
+            to: $request->query('to'),
         ));
 
         return response()->json(['data' => $result]);
@@ -62,9 +72,14 @@ final class DashboardAnalyticsController extends Controller
 
     public function revenue(Request $request): JsonResponse
     {
+        $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
         $result = $this->revenueHandler->handle(new GetRevenueBreakdownQuery(
             from: $request->query('from'),
-            to:   $request->query('to'),
+            to: $request->query('to'),
         ));
 
         return response()->json(['data' => $result]);

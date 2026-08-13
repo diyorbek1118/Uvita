@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Application\Handlers;
 
+use Illuminate\Support\Facades\DB;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Product\Application\Commands\UpdateProductCommand;
 use Modules\Product\Application\Handlers\UpdateProductHandler;
+use Modules\Product\Domain\Enums\ProductStatusEnum;
 use Modules\Product\Infrastructure\Persistence\Models\Product as ProductModel;
 
 /**
@@ -22,12 +24,24 @@ final class UpdateDashboardProductHandler
 
     public function handle(UpdateProductCommand $command, Staff $actor): ProductModel
     {
-        $product = ProductModel::findOrFail($command->id);
+        return DB::transaction(function () use ($command, $actor): ProductModel {
+            $product = ProductModel::query()->lockForUpdate()->findOrFail($command->id);
 
-        if ($actor->role === StaffRole::MANAGER && $product->manager_id !== $actor->id) {
-            abort(403, "Bu mahsulotni tahrirlash huquqingiz yo'q");
-        }
+            if ($actor->role === StaffRole::MANAGER && $product->manager_id !== $actor->id) {
+                abort(403, "Bu mahsulotni tahrirlash huquqingiz yo'q");
+            }
 
-        return $this->updateHandler->handle($command);
+            $updated = $this->updateHandler->handle($command);
+
+            // Manager tahrirlagan har qanday mahsulot qayta moderatsiyadan o'tadi.
+            if ($actor->role === StaffRole::MANAGER) {
+                $updated->forceFill([
+                    'status' => ProductStatusEnum::Inactive->value,
+                    'rejection_reason' => null,
+                ])->save();
+            }
+
+            return $updated->fresh();
+        });
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Application\Handlers;
 
-use App\Shared\Services\Fee\OrderFeeCalculator;
 use Illuminate\Support\Facades\DB;
 use Modules\Admin\Application\Queries\GetRevenueBreakdownQuery;
 
@@ -27,21 +26,22 @@ final class GetRevenueBreakdownHandler
 
         $row = $builder->selectRaw('COUNT(*) as orders_count')
             ->selectRaw('COALESCE(SUM(total_price), 0) as gross_sales')
-            ->selectRaw('COALESCE(SUM(' . OrderFeeCalculator::courierFeeSql() . '), 0) as courier_fees')
+            ->selectRaw('COALESCE(SUM(service_fee), 0) as platform_fee_gross')
+            ->selectRaw('COALESCE(SUM(courier_fee), 0) as courier_fees')
             ->first();
 
-        $gross         = (int) ($row->gross_sales ?? 0);
-        $platformGross = (int) round($gross * OrderFeeCalculator::PLATFORM_FEE_RATE);
-        $courier       = (int) ($row->courier_fees ?? 0);
+        $gross = (int) ($row->gross_sales ?? 0);
+        $platformGross = (int) ($row->platform_fee_gross ?? 0);
+        $courier = (int) ($row->courier_fees ?? 0);
 
         return [
-            'orders_count'       => (int) ($row->orders_count ?? 0),
-            'gross_sales'        => $gross,           // mahsulotlar summasi
-            'seller_payouts'     => $gross,           // sotuvchilarga
+            'orders_count' => (int) ($row->orders_count ?? 0),
+            'gross_sales' => $gross,           // mahsulotlar summasi
+            'seller_payouts' => $gross,           // sotuvchilarga
             'platform_fee_gross' => $platformGross,   // 15% yalpi
-            'courier_fees'       => $courier,         // kuryerlarga
-            'platform_fee_net'   => $platformGross - $courier,  // platformada qoladi
-            'customer_total'     => $gross + $platformGross,    // mijozlar to'lagan jami
+            'courier_fees' => $courier,         // kuryerlarga
+            'platform_fee_net' => $platformGross - $courier,  // platformada qoladi
+            'customer_total' => $gross + $platformGross,    // mijozlar to'lagan jami
         ];
     }
 }

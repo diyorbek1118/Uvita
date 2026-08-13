@@ -18,9 +18,11 @@ final class EloquentReviewRepository implements ReviewRepositoryInterface
         return $model !== null ? $this->toDomain($model) : null;
     }
 
-    public function findByOrderId(int $orderId): ?Review
+    public function findByOrderAndProduct(int $orderId, int $productId): ?Review
     {
-        $model = ReviewModel::where('order_id', $orderId)->first();
+        $model = ReviewModel::where('order_id', $orderId)
+            ->where('product_id', $productId)
+            ->first();
 
         return $model !== null ? $this->toDomain($model) : null;
     }
@@ -29,12 +31,12 @@ final class EloquentReviewRepository implements ReviewRepositoryInterface
     {
         if ($review->id === null) {
             $model = ReviewModel::create([
-                'order_id'   => $review->orderId,
-                'user_id'    => $review->userId,
+                'order_id' => $review->orderId,
+                'user_id' => $review->userId,
                 'product_id' => $review->productId,
-                'rating'     => $review->rating,
-                'comment'    => $review->comment,
-                'status'     => $review->status->value,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'status' => $review->status->value,
                 'is_visible' => $review->isVisible,
                 'admin_note' => $review->adminNote,
             ]);
@@ -43,9 +45,9 @@ final class EloquentReviewRepository implements ReviewRepositoryInterface
         }
 
         ReviewModel::where('id', $review->id)->update([
-            'rating'     => $review->rating,
-            'comment'    => $review->comment,
-            'status'     => $review->status->value,
+            'rating' => $review->rating,
+            'comment' => $review->comment,
+            'status' => $review->status->value,
             'is_visible' => $review->isVisible,
             'admin_note' => $review->adminNote,
         ]);
@@ -56,13 +58,13 @@ final class EloquentReviewRepository implements ReviewRepositoryInterface
     private function toDomain(ReviewModel $model): Review
     {
         return new Review(
-            id:        $model->id,
-            orderId:   $model->order_id,
-            userId:    $model->user_id,
+            id: $model->id,
+            orderId: $model->order_id,
+            userId: $model->user_id,
             productId: $model->product_id,
-            rating:    $model->rating,
-            comment:   $model->comment,
-            status:    ReviewStatus::from($model->status->value),
+            rating: $model->rating,
+            comment: $model->comment,
+            status: ReviewStatus::from($model->status->value),
             isVisible: $model->is_visible,
             adminNote: $model->admin_note,
         );

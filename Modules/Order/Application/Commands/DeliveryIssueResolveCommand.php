@@ -7,7 +7,8 @@ namespace Modules\Order\Application\Commands;
 final readonly class DeliveryIssueResolveCommand
 {
     public function __construct(
-        public int    $orderId,
+        public int $orderId,
         public string $action, // 'reschedule' | 'cancel'
+        public ?string $deliveryTime = null,
     ) {}
 }

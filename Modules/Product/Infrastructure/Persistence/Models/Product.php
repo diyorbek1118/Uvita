@@ -7,6 +7,7 @@ namespace Modules\Product\Infrastructure\Persistence\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category as CategoryModel;
@@ -30,6 +31,15 @@ final class Product extends Model
         'images',
         'category_id',
         'manager_id',
+        'seller_id',
+        'approved_version',
+        'fee_snapshot',
+        'video_url',
+        'primary_image_index',
+        'origin_region',
+        'farmer_name',
+        'unit',
+        'minimum_order_quantity',
         'rejection_reason',
     ];
 
@@ -43,6 +53,11 @@ final class Product extends Model
             'images'        => 'array',
             'status'        => ProductStatusEnum::class,
             'manager_id'    => 'integer',
+            'seller_id'     => 'integer',
+            'approved_version' => 'integer',
+            'fee_snapshot' => 'array',
+            'primary_image_index' => 'integer',
+            'minimum_order_quantity' => 'integer',
         ];
     }
 
@@ -54,5 +69,15 @@ final class Product extends Model
     public function manager(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'manager_id');
+    }
+
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'seller_id');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(ProductRevision::class);
     }
 }

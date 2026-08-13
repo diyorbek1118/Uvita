@@ -1,6 +1,7 @@
-# Uvita — Online Marketplace API
+# Uvita — B2B va B2B2C Farm Marketplace
 
-Laravel 12 asosida qurilgan modular monolith REST API.
+Fermer/dehqon mahsulotlarini sellerlar orqali biznes xaridorlar va customerlarga
+yetkazish uchun Laravel 12 asosida qurilgan modular monolith REST API.
 
 ## Texnologiyalar
 
@@ -47,14 +48,14 @@ Base URL: `http://localhost:8000/api`
 
 | Method | Endpoint | Tavsif |
 |--------|----------|--------|
-| POST | `/auth/send-otp` | OTP kod yuborish |
-| POST | `/auth/verify-otp` | OTP kodni tasdiqlash |
+| POST | `/auth/otp/send` | OTP kod yuborish |
+| POST | `/auth/otp/verify` | OTP kodni tasdiqlash |
 | POST | `/auth/logout` | Chiqish |
 
 ### send-otp
 
 ```json
-POST /api/auth/send-otp
+POST /api/auth/otp/send
 Content-Type: application/json
 
 {
@@ -66,7 +67,7 @@ Content-Type: application/json
 ### verify-otp
 
 ```json
-POST /api/auth/verify-otp
+POST /api/auth/otp/verify
 Content-Type: application/json
 
 {
@@ -89,9 +90,26 @@ Authorization: Bearer {token}
 Modules/
 ├── Auth/         — autentifikatsiya
 ├── User/         — foydalanuvchi
-├── Product/      — mahsulotlar
+├── Product/      — mahsulot, media, fee va versiyalangan moderatsiya
 ├── Cart/         — savat
-└── Order/        — buyurtmalar
+├── Order/        — buyurtmalar
+├── Seller/       — seller profil/KYB va tasdiqlash
+├── Payment/      — Payme, Click, Uzum
+├── Review/       — moderatsiyali sharhlar
+├── Courier/      — assignment, PIN, GPS, payout
+└── Admin/        — moderatsiya va analitika
+```
+
+Seller dashboard backenddan mustaqil `../uvita_frontend_seller/` loyihasida joylashgan. Seller mahsulot
+yaratganda kamida 4 ta rasm va bitta video yuklaydi, server komissiyalarni hisoblaydi
+va mahsulot/tahrir admin tasdig'idan keyingina marketga chiqadi.
+
+Frontendlar alohida deploy qilinadi:
+
+```text
+uvita_frontend/             Customer va B2B xaridor marketi
+uvita_frontend_dashboard/   Manager, admin va super-admin paneli
+uvita_frontend_seller/      Seller kabineti
 ```
 
 ## Litsenziya

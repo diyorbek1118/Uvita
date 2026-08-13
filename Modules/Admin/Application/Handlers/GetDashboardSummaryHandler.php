@@ -21,20 +21,19 @@ final class GetDashboardSummaryHandler
     {
         return [
             'orders' => [
-                'today'      => OrderModel::whereDate('created_at', now()->toDateString())->count(),
+                'today' => OrderModel::whereDate('created_at', now()->toDateString())->count(),
                 'this_month' => OrderModel::whereYear('created_at', now()->year)
                     ->whereMonth('created_at', now()->month)
                     ->count(),
-                'total'      => OrderModel::count(),
+                'total' => OrderModel::count(),
             ],
             'pending_approvals' => ProductModel::where('status', 'inactive')
-                ->whereNotNull('manager_id')
                 ->count(),
-            'delivery_issues'   => OrderModel::where('status', 'delivery_issue')->count(),
-            'active_couriers'   => Staff::where('role', 'courier')->where('is_active', true)->count(),
-            'low_stock'         => ProductModel::where('stock', '<=', self::LOW_STOCK_THRESHOLD)->count(),
-            'active_products'   => ProductModel::where('status', 'active')->count(),
-            'total_customers'   => User::count(),
+            'delivery_issues' => OrderModel::where('status', 'delivery_issue')->count(),
+            'active_couriers' => Staff::where('role', 'courier')->where('is_active', true)->count(),
+            'low_stock' => ProductModel::where('stock', '<=', self::LOW_STOCK_THRESHOLD)->count(),
+            'active_products' => ProductModel::where('status', 'active')->count(),
+            'total_customers' => User::count(),
         ];
     }
 }

@@ -15,7 +15,10 @@ final class GetAvailableCouriersHandler
     {
         $couriers = Staff::where('role', StaffRole::COURIER)
             ->where('is_active', true)
-            ->get();
+            ->with('courierProfile')
+            ->get()
+            ->sortByDesc(fn (Staff $courier): bool => (bool) $courier->courierProfile?->is_online)
+            ->values();
 
         foreach ($couriers as $courier) {
             $courier->setAttribute(

@@ -21,28 +21,36 @@ final class CreateReviewHandler
 
     public function handle(CreateReviewCommand $command): ReviewModel
     {
-        $dto   = $command->dto;
+        $dto = $command->dto;
         $order = OrderModel::findOrFail($dto->orderId);
 
         if ($order->user_id !== $dto->userId) {
-            abort(403, "Bu buyurtma sizga tegishli emas.");
+            abort(403, 'Bu buyurtma sizga tegishli emas.');
         }
 
         if ($order->status !== OrderStatus::DELIVERED) {
-            throw new OrderNotDeliveredException("Buyurtma hali yetkazilmagan.");
+            throw new OrderNotDeliveredException('Buyurtma hali yetkazilmagan.');
         }
 
-        if ($this->reviews->findByOrderId($dto->orderId) !== null) {
-            throw new ReviewAlreadyExistsException("Bu buyurtma uchun sharh allaqachon yozilgan.");
+        $productIsInOrder = $order->items()
+            ->where('product_id', $dto->productId)
+            ->exists();
+
+        if (! $productIsInOrder) {
+            abort(422, "Bu mahsulot ushbu buyurtmada yo'q.");
+        }
+
+        if ($this->reviews->findByOrderAndProduct($dto->orderId, $dto->productId) !== null) {
+            throw new ReviewAlreadyExistsException('Bu mahsulot uchun sharh allaqachon yozilgan.');
         }
 
         $review = new Review(
-            id:        null,
-            orderId:   $dto->orderId,
-            userId:    $dto->userId,
+            id: null,
+            orderId: $dto->orderId,
+            userId: $dto->userId,
             productId: $dto->productId,
-            rating:    $dto->rating,
-            comment:   $dto->comment,
+            rating: $dto->rating,
+            comment: $dto->comment,
         );
 
         $reviewId = $this->reviews->save($review);

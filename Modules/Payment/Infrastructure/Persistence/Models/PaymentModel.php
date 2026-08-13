@@ -25,13 +25,17 @@ class PaymentModel extends Model
         'amount',
         'status',
         'payload',
+        'refund_requested_at',
+        'refunded_at',
     ];
 
     protected $casts = [
-        'status'   => PaymentStatus::class,
+        'status' => PaymentStatus::class,
         'provider' => PaymentProvider::class,
-        'payload'  => 'array',
-        'amount'   => 'integer',
+        'payload' => 'array',
+        'amount' => 'integer',
+        'refund_requested_at' => 'datetime',
+        'refunded_at' => 'datetime',
     ];
 
     public function order(): BelongsTo

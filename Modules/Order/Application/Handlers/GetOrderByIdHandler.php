@@ -11,7 +11,7 @@ final class GetOrderByIdHandler
 {
     public function handle(GetOrderByIdQuery $query): OrderModel
     {
-        return OrderModel::with(['items.product'])
+        return OrderModel::with(['items.product', 'reviews', 'latestPayment'])
             ->where('id', $query->orderId)
             ->where('user_id', $query->userId)
             ->firstOrFail();

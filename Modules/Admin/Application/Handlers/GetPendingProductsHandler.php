@@ -13,7 +13,6 @@ final class GetPendingProductsHandler
     public function handle(GetPendingProductsQuery $query): LengthAwarePaginator
     {
         return ProductModel::where('status', 'inactive')
-            ->whereNotNull('manager_id')
             ->with('manager')
             ->latest()
             ->paginate(20);

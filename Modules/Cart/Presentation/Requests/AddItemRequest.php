@@ -17,7 +17,7 @@ final class AddItemRequest extends FormRequest
     {
         return [
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'quantity'   => ['required', 'integer', 'min:1', 'max:100'],
+            'quantity'   => ['required', 'integer', 'min:1', 'max:1000000'],
         ];
     }
 
@@ -28,7 +28,7 @@ final class AddItemRequest extends FormRequest
             'product_id.exists'   => 'Bunday mahsulot topilmadi.',
             'quantity.required'   => 'Miqdor kiritilishi shart.',
             'quantity.min'        => 'Miqdor kamida 1 bo\'lishi kerak.',
-            'quantity.max'        => 'Miqdor 100 tadan oshmasligi kerak.',
+            'quantity.max'        => 'Miqdor ruxsat etilgan chegaradan oshdi.',
         ];
     }
 }

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Modules\Order\Application\Handlers;
 
 use App\Jobs\SendTelegramJob;
-use App\Shared\Services\Push\FcmService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Modules\Admin\Infrastructure\Persistence\Models\StaffDeviceToken;
+use Illuminate\Support\Facades\DB;
+use Modules\Courier\Application\Contracts\CourierNotifierInterface;
+use Modules\Courier\Application\Services\DeliveryConfirmationService;
+use Modules\Courier\Domain\Enums\DeliveryAssignmentStatus;
+use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
 use Modules\Order\Application\Commands\AssignCourierCommand;
-use Modules\Order\Domain\Entities\Order;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 
@@ -17,65 +19,53 @@ final class AssignCourierHandler
 {
     public function __construct(
         private readonly OrderRepositoryInterface $orders,
-        private readonly FcmService $fcm,
+        private readonly CourierNotifierInterface $notifier,
+        private readonly DeliveryConfirmationService $confirmation,
     ) {}
 
     public function handle(AssignCourierCommand $command): OrderModel
     {
-        $order = $this->orders->findById($command->orderId)
-            ?? throw new ModelNotFoundException("Buyurtma topilmadi.");
+        $saved = DB::transaction(function () use ($command) {
+            OrderModel::query()->lockForUpdate()->findOrFail($command->orderId);
+            $order = $this->orders->findById($command->orderId)
+                ?? throw new ModelNotFoundException('Buyurtma topilmadi.');
 
-        $order->assignCourier($command->courierId);
+            DeliveryAssignment::query()
+                ->where('order_id', $command->orderId)
+                ->where('status', DeliveryAssignmentStatus::ASSIGNED->value)
+                ->update([
+                    'status' => DeliveryAssignmentStatus::CANCELLED->value,
+                    'responded_at' => now(),
+                ]);
 
-        $saved = $this->orders->save($order);
+            $order->assignCourier($command->courierId);
+            $saved = $this->orders->save($order);
+
+            DeliveryAssignment::create([
+                'order_id' => $saved->id,
+                'courier_id' => $command->courierId,
+                'assigned_by' => $command->assignedById,
+                'status' => DeliveryAssignmentStatus::ASSIGNED,
+                'assigned_at' => now(),
+            ]);
+            $this->confirmation->ensureForOrder($saved->id);
+
+            return $saved;
+        });
+
+        $this->notifier->notify(
+            $command->courierId,
+            'order_assigned',
+            'Yangi buyurtma',
+            "Sizga #{$saved->id} buyurtma tayinlandi.",
+            ['order_id' => $saved->id]
+        );
 
         dispatch(new SendTelegramJob(
-            role:    'manager',
+            role: 'admin',
             message: "🚴 <b>Buyurtma #{$saved->id}</b>\n\nKuryer #{$command->courierId} tayinlandi."
         ));
 
-        // FCM push — kuryer ilovasi butunlay yopiq bo'lsa ham xabar keladi
-        $this->notifyCourier($saved);
-
-        return OrderModel::with(['items.product'])->findOrFail($saved->id);
-    }
-
-    private function notifyCourier(Order $order): void
-    {
-        try {
-            $courierId = $order->courierId;
-            if ($courierId === null) {
-                return;
-            }
-
-            $tokens = StaffDeviceToken::where('staff_id', $courierId)
-                ->pluck('token');
-            if ($tokens->isEmpty()) {
-                return;
-            }
-
-            $address = implode(', ', array_filter([
-                $order->address->street,
-                $order->address->district,
-                $order->address->region,
-            ]));
-
-            $amount = number_format($order->grandTotal->amount, 0, '.', ' ');
-            $body   = trim($address . ' · ' . $amount . " so'm");
-
-            $data = [
-                'type'     => 'new_order',
-                'order_id' => (string) $order->id,
-                'title'    => "🛵 Yangi buyurtma #{$order->id}",
-                'body'     => $body,
-                'sound'    => 'on',
-            ];
-
-            foreach ($tokens as $token) {
-                $this->fcm->send($token, $data);
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        return OrderModel::with(['items.product', 'deliveryAssignments'])->findOrFail($saved->id);
     }
 }
