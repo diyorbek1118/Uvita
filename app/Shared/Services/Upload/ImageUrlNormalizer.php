@@ -14,13 +14,19 @@ namespace App\Shared\Services\Upload;
 final class ImageUrlNormalizer
 {
     /**
-     * @param  array<int, string>|null  $urls
+     * @param  array<int, string>|string|null  $urls
      * @return array<int, string>
      */
-    public static function normalizeArray(?array $urls): array
+    public static function normalizeArray(array|string|null $urls): array
     {
-        if (! $urls) {
+        if ($urls === null) {
             return [];
+        }
+
+        // Ba'zi eski modellarda images JSON-string bo'lib qolgan bo'lishi mumkin
+        if (is_string($urls)) {
+            $decoded = json_decode($urls, true);
+            $urls = is_array($decoded) ? $decoded : [$urls];
         }
 
         return array_map(

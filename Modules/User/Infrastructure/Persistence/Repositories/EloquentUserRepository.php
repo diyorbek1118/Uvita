@@ -30,8 +30,15 @@ final class EloquentUserRepository implements UserRepositoryInterface
             ? UserModel::findOrFail($user->id)
             : new UserModel();
 
-        $model->phone = $user->phone;
-        $model->name  = $user->name;
+        $model->phone    = $user->phone;
+        $model->name     = $user->name;
+        $model->surname  = $user->surname;
+        $model->region   = $user->region;
+        $model->district = $user->district;
+        $model->address  = $user->address;
+        $model->lat      = $user->lat;
+        $model->lng      = $user->lng;
+        $model->password = $user->password;
         $model->save();
 
         return $this->toEntity($model);
@@ -42,7 +49,14 @@ final class EloquentUserRepository implements UserRepositoryInterface
         return new UserEntity(
             id:        $model->id,
             name:      $model->name,
+            surname:   $model->surname,
             phone:     $model->phone,
+            region:    $model->region,
+            district:  $model->district,
+            address:   $model->address,
+            lat:       $model->lat !== null ? (float) $model->lat : null,
+            lng:       $model->lng !== null ? (float) $model->lng : null,
+            password:  $model->password,
             createdAt: $model->created_at?->toDateTimeImmutable(),
         );
     }

@@ -22,12 +22,25 @@ final class EloquentOtpAttemptRepository implements OtpAttemptRepositoryInterfac
         return $model ? $this->toEntity($model) : null;
     }
 
+    public function findVerifiedByPhone(string $phone): ?OtpAttemptEntity
+    {
+        $model = OtpAttemptModel::query()
+            ->where('phone', $phone)
+            ->where('is_verified', true)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        return $model ? $this->toEntity($model) : null;
+    }
+
     public function save(OtpAttemptEntity $attempt): void
     {
         if ($attempt->id !== null) {
             OtpAttemptModel::where('id', $attempt->id)->update([
                 'attempts_count' => $attempt->attemptsCount,
                 'blocked_until'  => $attempt->blockedUntil,
+                'expires_at'     => $attempt->expiresAt,
                 'is_verified'    => $attempt->isVerified,
             ]);
         } else {

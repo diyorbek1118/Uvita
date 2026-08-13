@@ -66,4 +66,18 @@ final class OtpAttempt
     {
         $this->isVerified = true;
     }
+
+    /** Tasdiqlangan OTP muddatini uzaytirish — ro'yxatdan o'tish bosqichlari uchun yetarli vaqt */
+    public function extendExpiry(DateTimeImmutable $newExpiry): self
+    {
+        return new self(
+            id:            $this->id,
+            phone:         $this->phone,
+            code:          $this->code,
+            attemptsCount: $this->attemptsCount,
+            blockedUntil:  $this->blockedUntil,
+            expiresAt:     $newExpiry,
+            isVerified:    $this->isVerified,
+        );
+    }
 }

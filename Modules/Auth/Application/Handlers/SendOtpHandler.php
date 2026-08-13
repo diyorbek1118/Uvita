@@ -5,20 +5,23 @@ declare(strict_types=1);
 namespace Modules\Auth\Application\Handlers;
 
 use App\Jobs\SendSmsJob;
+use App\Shared\Exceptions\DomainException;
+use App\Shared\Services\Settings\SettingService;
 use DateTimeImmutable;
 use Modules\Auth\Application\Commands\SendOtpCommand;
 use Modules\Auth\Domain\Entities\OtpAttempt;
 use Modules\Auth\Domain\Exceptions\OtpRateLimitException;
-use App\Shared\Services\Settings\SettingService;
 use Modules\Auth\Domain\Repositories\OtpAttemptRepositoryInterface;
 use Modules\Auth\Domain\ValueObjects\PhoneNumber;
+use Modules\User\Domain\Repositories\UserRepositoryInterface;
 
 final class SendOtpHandler
 {
-    private const OTP_LENGTH = 6;
+    private const OTP_LENGTH = 4;
 
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
+        private readonly UserRepositoryInterface       $userRepository,
         private readonly SettingService                $settingService,
     ) {}
 
@@ -26,6 +29,15 @@ final class SendOtpHandler
     {
         // 1. PhoneNumber VO formatni tekshiradi
         $phone = new PhoneNumber($command->dto->phone);
+
+        // 1b. Purpose bo'yicha oldindan tekshirish
+        $existingUser = $this->userRepository->findByPhone($phone->value);
+        if (in_array($command->dto->purpose, ['register', 'change_phone'], true) && $existingUser !== null) {
+            throw new DomainException("Bu raqam allaqachon ro'yxatdan o'tgan. Tizimga parol bilan kiring.");
+        }
+        if ($command->dto->purpose === 'reset' && $existingUser === null) {
+            throw new DomainException("Bu raqam ro'yxatdan o'tmagan. Avval ro'yxatdan o'ting.");
+        }
 
         // 2. Mavjud active OTP bormi tekshir
         $existing = $this->otpRepository->findActiveByPhone($phone->value);
@@ -42,8 +54,8 @@ final class SendOtpHandler
             }
         }
 
-        // 4. 6 xonali random kod
-        $code = str_pad((string) random_int(0, 999999), self::OTP_LENGTH, '0', STR_PAD_LEFT);
+        // 4. 4 xonali random kod
+        $code = str_pad((string) random_int(0, 9999), self::OTP_LENGTH, '0', STR_PAD_LEFT);
 
         $ttl = $this->settingService->otpExpirySeconds();
 

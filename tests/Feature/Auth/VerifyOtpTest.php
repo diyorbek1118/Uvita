@@ -23,7 +23,7 @@ class VerifyOtpTest extends TestCase
         $this->seedSettings();
     }
 
-    private function createValidOtp(string $phone = '+998901234567', string $code = '123456'): void
+    private function createValidOtp(string $phone = '+998901234567', string $code = '1234'): void
     {
         OtpAttempt::create([
             'phone'          => $phone,
@@ -37,11 +37,11 @@ class VerifyOtpTest extends TestCase
     public function test_verify_correct_otp_returns_token(): void
     {
         Queue::fake();
-        $this->createValidOtp(phone: '+998901234567', code: '654321');
+        $this->createValidOtp(phone: '+998901234567', code: '6543');
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '654321',
+            'code'  => '6543',
         ]);
 
         $response->assertStatus(201)
@@ -55,7 +55,7 @@ class VerifyOtpTest extends TestCase
 
         $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '123456',
+            'code'  => '1234',
         ]);
 
         $this->assertDatabaseHas('users', ['phone' => '+998901234567']);
@@ -68,7 +68,7 @@ class VerifyOtpTest extends TestCase
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '123456',
+            'code'  => '1234',
         ]);
 
         $response->assertStatus(201)
@@ -84,7 +84,7 @@ class VerifyOtpTest extends TestCase
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '123456',
+            'code'  => '1234',
         ]);
 
         $response->assertStatus(200)
@@ -93,11 +93,11 @@ class VerifyOtpTest extends TestCase
 
     public function test_wrong_code_returns_422(): void
     {
-        $this->createValidOtp(code: '123456');
+        $this->createValidOtp(code: '1234');
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '999999',
+            'code'  => '9999',
         ]);
 
         $response->assertStatus(422);
@@ -107,7 +107,7 @@ class VerifyOtpTest extends TestCase
     {
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '123456',
+            'code'  => '1234',
         ]);
 
         $response->assertStatus(422);
@@ -117,7 +117,7 @@ class VerifyOtpTest extends TestCase
     {
         OtpAttempt::create([
             'phone'          => '+998901234567',
-            'code'           => '123456',
+            'code'           => '1234',
             'expires_at'     => now()->subSeconds(1),
             'attempts_count' => 0,
             'is_verified'    => false,
@@ -125,7 +125,7 @@ class VerifyOtpTest extends TestCase
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '123456',
+            'code'  => '1234',
         ]);
 
         $response->assertStatus(422);
@@ -135,7 +135,7 @@ class VerifyOtpTest extends TestCase
     {
         OtpAttempt::create([
             'phone'          => '+998901234567',
-            'code'           => '123456',
+            'code'           => '1234',
             'expires_at'     => now()->addSeconds(120),
             'attempts_count' => 5,
             'blocked_until'  => now()->addMinutes(10),
@@ -144,7 +144,7 @@ class VerifyOtpTest extends TestCase
 
         $response = $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '123456',
+            'code'  => '1234',
         ]);
 
         $response->assertStatus(429);
@@ -152,11 +152,11 @@ class VerifyOtpTest extends TestCase
 
     public function test_wrong_code_increments_attempts(): void
     {
-        $this->createValidOtp(code: '123456');
+        $this->createValidOtp(code: '1234');
 
         $this->postJson($this->endpoint, [
             'phone' => '+998901234567',
-            'code'  => '000000',
+            'code'  => '0000',
         ]);
 
         $this->assertDatabaseHas('otp_attempts', [

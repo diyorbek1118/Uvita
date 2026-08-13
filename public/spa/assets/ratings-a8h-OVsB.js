@@ -1,0 +1,1 @@
+import{T as e}from"./index-BibA1cp5.js";var t=t=>e.post(`/ratings`,t),n=t=>e.get(`/users/${t}`),r=(t,n={})=>e.get(`/ratings/listing/${t}`,{params:n}),i=(t,n)=>e.post(`/ratings/listing/${t}`,n),a=t=>e.get(`/ratings/listing/${t}/status`);export{n as a,r as i,t as n,a as r,i as t};

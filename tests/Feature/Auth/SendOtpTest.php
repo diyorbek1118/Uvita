@@ -54,7 +54,7 @@ class SendOtpTest extends TestCase
     public function test_send_otp_rejects_invalid_phone_format(): void
     {
         $response = $this->postJson($this->endpoint, [
-            'phone' => '998901234567',
+            'phone' => '9989012347',
         ]);
 
         $response->assertStatus(422);
@@ -82,7 +82,7 @@ class SendOtpTest extends TestCase
 
         OtpAttempt::create([
             'phone'          => '+998901234567',
-            'code'           => '123456',
+            'code'           => '1234',
             'expires_at'     => now()->addSeconds(120),
             'attempts_count' => 0,
             'is_verified'    => false,
@@ -101,7 +101,7 @@ class SendOtpTest extends TestCase
 
         OtpAttempt::create([
             'phone'          => '+998901234567',
-            'code'           => '123456',
+            'code'           => '1234',
             'expires_at'     => now()->addSeconds(120),
             'attempts_count' => 5,
             'blocked_until'  => now()->addMinutes(10),

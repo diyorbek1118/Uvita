@@ -1,0 +1,1 @@
+var e=e=>{let t=e.replace(/\D/g,``).slice(0,9).match(/(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2})/);if(!t)return``;let n=t[1];return t[2]&&(n+=` `+t[2]),t[3]&&(n+=` `+t[3]),t[4]&&(n+=` `+t[4]),n},t=e=>e.startsWith(`+`)?e:`+998`+e.replace(/\D/g,``);export{t as n,e as t};

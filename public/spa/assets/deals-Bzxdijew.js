@@ -1,0 +1,1 @@
+import{T as e}from"./index-BibA1cp5.js";var t=t=>e.post(`/deals`,t),n=(t={})=>e.get(`/deals/incoming`,{params:t}),r=(t={})=>e.get(`/deals/outgoing`,{params:t}),i=t=>e.post(`/deals/${t}/confirm`),a=t=>e.post(`/deals/${t}/complete`),o=t=>e.post(`/deals/${t}/cancel`);export{n as a,t as i,a as n,r as o,i as r,o as t};

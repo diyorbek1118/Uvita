@@ -13,6 +13,10 @@ use Modules\Auth\Domain\Repositories\OtpAttemptRepositoryInterface;
 use Modules\Auth\Infrastructure\Auth\SanctumTokenService;
 use Modules\Auth\Infrastructure\Persistence\Repositories\EloquentOtpAttemptRepository;
 use Modules\Cart\Domain\Repositories\CartRepositoryInterface;
+use Modules\Deal\Domain\Repositories\DealRepositoryInterface;
+use Modules\Deal\Infrastructure\Persistence\Repositories\EloquentDealRepository;
+use Modules\Listing\Domain\Repositories\ListingRepositoryInterface;
+use Modules\Listing\Infrastructure\Persistence\Repositories\EloquentListingRepository;
 use Modules\Cart\Infrastructure\Persistence\Repositories\EloquentCartRepository;
 use Modules\Category\Domain\Repositories\CategoryRepositoryInterface;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
@@ -41,6 +45,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PaymentRepositoryInterface::class, EloquentPaymentRepository::class);
         $this->app->bind(ReviewRepositoryInterface::class, EloquentReviewRepository::class);
         $this->app->bind(SettingRepositoryInterface::class, EloquentSettingRepository::class);
+        $this->app->bind(ListingRepositoryInterface::class, EloquentListingRepository::class);
+        $this->app->bind(DealRepositoryInterface::class, EloquentDealRepository::class);
         $this->app->singleton(SettingService::class);
     }
 

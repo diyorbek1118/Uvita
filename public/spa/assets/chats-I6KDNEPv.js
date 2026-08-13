@@ -1,0 +1,1 @@
+import{T as e}from"./index-BibA1cp5.js";var t=(t={})=>e.get(`/chats`,{params:t}),n=t=>e.get(`/chats/${t}`),r=t=>e.post(`/chats`,{listing_id:t}),i=(t,n={})=>e.get(`/chats/${t}/messages`,{params:n}),a=(t,n)=>e.post(`/chats/${t}/messages`,{body:n});export{a,r as i,t as n,i as r,n as t};

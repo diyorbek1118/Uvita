@@ -6,8 +6,16 @@ services:
     container_name: app
     restart: unless-stopped
     working_dir: /var/www
+    # Bind-mount tufayli host fayllari www-data'ga tegishli emas —
+    # har boshlanishda storage'ni yoziladigan qilib qo'yamiz
+    command:
+      - sh
+      - -c
+      - "chmod -R 777 /var/www/storage /var/www/bootstrap/cache && exec php-fpm"
     volumes:
       - .:/var/www
+      # PHP upload hajm limitlarini bevosita container'ga ulaymiz (rebuild shart emas)
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
     depends_on:
       - mysql
       - redis
