@@ -13,7 +13,7 @@ use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 
 final class CreatePaymentHandler
 {
-    /** @return array{payment_id: int, payment_url: string} */
+    /** @return array{payment_id: int, payment_url: ?string} */
     public function handle(CreatePaymentCommand $command): array
     {
         // 1. Order topamiz
@@ -67,13 +67,14 @@ final class CreatePaymentHandler
         return ['payment_id' => $payment->id, 'payment_url' => $url];
     }
 
-    private function buildUrl(string $provider, int $orderId, int $amount): string
+    private function buildUrl(string $provider, int $orderId, int $amount): ?string
     {
         return match ($provider) {
+            'cash' => null,
             'payme' => $this->buildPaymeUrl($orderId, $amount),
             'click' => $this->buildClickUrl($orderId, $amount),
             'uzum' => $this->buildUzumUrl($orderId, $amount),
-            default => '',
+            default => null,
         };
     }
 

@@ -29,7 +29,7 @@ class CreateOrderRequest extends FormRequest
             'phone_secondary' => ['nullable', 'string', 'regex:/^\+998\d{9}$/'],
             'delivery_time' => ['required', 'string'],
             'courier_note' => ['nullable', 'string', 'max:500'],
-            'payment_method' => ['required', 'string', 'in:payme,click,uzum'],
+            'payment_method' => ['required', 'string', 'in:cash,payme,click,uzum'],
         ];
     }
 

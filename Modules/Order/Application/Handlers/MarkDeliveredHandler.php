@@ -13,6 +13,9 @@ use Modules\Courier\Application\Services\DeliveryConfirmationService;
 use Modules\Order\Application\Commands\MarkDeliveredCommand;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
+use Modules\Payment\Domain\Enums\PaymentProvider;
+use Modules\Payment\Domain\Enums\PaymentStatus;
+use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 
 final class MarkDeliveredHandler
 {
@@ -51,6 +54,17 @@ final class MarkDeliveredHandler
             }
 
             $order->markDelivered();
+
+            $cashPayment = PaymentModel::query()
+                ->where('order_id', $command->orderId)
+                ->where('provider', PaymentProvider::CASH->value)
+                ->where('status', PaymentStatus::PENDING->value)
+                ->latest('id')
+                ->first();
+            $cashPayment?->update([
+                'status' => PaymentStatus::PAID->value,
+                'transaction_id' => "cash-{$command->orderId}",
+            ]);
 
             return [$this->orders->save($order), null];
         });

@@ -98,7 +98,7 @@ final class CustomerAppTest extends TestCase
     {
         $payload = $this->validPayload();
         $payload['phone'] = '901234567';
-        $payload['payment_method'] = 'cash';
+        $payload['payment_method'] = 'visa';
         $payload['items'][] = $payload['items'][0];
 
         $this->asCustomer()->postJson('/api/orders', $payload)
@@ -125,10 +125,29 @@ final class CustomerAppTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.total_price', 60000)
-            ->assertJsonPath('data.service_fee', 9000)
-            ->assertJsonPath('data.grand_total', 69000)
+            ->assertJsonPath('data.service_fee', 0)
+            ->assertJsonPath('data.grand_total', 60000)
             ->assertJsonPath('data.items.0.product_name', 'Mahsulot')
             ->assertJsonPath('data.address.street', 'Navoiy');
+    }
+
+    public function test_cash_order_has_no_online_payment_url_and_keeps_amount_due(): void
+    {
+        $response = $this->asCustomer()
+            ->postJson('/api/orders', $this->validPayload('cash'))
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.payment_method', 'cash')
+            ->assertJsonPath('data.payment_status', 'pending')
+            ->assertJsonPath('data.payment_url', null)
+            ->assertJsonPath('data.grand_total', 60000);
+
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $response->json('data.id'),
+            'provider' => 'cash',
+            'amount' => 6000000,
+            'status' => 'pending',
+        ]);
     }
 
     public function test_payme_click_and_uzum_checkout_urls_are_generated(): void

@@ -38,10 +38,6 @@ final class AddItemHandler
             throw new InsufficientStockException('Mahsulot tugagan.');
         }
 
-        if ($command->dto->quantity < $product->minimumOrderQuantity) {
-            throw new DomainException("Bu mahsulot uchun minimal buyurtma: {$product->minimumOrderQuantity}");
-        }
-
         $cart = $this->cartRepository->findByUserId($command->userId)
             ?? new Cart(id: null, userId: $command->userId);
 

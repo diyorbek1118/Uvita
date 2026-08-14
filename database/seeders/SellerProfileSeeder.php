@@ -16,13 +16,13 @@ final class SellerProfileSeeder extends Seeder
 
         SellerProfileModel::create([
             'seller_id' => $seller->id,
-            'business_name' => 'Baraka Distribution',
+            'business_name' => 'Baraka Agro Market',
             'legal_type' => 'farmer_farm',
             'tin' => '309123456',
             'phone' => '+998901234567',
             'region' => 'Toshkent viloyati',
-            'district' => 'Parkent tumani',
-            'address' => 'Parkent, Markaziy ko‘cha 12',
+            'district' => 'Parkent',
+            'address' => 'Parkent tumani, Zarkent qishlog‘i, 12-uy',
             'bank_account' => '20208000900000000001',
             'bank_mfo' => '00001',
             'terms_accepted' => true,

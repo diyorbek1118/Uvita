@@ -10,31 +10,18 @@ use Modules\Cart\Infrastructure\Persistence\Models\CartModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\User\Infrastructure\Persistence\Models\User;
 
-/**
- * Ba'zi mijozlar uchun to'ldirilgan savatcha (persistent).
- */
-class CartSeeder extends Seeder
+final class CartSeeder extends Seeder
 {
     public function run(): void
     {
-        $userIds       = User::take(10)->pluck('id')->all();
-        $activeProducts = Product::where('status', 'active')->where('stock', '>', 0)->pluck('id')->all();
-
-        if ($activeProducts === []) {
-            return;
+        foreach (User::all() as $user) {
+            CartModel::create(['user_id' => $user->id]);
         }
 
-        foreach ($userIds as $userId) {
-            $cart = CartModel::create(['user_id' => $userId]);
-
-            $picked = fake()->randomElements($activeProducts, fake()->numberBetween(1, 3));
-            foreach ($picked as $productId) {
-                CartItemModel::create([
-                    'cart_id'    => $cart->id,
-                    'product_id' => $productId,
-                    'quantity'   => fake()->numberBetween(1, 4),
-                ]);
-            }
+        $madina = User::where('phone', '+998902222222')->firstOrFail();
+        $cart = CartModel::where('user_id', $madina->id)->firstOrFail();
+        foreach (['Parkent qizil olmasi' => 5, 'Issiqxona pomidori' => 5] as $name => $quantity) {
+            CartItemModel::create(['cart_id' => $cart->id, 'product_id' => Product::where('name', $name)->value('id'), 'quantity' => $quantity]);
         }
     }
 }

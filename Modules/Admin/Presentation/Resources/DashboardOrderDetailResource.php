@@ -49,7 +49,7 @@ class DashboardOrderDetailResource extends JsonResource
             ),
             'pricing' => [
                 'total_price' => $this->total_price,   // mahsulotlar summasi (sotuvchiga)
-                'service_fee' => $this->service_fee,   // 15% xizmat haqi (mijoz to'laydi)
+                'service_fee' => $this->service_fee,   // platforma 10% (ichki)
                 'grand_total' => $this->grand_total,   // mijoz to'lagan jami
             ],
             // Narx breakdown (platform_fee, courier_fee, ...) — faqat admin/super.

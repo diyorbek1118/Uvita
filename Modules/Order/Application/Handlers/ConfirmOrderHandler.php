@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Modules\Order\Application\Commands\ConfirmOrderCommand;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
+use Modules\Payment\Domain\Enums\PaymentProvider;
+use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 
 final class ConfirmOrderHandler
 {
@@ -21,7 +23,12 @@ final class ConfirmOrderHandler
         $order = $this->orders->findById($command->orderId)
             ?? throw new ModelNotFoundException("Buyurtma topilmadi.");
 
-        $order->confirm();
+        $payment = PaymentModel::where('order_id', $command->orderId)->latest('id')->first();
+        if ($payment?->provider === PaymentProvider::CASH) {
+            $order->confirmCashOnDelivery();
+        } else {
+            $order->confirm();
+        }
 
         $saved = $this->orders->save($order);
 

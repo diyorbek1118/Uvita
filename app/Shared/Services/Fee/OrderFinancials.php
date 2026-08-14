@@ -7,11 +7,9 @@ namespace App\Shared\Services\Fee;
 /**
  * Bitta buyurtma bo'yicha moliyaviy taqsimot (so'mda).
  *
- * goods (total_price) — sotuvchiga to'lanadigan mahsulotlar summasi.
- * customer_total      — mijoz to'laydigan jami = goods + 15% ustama.
- * platform_fee_gross  — 15% ustama (yalpi).
- * courier_fee         — pog'onali kuryer haqi (goods'dan hisoblanadi).
- * platform_fee_net    — platformada qoladigan sof = gross - courier_fee.
+ * goods (total_price) — mijoz to'laydigan yakuniy mahsulotlar summasi.
+ * customer_total      — mijoz to'laydigan jami = goods (ustama yo'q).
+ * seller_amount       — barcha ichki ushlanmalardan keyingi sof seller tushumi.
  */
 final readonly class OrderFinancials
 {
@@ -19,6 +17,8 @@ final readonly class OrderFinancials
         public int $sellerAmount,
         public int $platformFeeGross,
         public int $courierFee,
+        public int $taxFee,
+        public int $paymentFee,
         public int $platformFeeNet,
         public int $customerTotal,
     ) {}
@@ -29,6 +29,8 @@ final readonly class OrderFinancials
             'seller_amount'      => $this->sellerAmount,
             'platform_fee_gross' => $this->platformFeeGross,
             'courier_fee'        => $this->courierFee,
+            'tax_fee'            => $this->taxFee,
+            'payment_fee'        => $this->paymentFee,
             'platform_fee_net'   => $this->platformFeeNet,
             'customer_total'     => $this->customerTotal,
         ];

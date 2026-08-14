@@ -26,10 +26,7 @@ final readonly class ProductPriceBreakdown
             'deductions' => [
                 'platform_fee' => ['percent' => $this->platformPercent, 'amount' => $this->platformFee],
                 'courier_fee' => ['percent' => $this->courierPercent, 'amount' => $this->courierFee],
-                'tax' => ['percent' => $this->taxPercent, 'amount' => $this->tax],
-                'payment_fee' => ['percent' => $this->paymentPercent, 'amount' => $this->paymentFee],
             ],
-            'total_deductions' => $this->price - $this->sellerNet,
             'seller_net' => $this->sellerNet,
         ];
     }

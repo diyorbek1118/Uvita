@@ -14,8 +14,8 @@ final class CartResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // Mijoz mahsulot summasi + 15% xizmat haqi to'laydi. Yetkazish TEKIN,
-        // kuryer haqi platformadan (mijozga ko'rinmaydi).
+        // Mijoz faqat seller kiritgan mahsulot narxini to'laydi.
+        // Barcha komissiyalar ichki hisob bo'lib, mijozga ko'rinmaydi.
         if (!$this->resource) {
             return [
                 'items'       => [],
@@ -32,6 +32,7 @@ final class CartResource extends JsonResource
             'name'        => $item->product->name,
             'price'       => $item->product->price,
             'quantity'    => $item->quantity,
+            'minimum_order_quantity' => $item->product->minimum_order_quantity ?? 1,
             'images'      => ImageUrlNormalizer::normalizeArray($item->product->images ?? []),
             'category'    => $item->product->category ? [
                 'id'   => $item->product->category->id,
@@ -42,6 +43,8 @@ final class CartResource extends JsonResource
                 'name'  => $item->product->name,
                 'price' => $item->product->price,
                 'stock' => $item->product->stock,
+                'unit'  => $item->product->unit ?? 'dona',
+                'minimum_order_quantity' => $item->product->minimum_order_quantity ?? 1,
                 'images' => ImageUrlNormalizer::normalizeArray($item->product->images ?? []),
                 'category' => $item->product->category ? [
                     'id'   => $item->product->category->id,
@@ -57,8 +60,8 @@ final class CartResource extends JsonResource
         return [
             'items'       => $items,
             'total'       => $total,                            // mahsulotlar summasi
-            'service_fee' => $financials->platformFeeGross,     // 15% xizmat haqi
-            'grand_total' => $financials->customerTotal,        // jami to'lov
+            'service_fee' => 0,
+            'grand_total' => $financials->customerTotal,
             'items_count' => count($items),
         ];
     }

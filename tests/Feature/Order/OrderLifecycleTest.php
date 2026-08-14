@@ -153,15 +153,26 @@ class OrderLifecycleTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
     }
 
-    public function test_order_pricing_charges_service_fee_not_delivery(): void
+    public function test_order_below_product_minimum_quantity_is_rejected(): void
     {
-        // 2 x 30 000 = 60 000 mahsulot; 15% xizmat = 9 000; jami 69 000
+        $this->product->update(['minimum_order_quantity' => 3, 'unit' => 'kg']);
+
+        $response = $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', '"Mahsulot" mahsulotidan kamida 3 kg buyurtma qilishingiz kerak.');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_order_pricing_does_not_add_internal_fees_to_customer_total(): void
+    {
+        // 2 x 30 000 = 60 000; ichki ushlanmalar mijoz narxiga qo'shilmaydi.
         $response = $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
 
         $response->assertStatus(201)
             ->assertJsonPath('data.total_price', 60000)
-            ->assertJsonPath('data.service_fee', 9000)
-            ->assertJsonPath('data.grand_total', 69000)
+            ->assertJsonPath('data.service_fee', 0)
+            ->assertJsonPath('data.grand_total', 60000)
             ->assertJsonMissingPath('data.delivery_price')  // yetkazish mijozdan olinmaydi
             ->assertJsonMissingPath('data.courier_fee');    // kuryer haqi mijozga ko'rinmaydi
     }
@@ -231,6 +242,25 @@ class OrderLifecycleTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'confirmed']);
+    }
+
+    public function test_manager_can_confirm_pending_cash_order(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+
+        $this->asStaff(StaffRole::MANAGER)
+            ->putJson("/api/manager/orders/{$order->id}/confirm")
+            ->assertOk();
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'confirmed']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'provider' => 'cash',
+            'status' => 'pending',
+        ]);
     }
 
     public function test_manager_cannot_confirm_pending_order(): void

@@ -10,8 +10,7 @@ use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 
 /**
  * Sotuv vaqt qatori (grafik uchun). Faqat Super Admin (moliyaviy).
- * Kuryer haqi pog'onali — SQL CASE bilan har buyurtma bo'yicha yig'iladi.
- * Platform fee 15% chiziqli, shuning uchun yig'indidan hisoblanadi.
+ * Mijoz jami mahsulot narxini to'laydi; ichki ushlanmalar shu summadan olinadi.
  */
 final class GetSalesTimeSeriesHandler
 {
@@ -41,14 +40,16 @@ final class GetSalesTimeSeriesHandler
                 $gross = (int) $orders->sum('total_price');
                 $platformGross = (int) $orders->sum('service_fee');
                 $courier = (int) $orders->sum('courier_fee');
+                $tax = (int) round($gross * 0.01);
+                $payment = (int) round($gross * 0.03);
 
                 return [
                     'period' => $periodKey,
                     'orders_count' => $orders->count(),
                     'gross_sales' => $gross,
                     'courier_fees' => $courier,
-                    'platform_fee_net' => $platformGross - $courier,
-                    'customer_total' => $gross + $platformGross,
+                    'platform_fee_net' => $platformGross + $tax + $payment,
+                    'customer_total' => $gross,
                 ];
             })
             ->values()

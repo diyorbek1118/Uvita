@@ -13,161 +13,89 @@ use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\User\Infrastructure\Persistence\Models\User;
 
-/**
- * Buyurtmalar + order_items.
- *  - Narxlash: mijoz mahsulot + 15% xizmat haqi; kuryer haqi ichki (OrderFeeCalculator).
- *  - Har buyurtma >= 50 000 so'm (minimal buyurtma).
- *  - Status timeline milestone vaqtlari statusga qarab to'ldiriladi.
- */
-class OrderSeeder extends Seeder
+final class OrderSeeder extends Seeder
 {
-    private const MIN_ORDER = 50000;
-
-    /** Statuslarni vaznlangan tanlash uchun havza. */
-    private const STATUS_POOL = [
-        'delivered', 'delivered', 'delivered', 'delivered',
-        'delivering', 'delivering',
-        'paid', 'paid', 'confirmed', 'ready_to_deliver',
-        'pending', 'pending', 'cancelled', 'delivery_issue',
+    /** @var array<int, array<string, mixed>> */
+    private const SCENARIOS = [
+        ['status' => 'pending', 'days' => 0, 'items' => ['Parkent qizil olmasi' => 5, 'Yangi hosil kartoshka' => 10], 'district' => 'Jizzax shahri', 'note' => 'Qo‘ng‘iroq qilib keyin kiring.'],
+        ['status' => 'paid', 'days' => 1, 'items' => ['Devzira guruchi' => 5, 'Oq no‘xat — saralangan' => 5], 'district' => 'Yunusobod', 'note' => 'Ofis resepsheniga qoldiring.'],
+        ['status' => 'confirmed', 'days' => 2, 'items' => ['Issiqxona pomidori' => 8, 'Mirzacho‘l sabzisi' => 10], 'district' => 'Samarqand shahri', 'note' => null],
+        ['status' => 'ready_to_deliver', 'days' => 3, 'items' => ['Parkent qora uzumi' => 8, 'Parkent qizil olmasi' => 10], 'district' => 'Jizzax shahri', 'note' => 'Mahsulotlarni ezmasdan olib keling.'],
+        ['status' => 'delivering', 'days' => 4, 'items' => ['Mirzacho‘l tarvuzi' => 25, 'Obinovvot qovuni' => 12], 'district' => 'Yunusobod', 'note' => '3-kirish, 2-qavat.'],
+        ['status' => 'delivered', 'days' => 8, 'items' => ['Yangi hosil kartoshka' => 20, 'Birinchi nav oq piyoz' => 20], 'district' => 'Jizzax shahri', 'note' => null],
+        ['status' => 'delivered', 'days' => 14, 'items' => ['Oziq-ovqat bug‘doyi' => 50, 'Oq no‘xat — saralangan' => 10], 'district' => 'Samarqand shahri', 'note' => 'Ombor darvozasidan kiring.'],
+        ['status' => 'cancelled', 'days' => 5, 'items' => ['Parkent qizil olmasi' => 10], 'district' => 'Jizzax shahri', 'note' => 'Mijoz buyurtmani bekor qilgan.'],
+        ['status' => 'delivery_issue', 'days' => 6, 'items' => ['Devzira guruchi' => 5, 'Parkent qora uzumi' => 5], 'district' => 'Yunusobod', 'note' => 'Telefon vaqtincha javob bermadi.'],
     ];
 
     public function run(): void
     {
-        $userIds    = User::pluck('id')->all();
-        $courierIds = Staff::where('role', 'courier')->pluck('id')->all();
-        $products   = Product::where('status', 'active')->get(['id', 'price']);
+        $users = User::all()->values();
+        $courier = Staff::where('role', 'courier')->first();
+        $products = Product::where('status', 'active')->get()->keyBy('name');
         $calculator = new OrderFeeCalculator();
 
-        if ($userIds === [] || $products->isEmpty()) {
-            return;
-        }
-
-        for ($n = 0; $n < 25; $n++) {
-            $status = fake()->randomElement(self::STATUS_POOL);
-
-            // 1–3 mahsulot, jami >= 50 000 bo'lguncha
-            [$lineItems, $goods] = $this->buildLineItems($products);
-
-            $fin  = $calculator->calculate($goods);
-            $base = Carbon::now()
-                ->subDays(fake()->numberBetween(0, 29))
-                ->subMinutes(fake()->numberBetween(0, 1439));
-
-            $milestones = $this->milestones($status, $base);
-            $courierId  = in_array($status, ['delivering', 'delivered', 'delivery_issue'], true)
-                ? fake()->randomElement($courierIds ?: [null])
-                : null;
-
-            $region = fake()->randomElement(['Toshkent', 'Samarqand', 'Buxoro']);
-            [$lat, $lng] = $this->regionCoords($region);
-
-            $order = new OrderModel([
-                'user_id'         => fake()->randomElement($userIds),
-                'courier_id'      => $courierId,
-                'status'          => $status,
-                'address'         => [
-                    'region'   => $region,
-                    'district' => fake()->city(),
-                    'street'   => fake()->streetName(),
-                    'house'    => (string) fake()->buildingNumber(),
-                    'landmark' => fake()->optional()->sentence(),
-                ],
-                'lat'             => $lat,
-                'lng'             => $lng,
-                'geo_level'       => 'address',
-                'phone'           => '+998' . fake()->numberBetween(900000000, 999999999),
-                'phone_secondary' => null,
-                'delivery_time'   => fake()->dateTimeBetween('-3 days', '+5 days')->format('Y-m-d H:i'),
-                'courier_note'    => fake()->optional()->sentence(),
-                'total_price'     => $goods,
-                'service_fee'     => $fin->platformFeeGross,
-                'courier_fee'     => $fin->courierFee,
-                'grand_total'     => $fin->customerTotal,
-                'not_found_count' => $status === 'delivery_issue' ? 3 : 0,
-                ...$milestones,
-            ]);
-
-            // created_at/updated_at ni qo'lda o'rnatamiz (avtomatik emas)
-            $latest = $base;
-            foreach ($milestones as $ts) {
-                if ($ts->greaterThan($latest)) {
-                    $latest = $ts;
+        foreach (self::SCENARIOS as $index => $scenario) {
+            $lines = [];
+            $goods = 0;
+            foreach ($scenario['items'] as $name => $quantity) {
+                $product = $products->get($name);
+                if (! $product) {
+                    throw new \RuntimeException("OrderSeeder: mahsulot topilmadi: {$name}");
                 }
+                $lines[] = ['product' => $product, 'quantity' => $quantity];
+                $goods += $product->price * $quantity;
             }
-            $order->created_at = $base;
-            $order->updated_at = $latest;
-            $order->timestamps = false;
-            $order->save();
 
-            foreach ($lineItems as $li) {
-                OrderItemModel::create([
-                    'order_id'   => $order->id,
-                    'product_id' => $li['product_id'],
-                    'quantity'   => $li['quantity'],
-                    'price'      => $li['price'],
-                ]);
+            $fin = $calculator->calculate($goods);
+            $created = Carbon::now()->subDays($scenario['days'])->setTime(10 + ($index % 6), 20);
+            $times = $this->milestones($scenario['status'], $created);
+            $user = $users[$index % $users->count()];
+            $isCourierStage = in_array($scenario['status'], ['delivering', 'delivered', 'delivery_issue'], true);
+
+            $order = OrderModel::create([
+                'user_id' => $user->id,
+                'courier_id' => $isCourierStage ? $courier?->id : null,
+                'status' => $scenario['status'],
+                'address' => ['region' => $user->region, 'district' => $scenario['district'], 'street' => $user->address, 'house' => (string) (12 + $index), 'landmark' => $index % 2 ? 'Mahalla markazi yaqinida' : null],
+                'lat' => $user->lat,
+                'lng' => $user->lng,
+                'geo_level' => 'address',
+                'phone' => $user->phone,
+                'phone_secondary' => null,
+                'delivery_time' => $created->copy()->addDay()->setTime(14, 0)->format('Y-m-d H:i'),
+                'courier_note' => $scenario['note'],
+                'total_price' => $goods,
+                'service_fee' => $fin->platformFeeGross,
+                'courier_fee' => $fin->courierFee,
+                'grand_total' => $fin->customerTotal,
+                'not_found_count' => $scenario['status'] === 'delivery_issue' ? 3 : 0,
+                ...$times,
+            ]);
+            $order->forceFill(['created_at' => $created, 'updated_at' => collect($times)->filter()->max() ?? $created])->save();
+
+            foreach ($lines as $line) {
+                OrderItemModel::create(['order_id' => $order->id, 'product_id' => $line['product']->id, 'quantity' => $line['quantity'], 'price' => $line['product']->price]);
             }
         }
+
+        $this->command?->info('✓ 9 ta buyurtma status ssenariysi yaratildi.');
     }
 
-    /** @return array{0: array<int, array{product_id:int, quantity:int, price:int}>, 1: int} */
-    private function buildLineItems($products): array
-    {
-        $count  = fake()->numberBetween(1, min(3, $products->count()));
-        $picked = $products->random($count);
-        $picked = $picked instanceof \Illuminate\Support\Collection ? $picked : collect([$picked]);
-
-        $lineItems = [];
-        $goods     = 0;
-        foreach ($picked as $p) {
-            $qty = fake()->numberBetween(1, 3);
-            $lineItems[] = ['product_id' => $p->id, 'quantity' => $qty, 'price' => (int) $p->price];
-            $goods += (int) $p->price * $qty;
-        }
-
-        // Minimal buyurtma summasiga yetkazish
-        while ($goods < self::MIN_ORDER) {
-            $lineItems[0]['quantity']++;
-            $goods += $lineItems[0]['price'];
-        }
-
-        return [$lineItems, $goods];
-    }
-
-    /** @return array{0: float, 1: float} */
-    private function regionCoords(string $region): array
-    {
-        $coords = [
-            'Toshkent'  => [41.31, 69.28],
-            'Samarqand' => [39.65, 66.96],
-            'Buxoro'    => [39.77, 64.42],
-        ];
-
-        [$lat, $lng] = $coords[$region] ?? [41.31, 69.28];
-
-        return [
-            $lat + fake()->randomFloat(4, -0.03, 0.03),
-            $lng + fake()->randomFloat(4, -0.03, 0.03),
-        ];
-    }
-
-    /**
-     * Statusga mos milestone vaqtlari (created_at = $base).
-     * @return array<string, Carbon>
-     */
+    /** @return array<string, Carbon> */
     private function milestones(string $status, Carbon $base): array
     {
-        $at = fn (int $minutes) => (clone $base)->addMinutes($minutes);
+        $at = fn (int $minutes) => $base->copy()->addMinutes($minutes);
 
         return match ($status) {
-            'cancelled'        => ['cancelled_at' => $at(20)],
-            'paid'             => ['paid_at' => $at(10)],
-            'confirmed'        => ['paid_at' => $at(10), 'confirmed_at' => $at(60)],
-            'ready_to_deliver' => ['paid_at' => $at(10), 'confirmed_at' => $at(60), 'ready_at' => $at(120)],
-            'delivering'       => ['paid_at' => $at(10), 'confirmed_at' => $at(60), 'ready_at' => $at(120), 'delivering_at' => $at(180)],
-            'delivered'        => ['paid_at' => $at(10), 'confirmed_at' => $at(60), 'ready_at' => $at(120), 'delivering_at' => $at(180), 'delivered_at' => $at(300)],
-            'delivery_issue'   => ['paid_at' => $at(10), 'confirmed_at' => $at(60), 'ready_at' => $at(120), 'delivering_at' => $at(180), 'delivery_issue_at' => $at(240)],
-            default            => [],   // pending
+            'paid' => ['paid_at' => $at(10)],
+            'confirmed' => ['paid_at' => $at(10), 'confirmed_at' => $at(45)],
+            'ready_to_deliver' => ['paid_at' => $at(10), 'confirmed_at' => $at(45), 'ready_at' => $at(100)],
+            'delivering' => ['paid_at' => $at(10), 'confirmed_at' => $at(45), 'ready_at' => $at(100), 'delivering_at' => $at(150)],
+            'delivered' => ['paid_at' => $at(10), 'confirmed_at' => $at(45), 'ready_at' => $at(100), 'delivering_at' => $at(150), 'delivered_at' => $at(260)],
+            'cancelled' => ['cancelled_at' => $at(25)],
+            'delivery_issue' => ['paid_at' => $at(10), 'confirmed_at' => $at(45), 'ready_at' => $at(100), 'delivering_at' => $at(150), 'delivery_issue_at' => $at(210)],
+            default => [],
         };
     }
 }

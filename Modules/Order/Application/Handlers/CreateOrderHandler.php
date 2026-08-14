@@ -59,6 +59,12 @@ final class CreateOrderHandler
                     );
                 }
 
+                if ($item['quantity'] < $product->minimum_order_quantity) {
+                    throw new DomainException(
+                        "\"{$product->name}\" mahsulotidan kamida {$product->minimum_order_quantity} {$product->unit} buyurtma qilishingiz kerak."
+                    );
+                }
+
                 $totalAmount += $product->price * $item['quantity'];
 
                 $orderItems[] = new OrderItem(
@@ -79,8 +85,7 @@ final class CreateOrderHandler
                 );
             }
 
-            // Narx breakdown: mijoz mahsulot + 15% xizmat haqi to'laydi.
-            // Kuryer haqi platformadan (ichki) — mijozga ko'rinmaydi.
+            // Mijoz faqat mahsulotlar summasini to'laydi; ushlanmalar ichki.
             $financials = $this->feeCalculator->calculate($totalAmount);
 
             $order = new Order(
@@ -118,7 +123,7 @@ final class CreateOrderHandler
             message: "🛒 <b>Yangi buyurtma #{$savedOrder->id}</b>\n\n📞 {$dto->phone}\n💰 {$savedOrder->grandTotal->amount} so'm\n🕐 {$dto->deliveryTime}"
         ));
 
-        $orderModel = OrderModel::with(['items.product'])->findOrFail($savedOrder->id);
+        $orderModel = OrderModel::with(['items.product', 'latestPayment'])->findOrFail($savedOrder->id);
         $orderModel->setAttribute('payment_url', $paymentResult['payment_url'] ?? null);
 
         return $orderModel;
