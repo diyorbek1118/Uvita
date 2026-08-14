@@ -12,7 +12,7 @@ final class GetProductByIdHandler
 {
     public function handle(GetProductByIdQuery $query): ProductModel
     {
-        return ProductModel::with('category')
+        return ProductModel::with(['category', 'sellerProfile'])
             ->where('status', ProductStatusEnum::Active->value)
             ->findOrFail($query->id);
     }

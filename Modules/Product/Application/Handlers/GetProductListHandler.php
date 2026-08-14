@@ -15,7 +15,7 @@ final class GetProductListHandler
 {
     public function handle(GetProductListQuery $query): LengthAwarePaginator
     {
-        return QueryBuilder::for(ProductModel::with('category'))
+        return QueryBuilder::for(ProductModel::with(['category', 'sellerProfile']))
             ->allowedFilters(
                 AllowedFilter::exact('category_id'),
                 AllowedFilter::partial('name'),

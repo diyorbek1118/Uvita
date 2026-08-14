@@ -29,6 +29,13 @@ final class ProductResource extends JsonResource
                 'region' => $this->origin_region,
                 'farmer_name' => $this->farmer_name,
             ],
+            'seller_shop' => $this->whenLoaded('sellerProfile', fn () => $this->sellerProfile === null ? null : [
+                'id' => $this->sellerProfile->id,
+                'business_name' => $this->sellerProfile->business_name,
+                'region' => $this->sellerProfile->region,
+                'district' => $this->sellerProfile->district,
+                'is_verified' => (bool) $this->sellerProfile->is_verified,
+            ]),
             'unit' => $this->unit,
             'minimum_order_quantity' => $this->minimum_order_quantity ?? 1,
             'category_id' => $this->category_id,
