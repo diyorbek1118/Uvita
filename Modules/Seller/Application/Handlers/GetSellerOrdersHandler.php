@@ -16,6 +16,10 @@ final readonly class GetSellerOrdersHandler
 
     public function handle(GetSellerOrdersQuery $query): LengthAwarePaginator
     {
-        return $this->orders->paginateForSeller($query->sellerId, min(max($query->perPage, 1), 100));
+        return $this->orders->paginateForSeller(
+            $query->sellerId,
+            min(max($query->perPage, 1), 100),
+            $query->sellerProfileId,
+        );
     }
 }

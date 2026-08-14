@@ -11,12 +11,12 @@ final class UpdateSellerProfileRequest extends FormRequest
 {
     public function rules(): array
     {
-        $sellerId = auth('sanctum')->id();
+        $shopId = $this->header('X-Seller-Shop-Id');
 
         return [
             'business_name' => ['required', 'string', 'min:2', 'max:255'],
             'legal_type' => ['required', 'in:individual,farmer_farm,company'],
-            'tin' => ['required', 'digits_between:9,14', Rule::unique('seller_profiles', 'tin')->ignore($sellerId, 'seller_id')],
+            'tin' => ['required', 'digits_between:9,14', Rule::unique('seller_profiles', 'tin')->ignore(is_numeric($shopId) ? (int) $shopId : null)],
             'phone' => ['required', 'regex:/^\+998\d{9}$/'],
             'region' => ['required', 'string', 'max:100'],
             'district' => ['required', 'string', 'max:100'],

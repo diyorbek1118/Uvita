@@ -30,6 +30,23 @@ Dehqon / fermer → Seller → Uvita moderatsiya → Market
 - `Admin / Super Admin` — seller profilini va har bir mahsulot versiyasini tasdiqlaydi.
 - Seller profili tasdiqlanmaguncha mahsulot moderatsiyasiga yubora olmaydi.
 
+### Seller akkaunti va ko‘p do‘kon
+
+```
+Admin → seller telefon raqami + boshlang‘ich parol + birinchi do‘konni yaratadi
+Seller → telefon/parol bilan kiradi
+       → o‘ziga biriktirilgan do‘konlardan birini tanlaydi
+       → mahsulot, buyurtma va analitikani tanlangan do‘kon kesimida boshqaradi
+Admin → shu sellerga qo‘shimcha do‘konlar biriktira oladi
+```
+
+- Telefon raqami seller akkaunti bo‘yicha unique.
+- Bitta seller akkauntida bir nechta do‘kon bo‘lishi mumkin.
+- Har do‘kon alohida KYB/verifikatsiyadan o‘tadi.
+- Seller faqat o‘z akkauntiga tegishli faol do‘konni tanlay oladi.
+- Mahsulot va product revision `seller_profile_id` orqali do‘konga bog‘lanadi.
+- Seller API tanlangan do‘konni `X-Seller-Shop-Id` header orqali oladi.
+
 ### Seller mahsulot qo'shish formasi
 
 Majburiy maydonlar:

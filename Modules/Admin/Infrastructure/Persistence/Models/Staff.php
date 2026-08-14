@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Courier\Infrastructure\Persistence\Models\CourierProfile;
 
 class Staff extends Authenticatable
@@ -20,6 +21,7 @@ class Staff extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
         'role',
         'is_active',
@@ -39,5 +41,10 @@ class Staff extends Authenticatable
     public function courierProfile(): HasOne
     {
         return $this->hasOne(CourierProfile::class, 'courier_id');
+    }
+
+    public function sellerProfiles(): HasMany
+    {
+        return $this->hasMany(\Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel::class, 'seller_id');
     }
 }

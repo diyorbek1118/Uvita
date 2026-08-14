@@ -8,5 +8,5 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface SellerOrderReadRepositoryInterface
 {
-    public function paginateForSeller(int $sellerId, int $perPage): LengthAwarePaginator;
+    public function paginateForSeller(int $sellerId, int $perPage, ?int $sellerProfileId = null): LengthAwarePaginator;
 }

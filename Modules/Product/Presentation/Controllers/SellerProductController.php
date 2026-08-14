@@ -17,6 +17,7 @@ use Modules\Product\Domain\Services\ProductFeeCalculator;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\Product\Presentation\Requests\CreateSellerProductRequest;
 use Modules\Product\Presentation\Resources\ProductRevisionResource;
+use Modules\Seller\Application\Services\SellerShopResolver;
 
 final class SellerProductController extends Controller
 {
@@ -30,8 +31,10 @@ final class SellerProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         $sellerId = $this->seller()->id;
+        $shopId = $this->shop($request)->id;
         $products = Product::query()
             ->where('seller_id', $sellerId)
+            ->where(fn ($query) => $query->where('seller_profile_id', $shopId)->orWhereNull('seller_profile_id'))
             ->with(['category', 'revisions' => fn ($query) => $query->latest('version')->limit(1)])
             ->latest()
             ->paginate((int) $request->integer('per_page', 20));
@@ -39,10 +42,13 @@ final class SellerProductController extends Controller
         return response()->json($products);
     }
 
-    public function analytics(): JsonResponse
+    public function analytics(Request $request): JsonResponse
     {
         $sellerId = $this->seller()->id;
-        $productIds = Product::query()->where('seller_id', $sellerId)->pluck('id');
+        $shopId = $this->shop($request)->id;
+        $productIds = Product::query()->where('seller_id', $sellerId)
+            ->where(fn ($query) => $query->where('seller_profile_id', $shopId)->orWhereNull('seller_profile_id'))
+            ->pluck('id');
         $soldStatuses = ['paid', 'confirmed', 'ready_to_deliver', 'delivering', 'delivered'];
         $sales = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
@@ -66,7 +72,7 @@ final class SellerProductController extends Controller
 
     public function store(CreateSellerProductRequest $request, ProductMediaUploadService $media, SaveSellerProductDraftHandler $handler): JsonResponse
     {
-        $revision = $handler->handle($this->dto($request, $media), $this->seller()->id);
+        $revision = $handler->handle($this->dto($request, $media), $this->seller()->id, null, $this->shop($request)->id);
 
         return ProductRevisionResource::make($revision)
             ->additional(['message' => 'Mahsulot moderatsiyaga yuborildi'])
@@ -75,7 +81,7 @@ final class SellerProductController extends Controller
 
     public function update(int $product, CreateSellerProductRequest $request, ProductMediaUploadService $media, SaveSellerProductDraftHandler $handler): JsonResponse
     {
-        $revision = $handler->handle($this->dto($request, $media), $this->seller()->id, $product);
+        $revision = $handler->handle($this->dto($request, $media), $this->seller()->id, $product, $this->shop($request)->id);
 
         return ProductRevisionResource::make($revision)
             ->additional(['message' => 'Tahrir moderatsiyaga yuborildi; marketda avvalgi tasdiqlangan versiya qoladi'])
@@ -107,5 +113,10 @@ final class SellerProductController extends Controller
         /** @var Staff $seller */
         $seller = auth('sanctum')->user();
         return $seller;
+    }
+
+    private function shop(Request $request): \Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel
+    {
+        return app(SellerShopResolver::class)->resolve($request, $this->seller()->id);
     }
 }

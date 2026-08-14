@@ -17,9 +17,9 @@ final class SaveSellerProductDraftHandler
 {
     public function __construct(private readonly ProductFeeCalculator $fees) {}
 
-    public function handle(SellerProductDraftDTO $dto, int $sellerId, ?int $productId = null): ProductRevision
+    public function handle(SellerProductDraftDTO $dto, int $sellerId, ?int $productId = null, ?int $sellerProfileId = null): ProductRevision
     {
-        return DB::transaction(function () use ($dto, $sellerId, $productId): ProductRevision {
+        return DB::transaction(function () use ($dto, $sellerId, $productId, $sellerProfileId): ProductRevision {
             $product = $productId === null
                 ? Product::create([
                     'name' => $dto->name,
@@ -31,8 +31,13 @@ final class SaveSellerProductDraftHandler
                     'images' => [],
                     'category_id' => $dto->categoryId,
                     'seller_id' => $sellerId,
+                    'seller_profile_id' => $sellerProfileId,
                 ])
-                : Product::query()->where('seller_id', $sellerId)->lockForUpdate()->findOrFail($productId);
+                : Product::query()->where('seller_id', $sellerId)
+                    ->when($sellerProfileId !== null, fn ($query) => $query->where(
+                        fn ($scope) => $scope->where('seller_profile_id', $sellerProfileId)->orWhereNull('seller_profile_id')
+                    ))
+                    ->lockForUpdate()->findOrFail($productId);
 
             $version = ((int) $product->revisions()->max('version')) + 1;
             $snapshot = $this->fees->calculate($dto->price)->toArray();
@@ -40,6 +45,7 @@ final class SaveSellerProductDraftHandler
             return ProductRevision::create([
                 'product_id' => $product->id,
                 'seller_id' => $sellerId,
+                'seller_profile_id' => $sellerProfileId,
                 'version' => $version,
                 'payload' => $dto->toPayload(),
                 'fee_snapshot' => $snapshot,

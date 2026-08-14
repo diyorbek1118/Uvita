@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Seller\Application\Handlers\GetSellerOrdersHandler;
 use Modules\Seller\Application\Queries\GetSellerOrdersQuery;
+use Modules\Seller\Application\Services\SellerShopResolver;
 
 final class SellerOrderController extends Controller
 {
@@ -16,10 +17,12 @@ final class SellerOrderController extends Controller
         private readonly GetSellerOrdersHandler $handler,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, SellerShopResolver $resolver): JsonResponse
     {
+        $sellerId = (int) auth('sanctum')->id();
         $orders = $this->handler->handle(new GetSellerOrdersQuery(
-            sellerId: (int) auth('sanctum')->id(),
+            sellerId: $sellerId,
+            sellerProfileId: $resolver->resolveOptional($request, $sellerId)?->id,
             perPage: (int) $request->integer('per_page', 30),
         ));
 

@@ -83,10 +83,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('staff-login', function (Request $request): array {
-            $email = mb_strtolower((string) $request->input('email', 'unknown'));
+            $identity = mb_strtolower((string) ($request->input('email') ?: $request->input('phone', 'unknown')));
 
             return [
-                Limit::perMinute(5)->by('staff-login:'.$request->ip().'|'.$email),
+                Limit::perMinute(5)->by('staff-login:'.$request->ip().'|'.$identity),
                 Limit::perMinute(30)->by('staff-login-ip:'.$request->ip()),
             ];
         });

@@ -32,6 +32,7 @@ final class Product extends Model
         'category_id',
         'manager_id',
         'seller_id',
+        'seller_profile_id',
         'approved_version',
         'fee_snapshot',
         'video_url',
@@ -54,6 +55,7 @@ final class Product extends Model
             'status'        => ProductStatusEnum::class,
             'manager_id'    => 'integer',
             'seller_id'     => 'integer',
+            'seller_profile_id' => 'integer',
             'approved_version' => 'integer',
             'fee_snapshot' => 'array',
             'primary_image_index' => 'integer',
@@ -74,6 +76,11 @@ final class Product extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'seller_id');
+    }
+
+    public function sellerProfile(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel::class, 'seller_profile_id');
     }
 
     public function revisions(): HasMany
