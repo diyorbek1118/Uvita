@@ -5,16 +5,30 @@ declare(strict_types=1);
 namespace Modules\Admin\Application\Handlers;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Modules\Admin\Application\Queries\GetDashboardOrdersQuery;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
+use Modules\Payment\Domain\Enums\PaymentProvider;
 
 final class GetDashboardOrdersHandler
 {
-    /** Manager ko'ra oladigan statuslar (pending va cancelled'siz). */
+    /** Manager ko'ra oladigan jarayondagi statuslar. */
     public const MANAGER_VISIBLE = [
         'paid', 'confirmed', 'ready_to_deliver',
         'delivering', 'delivered', 'delivery_issue',
     ];
+
+    public static function applyManagerVisibility(Builder $builder): Builder
+    {
+        return $builder->where(function (Builder $scope): void {
+            $scope->whereIn('status', self::MANAGER_VISIBLE)
+                ->orWhere(function (Builder $pendingCash): void {
+                    $pendingCash->where('status', 'pending')
+                        ->whereHas('latestPayment', fn (Builder $payment) => $payment
+                            ->where('provider', PaymentProvider::CASH->value));
+                });
+        });
+    }
 
     public function handle(GetDashboardOrdersQuery $query): LengthAwarePaginator
     {
@@ -24,7 +38,7 @@ final class GetDashboardOrdersHandler
             ->orderByDesc('created_at');
 
         if ($query->managerScope) {
-            $builder->whereIn('status', self::MANAGER_VISIBLE);
+            self::applyManagerVisibility($builder);
         }
 
         if ($query->status !== null && $query->status !== '') {

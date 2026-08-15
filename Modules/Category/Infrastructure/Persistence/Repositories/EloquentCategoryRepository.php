@@ -22,12 +22,12 @@ final class EloquentCategoryRepository implements CategoryRepositoryInterface
         if ($category->id !== null) {
             $model = CategoryModel::findOrFail($category->id);
         } else {
-            $model = new CategoryModel();
+            $model = new CategoryModel;
         }
 
-        $model->name      = $category->name;
-        $model->slug      = $category->slug;
-        $model->image     = $category->image;
+        $model->name = $category->name;
+        $model->slug = $category->slug;
+        $model->image = $category->image;
         $model->parent_id = $category->parentId;
         $model->is_active = $category->isActive;
         $model->save();
@@ -44,19 +44,19 @@ final class EloquentCategoryRepository implements CategoryRepositoryInterface
     {
         return CategoryModel::query()
             ->where('slug', $slug)
-            ->when($excludeId !== null, fn($q) => $q->where('id', '!=', $excludeId))
+            ->when($excludeId !== null, fn ($q) => $q->where('id', '!=', $excludeId))
             ->exists();
     }
 
     private function toEntity(CategoryModel $model): CategoryEntity
     {
         return new CategoryEntity(
-            id:        $model->id,
-            name:      $model->name,
-            slug:      $model->slug,
-            image:     $model->image,
-            parentId:  $model->parent_id,
-            isActive:  $model->is_active,
+            id: $model->id,
+            name: $model->name,
+            slug: $model->slug,
+            image: $model->image,
+            parentId: $model->parent_id,
+            isActive: $model->is_active,
             createdAt: $model->created_at?->toDateTimeImmutable(),
             updatedAt: $model->updated_at?->toDateTimeImmutable(),
         );

@@ -32,8 +32,8 @@ class Order
         public readonly string $phone,
         public readonly ?string $phoneSecondary,
         DeliveryTime $deliveryTime,
-        public readonly Money $serviceFee,   // 15% xizmat haqi (mijoz to'laydi)
-        public readonly Money $courierFee,   // pog'onali kuryer haqi (ichki; mijozga ko'rinmaydi)
+        public readonly Money $serviceFee,   // platforma 10% (ichki)
+        public readonly Money $courierFee,   // kuryer 5% gacha (ichki)
         public readonly Money $totalPrice,
         public readonly Money $grandTotal,
         public readonly array $items,
@@ -66,6 +66,16 @@ class Order
         if ($this->status !== OrderStatus::PAID) {
             throw new InvalidStatusTransitionException(
                 "Tasdiqlash faqat 'paid' statusda amalga oshiriladi."
+            );
+        }
+        $this->status = OrderStatus::CONFIRMED;
+    }
+
+    public function confirmCashOnDelivery(): void
+    {
+        if ($this->status !== OrderStatus::PENDING) {
+            throw new InvalidStatusTransitionException(
+                "Naqd buyurtmani tasdiqlash faqat 'pending' statusda amalga oshiriladi."
             );
         }
         $this->status = OrderStatus::CONFIRMED;

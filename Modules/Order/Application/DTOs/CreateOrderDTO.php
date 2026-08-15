@@ -9,37 +9,37 @@ use Modules\Order\Presentation\Requests\CreateOrderRequest;
 final readonly class CreateOrderDTO
 {
     public function __construct(
-        public int     $userId,
-        public array   $items,
-        public array   $address,
+        public int $userId,
+        public array $items,
+        public array $address,
         public ?float $deliveryLatitude,
         public ?float $deliveryLongitude,
-        public string  $phone,
+        public string $phone,
         public ?string $phoneSecondary,
-        public string  $deliveryTime,
+        public string $deliveryTime,
         public ?string $courierNote,
-        public string  $paymentMethod,
-        public ?float  $lat = null,
-        public ?float  $lng = null,
+        public string $paymentMethod,
+        public ?float $lat = null,
+        public ?float $lng = null,
         public ?string $geoLevel = null,
     ) {}
 
     public static function fromRequest(CreateOrderRequest $request, int $userId): static
     {
-        return new static(
-            userId:         $userId,
-            items:          $request->input('items'),
-            address:        $request->input('address'),
+        return new self(
+            userId: $userId,
+            items: $request->input('items'),
+            address: $request->input('address'),
             deliveryLatitude: $request->filled('delivery_latitude') ? $request->float('delivery_latitude') : null,
             deliveryLongitude: $request->filled('delivery_longitude') ? $request->float('delivery_longitude') : null,
-            phone:          $request->input('phone'),
+            phone: $request->input('phone'),
             phoneSecondary: $request->input('phone_secondary'),
-            deliveryTime:   $request->input('delivery_time'),
-            courierNote:    $request->input('courier_note'),
-            paymentMethod:  $request->input('payment_method'),
-            lat:            is_numeric($request->input('lat')) ? (float) $request->input('lat') : null,
-            lng:            is_numeric($request->input('lng')) ? (float) $request->input('lng') : null,
-            geoLevel:       $request->input('geo_level') ?: null,
+            deliveryTime: $request->input('delivery_time'),
+            courierNote: $request->input('courier_note'),
+            paymentMethod: $request->input('payment_method'),
+            lat: is_numeric($request->input('lat')) ? (float) $request->input('lat') : null,
+            lng: is_numeric($request->input('lng')) ? (float) $request->input('lng') : null,
+            geoLevel: $request->input('geo_level') ?: null,
         );
     }
 }

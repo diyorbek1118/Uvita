@@ -16,8 +16,8 @@ use Modules\Admin\Presentation\Resources\AdminUserResource;
 final class AdminUserController extends Controller
 {
     public function __construct(
-        private readonly GetAllUsersHandler  $getAllHandler,
-        private readonly GetUserByIdHandler  $getByIdHandler,
+        private readonly GetAllUsersHandler $getAllHandler,
+        private readonly GetUserByIdHandler $getByIdHandler,
     ) {}
 
     public function index(): JsonResponse

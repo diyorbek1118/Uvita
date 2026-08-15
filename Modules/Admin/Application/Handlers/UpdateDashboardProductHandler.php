@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Application\Handlers;
 
+use App\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
@@ -29,6 +30,11 @@ final class UpdateDashboardProductHandler
 
             if ($actor->role === StaffRole::MANAGER && $product->manager_id !== $actor->id) {
                 abort(403, "Bu mahsulotni tahrirlash huquqingiz yo'q");
+            }
+            if ($command->dto->stock < $product->reserved_stock) {
+                throw new DomainException(
+                    "Stokni {$product->reserved_stock} dan kamaytirib bo‘lmaydi: bu miqdor faol buyurtmalar uchun rezerv qilingan."
+                );
             }
 
             $updated = $this->updateHandler->handle($command);

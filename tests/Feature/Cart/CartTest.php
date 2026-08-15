@@ -77,12 +77,25 @@ class CartTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.items.0.quantity', 2)
             ->assertJsonPath('data.total', 40000)
-            ->assertJsonPath('data.service_fee', 6000)
-            ->assertJsonPath('data.grand_total', 46000);
+            ->assertJsonPath('data.service_fee', 0)
+            ->assertJsonPath('data.grand_total', 40000);
         $this->assertDatabaseHas('cart_items', [
             'product_id' => $this->product->id,
             'quantity' => 2,
         ]);
+    }
+
+    public function test_quantity_below_seller_minimum_can_stay_in_cart(): void
+    {
+        $this->product->update(['minimum_order_quantity' => 5, 'unit' => 'kg']);
+
+        $this->asUser()->postJson('/api/cart/items', [
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ])->assertOk()
+            ->assertJsonPath('data.items.0.quantity', 1)
+            ->assertJsonPath('data.items.0.minimum_order_quantity', 5)
+            ->assertJsonPath('data.items.0.product.unit', 'kg');
     }
 
     public function test_add_same_product_merges_quantity(): void

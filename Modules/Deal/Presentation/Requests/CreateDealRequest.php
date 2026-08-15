@@ -17,8 +17,8 @@ class CreateDealRequest extends FormRequest
     {
         return [
             'listing_id' => ['required', 'integer', 'exists:listings,id'],
-            'quantity'   => ['required', 'numeric', 'min:0.1'],
-            'unit'       => ['required', "in:kg,tonna,dona,litr,bog'lam,quti,o'ram,sumka,dasta"],
+            'quantity' => ['required', 'numeric', 'min:0.1'],
+            'unit' => ['required', "in:kg,tonna,dona,litr,bog'lam,quti,o'ram,sumka,dasta"],
         ];
     }
 }

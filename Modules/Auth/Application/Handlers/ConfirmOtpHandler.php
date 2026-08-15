@@ -18,9 +18,9 @@ final class ConfirmOtpHandler
     private const CONFIRMED_TTL = '+15 minutes';
 
     public function __construct(
-        private readonly OtpVerifier                  $otpVerifier,
+        private readonly OtpVerifier $otpVerifier,
         private readonly OtpAttemptRepositoryInterface $otpRepository,
-        private readonly UserRepositoryInterface      $userRepository,
+        private readonly UserRepositoryInterface $userRepository,
     ) {}
 
     public function handle(ConfirmOtpCommand $command): void

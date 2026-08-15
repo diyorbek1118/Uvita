@@ -16,6 +16,7 @@ use Modules\Order\Domain\ValueObjects\DeliveryTime;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 use Modules\Payment\Domain\Enums\PaymentStatus;
 use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
+use Modules\Product\Infrastructure\Persistence\Models\Product;
 
 final class ResolveIssueHandler
 {
@@ -27,7 +28,7 @@ final class ResolveIssueHandler
     public function handle(DeliveryIssueResolveCommand $command): OrderModel
     {
         [$saved, $phone, $previousCourierId] = DB::transaction(function () use ($command): array {
-            OrderModel::query()->lockForUpdate()->findOrFail($command->orderId);
+            $orderModel = OrderModel::query()->lockForUpdate()->findOrFail($command->orderId);
 
             $order = $this->orders->findById($command->orderId)
                 ?? throw new ModelNotFoundException('Buyurtma topilmadi.');
@@ -52,6 +53,25 @@ final class ResolveIssueHandler
                 ]);
 
             if ($command->action === 'cancel') {
+                if ($orderModel->stock_committed_at !== null && $orderModel->stock_released_at === null) {
+                    $items = $orderModel->items()->orderBy('product_id')->get();
+                    $products = Product::withTrashed()
+                        ->whereIn('id', $items->pluck('product_id'))
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get()
+                        ->keyBy('id');
+
+                    foreach ($items as $item) {
+                        $product = $products->get($item->product_id);
+                        if ($product !== null) {
+                            $product->increment('stock', $item->quantity);
+                        }
+                    }
+
+                    $orderModel->update(['stock_released_at' => now()]);
+                }
+
                 $payment = PaymentModel::query()
                     ->where('order_id', $command->orderId)
                     ->latest('id')

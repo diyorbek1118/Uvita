@@ -23,8 +23,8 @@ final class RejectProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'reason.required' => "Rad etish sababi kiritilishi shart.",
-            'reason.max'      => "Sabab 500 ta belgidan oshmasligi kerak.",
+            'reason.required' => 'Rad etish sababi kiritilishi shart.',
+            'reason.max' => 'Sabab 500 ta belgidan oshmasligi kerak.',
         ];
     }
 }

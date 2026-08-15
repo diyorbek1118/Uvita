@@ -22,8 +22,8 @@ Route::post('staff/login', [StaffAuthController::class, 'login'])
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('staff/logout', [StaffAuthController::class, 'logout']);
-    Route::post('staff/device-token',       [StaffDeviceTokenController::class, 'store']);
-    Route::delete('staff/device-token',     [StaffDeviceTokenController::class, 'destroy']);
+    Route::post('staff/device-token', [StaffDeviceTokenController::class, 'store']);
+    Route::delete('staff/device-token', [StaffDeviceTokenController::class, 'destroy']);
 });
 
 Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(function (): void {

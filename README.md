@@ -3,6 +3,10 @@
 Fermer/dehqon mahsulotlarini sellerlar orqali biznes xaridorlar va customerlarga
 yetkazish uchun Laravel 12 asosida qurilgan modular monolith REST API.
 
+## Dokumentatsiya
+
+- [Buyurtma va yetkazish jarayoni](docs/ORDER_LIFECYCLE.md)
+
 ## Texnologiyalar
 
 - **Laravel 12** — PHP framework

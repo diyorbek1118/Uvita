@@ -13,6 +13,6 @@ final readonly class CreateListingCommand
 
     public static function fromRequest(CreateListingRequest $request, int $sellerId): static
     {
-        return new static(dto: CreateListingDTO::fromRequest($request, $sellerId));
+        return new self(dto: CreateListingDTO::fromRequest($request, $sellerId));
     }
 }

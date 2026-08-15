@@ -29,13 +29,13 @@ use Modules\Review\Presentation\Resources\ReviewResource;
 final class ReviewController extends Controller
 {
     public function __construct(
-        private readonly CreateReviewHandler      $createHandler,
-        private readonly UpdateReviewHandler      $updateHandler,
-        private readonly ApproveReviewHandler     $approveHandler,
-        private readonly RejectReviewHandler      $rejectHandler,
+        private readonly CreateReviewHandler $createHandler,
+        private readonly UpdateReviewHandler $updateHandler,
+        private readonly ApproveReviewHandler $approveHandler,
+        private readonly RejectReviewHandler $rejectHandler,
         private readonly GetProductReviewsHandler $getProductReviewsHandler,
         private readonly GetPendingReviewsHandler $getPendingReviewsHandler,
-        private readonly GetMyReviewsHandler      $getMyReviewsHandler,
+        private readonly GetMyReviewsHandler $getMyReviewsHandler,
     ) {}
 
     // ─── Public ──────────────────────────────────────────────────────────────
@@ -67,8 +67,8 @@ final class ReviewController extends Controller
     {
         $review = $this->updateHandler->handle(new UpdateReviewCommand(
             reviewId: $id,
-            userId:   auth()->id(),
-            dto:      UpdateReviewDTO::fromRequest($request),
+            userId: auth()->id(),
+            dto: UpdateReviewDTO::fromRequest($request),
         ));
 
         return ReviewResource::make($review)
@@ -89,7 +89,7 @@ final class ReviewController extends Controller
 
     public function pendingReviews(): JsonResponse
     {
-        $reviews = $this->getPendingReviewsHandler->handle(new GetPendingReviewsQuery());
+        $reviews = $this->getPendingReviewsHandler->handle(new GetPendingReviewsQuery);
 
         return ReviewResource::collection($reviews)->response();
     }
@@ -105,7 +105,7 @@ final class ReviewController extends Controller
     {
         $this->rejectHandler->handle(new RejectReviewCommand(
             reviewId: $id,
-            reason:   (string) $request->input('reason'),
+            reason: (string) $request->input('reason'),
         ));
 
         return response()->json(['message' => 'Sharh rad etildi']);

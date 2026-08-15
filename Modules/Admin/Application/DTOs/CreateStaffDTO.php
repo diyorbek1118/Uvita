@@ -10,19 +10,19 @@ use Modules\Admin\Domain\Enums\StaffRole;
 final readonly class CreateStaffDTO
 {
     public function __construct(
-        public string    $name,
-        public string    $email,
-        public string    $password,
+        public string $name,
+        public string $email,
+        public string $password,
         public StaffRole $role,
     ) {}
 
     public static function fromRequest(Request $request): self
     {
         return new self(
-            name:     $request->input('name'),
-            email:    $request->input('email'),
+            name: $request->input('name'),
+            email: $request->input('email'),
             password: $request->input('password'),
-            role:     StaffRole::from($request->input('role')),
+            role: StaffRole::from($request->input('role')),
         );
     }
 }

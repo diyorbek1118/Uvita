@@ -20,14 +20,14 @@ final class CreateProductHandler
         $dto = $command->dto;
 
         $entity = Product::create(
-            name:        $dto->name,
-            slug:        $dto->slug,
+            name: $dto->name,
+            slug: $dto->slug,
             description: $dto->description,
-            price:       $dto->price,
-            stock:       $dto->stock,
-            images:      $dto->images,
-            categoryId:  $dto->categoryId,
-            managerId:   $dto->managerId,
+            price: $dto->price,
+            stock: $dto->stock,
+            images: $dto->images,
+            categoryId: $dto->categoryId,
+            managerId: $dto->managerId,
         );
 
         $saved = $this->products->save($entity);

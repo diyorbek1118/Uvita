@@ -21,7 +21,7 @@ final class ApproveReviewHandler
         $review = $this->reviews->findById($command->reviewId);
 
         if ($review === null) {
-            throw new ReviewNotFoundException("Sharh topilmadi.");
+            throw new ReviewNotFoundException('Sharh topilmadi.');
         }
 
         $review->approve();
@@ -33,7 +33,7 @@ final class ApproveReviewHandler
             ->get();
 
         ProductModel::where('id', $review->productId)->update([
-            'rating'        => round((float) $approved->avg('rating'), 1),
+            'rating' => round((float) $approved->avg('rating'), 1),
             'reviews_count' => $approved->count(),
         ]);
     }

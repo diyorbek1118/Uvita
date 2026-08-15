@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Order\Application\Handlers;
 
 use App\Jobs\SendTelegramJob;
+use App\Shared\Exceptions\DomainException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Modules\Courier\Domain\Enums\DeliveryAssignmentStatus;
@@ -27,12 +28,21 @@ final class RejectCourierAssignmentHandler
             $assignment = DeliveryAssignment::query()
                 ->where('order_id', $command->orderId)
                 ->where('courier_id', $command->courierId)
-                ->where('status', DeliveryAssignmentStatus::ASSIGNED->value)
+                ->whereIn('status', [
+                    DeliveryAssignmentStatus::ASSIGNED->value,
+                    DeliveryAssignmentStatus::ACCEPTED->value,
+                ])
                 ->latest('id')
                 ->first();
 
             if ($assignment === null) {
                 throw new ModelNotFoundException('Faol tayinlov topilmadi.');
+            }
+            if (
+                $assignment->status === DeliveryAssignmentStatus::ACCEPTED
+                && $assignment->assigned_at->lt(now()->subHours(5))
+            ) {
+                throw new DomainException('Qabul qilingan buyurtmani faqat dastlabki 5 soat ichida bekor qilish mumkin.');
             }
 
             $order->unassignCourier($command->courierId);

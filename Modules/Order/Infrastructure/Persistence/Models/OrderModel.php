@@ -10,9 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
+use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAttempt;
+use Modules\Courier\Infrastructure\Persistence\Models\DeliveryProof;
 use Modules\Order\Domain\Enums\OrderStatus;
 use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 use Modules\Review\Infrastructure\Persistence\Models\ReviewModel;
+use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 use Modules\User\Infrastructure\Persistence\Models\User;
 
 class OrderModel extends Model
@@ -23,6 +27,8 @@ class OrderModel extends Model
 
     protected $fillable = [
         'user_id',
+        'seller_profile_id',
+        'checkout_group_id',
         'courier_id',
         'status',
         'address',
@@ -43,6 +49,9 @@ class OrderModel extends Model
         'paid_at',
         'confirmed_at',
         'ready_at',
+        'stock_reserved_at',
+        'stock_committed_at',
+        'stock_released_at',
         'delivering_at',
         'delivered_at',
         'delivery_issue_at',
@@ -59,6 +68,9 @@ class OrderModel extends Model
         'paid_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'ready_at' => 'datetime',
+        'stock_reserved_at' => 'datetime',
+        'stock_committed_at' => 'datetime',
+        'stock_released_at' => 'datetime',
         'delivering_at' => 'datetime',
         'delivered_at' => 'datetime',
         'delivery_issue_at' => 'datetime',
@@ -85,6 +97,11 @@ class OrderModel extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function sellerProfile(): BelongsTo
+    {
+        return $this->belongsTo(SellerProfileModel::class, 'seller_profile_id');
+    }
+
     public function courier(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'courier_id');
@@ -92,16 +109,16 @@ class OrderModel extends Model
 
     public function deliveryAssignments(): HasMany
     {
-        return $this->hasMany(\Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment::class, 'order_id');
+        return $this->hasMany(DeliveryAssignment::class, 'order_id');
     }
 
     public function deliveryAttempts(): HasMany
     {
-        return $this->hasMany(\Modules\Courier\Infrastructure\Persistence\Models\DeliveryAttempt::class, 'order_id');
+        return $this->hasMany(DeliveryAttempt::class, 'order_id');
     }
 
     public function deliveryProof(): HasOne
     {
-        return $this->hasOne(\Modules\Courier\Infrastructure\Persistence\Models\DeliveryProof::class, 'order_id');
+        return $this->hasOne(DeliveryProof::class, 'order_id');
     }
 }

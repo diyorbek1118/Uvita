@@ -39,12 +39,12 @@ final class CreateDealHandler
         }
 
         $deal = new Deal(
-            id:         null,
-            listingId:  $dto->listingId,
-            sellerId:   $listing->seller_id,
-            buyerId:    $dto->buyerId,
-            quantity:   $dto->quantity,
-            unit:       $dto->unit,
+            id: null,
+            listingId: $dto->listingId,
+            sellerId: $listing->seller_id,
+            buyerId: $dto->buyerId,
+            quantity: $dto->quantity,
+            unit: $dto->unit,
             totalPrice: $dto->totalPrice,
         );
 

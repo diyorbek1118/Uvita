@@ -8,6 +8,6 @@ final readonly class GetListingListQuery
 {
     public function __construct(
         public array $filters = [],
-        public int   $perPage = 20,
+        public int $perPage = 20,
     ) {}
 }

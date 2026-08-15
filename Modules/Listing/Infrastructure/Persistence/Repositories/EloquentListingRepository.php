@@ -24,25 +24,25 @@ final class EloquentListingRepository implements ListingRepositoryInterface
     {
         if ($listing->id === null) {
             $model = ListingModel::create([
-                'seller_id'        => $listing->sellerId,
-                'category_id'      => $listing->categoryId,
-                'title'            => $listing->title,
-                'slug'             => Str::slug($listing->title) . '-' . Str::lower(Str::random(6)),
-                'description'      => $listing->description,
-                'price'            => $listing->price,
-                'quantity'         => $listing->quantity,
-                'unit'             => $listing->unit,
-                'images'           => $listing->images,
-                'video'            => $listing->video,
-                'region'           => $listing->region,
-                'district'         => $listing->district,
-                'address'          => $listing->address,
-                'lat'              => $listing->lat,
-                'lng'              => $listing->lng,
-                'details'          => $listing->details,
-                'contacts'         => $listing->contacts,
-                'expires_at'       => $listing->expiresAt,
-                'status'           => $listing->status->value,
+                'seller_id' => $listing->sellerId,
+                'category_id' => $listing->categoryId,
+                'title' => $listing->title,
+                'slug' => Str::slug($listing->title).'-'.Str::lower(Str::random(6)),
+                'description' => $listing->description,
+                'price' => $listing->price,
+                'quantity' => $listing->quantity,
+                'unit' => $listing->unit,
+                'images' => $listing->images,
+                'video' => $listing->video,
+                'region' => $listing->region,
+                'district' => $listing->district,
+                'address' => $listing->address,
+                'lat' => $listing->lat,
+                'lng' => $listing->lng,
+                'details' => $listing->details,
+                'contacts' => $listing->contacts,
+                'expires_at' => $listing->expiresAt,
+                'status' => $listing->status->value,
                 'rejection_reason' => $listing->rejectionReason,
             ]);
 
@@ -50,23 +50,23 @@ final class EloquentListingRepository implements ListingRepositoryInterface
         }
 
         ListingModel::where('id', $listing->id)->update([
-            'category_id'      => $listing->categoryId,
-            'title'            => $listing->title,
-            'description'      => $listing->description,
-            'price'            => $listing->price,
-            'quantity'         => $listing->quantity,
-            'unit'             => $listing->unit,
-            'images'           => $listing->images,
-            'video'            => $listing->video,
-            'region'           => $listing->region,
-            'district'         => $listing->district,
-            'address'          => $listing->address,
-            'lat'              => $listing->lat,
-            'lng'              => $listing->lng,
-            'details'          => $listing->details,
-            'contacts'         => $listing->contacts,
-            'expires_at'       => $listing->expiresAt,
-            'status'           => $listing->status->value,
+            'category_id' => $listing->categoryId,
+            'title' => $listing->title,
+            'description' => $listing->description,
+            'price' => $listing->price,
+            'quantity' => $listing->quantity,
+            'unit' => $listing->unit,
+            'images' => $listing->images,
+            'video' => $listing->video,
+            'region' => $listing->region,
+            'district' => $listing->district,
+            'address' => $listing->address,
+            'lat' => $listing->lat,
+            'lng' => $listing->lng,
+            'details' => $listing->details,
+            'contacts' => $listing->contacts,
+            'expires_at' => $listing->expiresAt,
+            'status' => $listing->status->value,
             'rejection_reason' => $listing->rejectionReason,
         ]);
 
@@ -96,7 +96,7 @@ final class EloquentListingRepository implements ListingRepositoryInterface
         }
 
         if (! empty($filters['search'])) {
-            $query->where('title', 'like', '%' . $filters['search'] . '%');
+            $query->where('title', 'like', '%'.$filters['search'].'%');
         }
 
         if (! empty($filters['region'])) {
@@ -105,9 +105,9 @@ final class EloquentListingRepository implements ListingRepositoryInterface
 
         $sort = $filters['sort'] ?? 'newest';
         match ($sort) {
-            'cheap'    => $query->orderBy('price'),
-            'expensive'=> $query->orderByDesc('price'),
-            default    => $query->orderByDesc('id'),
+            'cheap' => $query->orderBy('price'),
+            'expensive' => $query->orderByDesc('price'),
+            default => $query->orderByDesc('id'),
         };
 
         return $query->paginate($perPage);
@@ -124,25 +124,25 @@ final class EloquentListingRepository implements ListingRepositoryInterface
     private function toDomain(ListingModel $model): Listing
     {
         return new Listing(
-            id:              $model->id,
-            sellerId:        $model->seller_id,
-            categoryId:      $model->category_id,
-            title:           $model->title,
-            description:     $model->description,
-            price:           $model->price,
-            quantity:        (float) $model->quantity,
-            unit:            $model->unit,
-            images:          $model->images,
-            video:           $model->video,
-            region:          $model->region,
-            district:        $model->district,
-            address:         $model->address,
-            lat:             $model->lat !== null ? (float) $model->lat : null,
-            lng:             $model->lng !== null ? (float) $model->lng : null,
-            details:         $model->details,
-            contacts:        $model->contacts,
-            expiresAt:       $model->expires_at?->toDateTimeImmutable(),
-            status:          ListingStatus::from($model->status->value),
+            id: $model->id,
+            sellerId: $model->seller_id,
+            categoryId: $model->category_id,
+            title: $model->title,
+            description: $model->description,
+            price: $model->price,
+            quantity: (float) $model->quantity,
+            unit: $model->unit,
+            images: $model->images,
+            video: $model->video,
+            region: $model->region,
+            district: $model->district,
+            address: $model->address,
+            lat: $model->lat !== null ? (float) $model->lat : null,
+            lng: $model->lng !== null ? (float) $model->lng : null,
+            details: $model->details,
+            contacts: $model->contacts,
+            expiresAt: $model->expires_at?->toDateTimeImmutable(),
+            status: ListingStatus::from($model->status->value),
             rejectionReason: $model->rejection_reason,
         );
     }

@@ -30,9 +30,9 @@ class ReviewModel extends Model
     ];
 
     protected $casts = [
-        'status'     => ReviewStatus::class,
+        'status' => ReviewStatus::class,
         'is_visible' => 'boolean',
-        'rating'     => 'integer',
+        'rating' => 'integer',
     ];
 
     public function order(): BelongsTo

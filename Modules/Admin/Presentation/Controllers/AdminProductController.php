@@ -21,14 +21,14 @@ final class AdminProductController extends Controller
 {
     public function __construct(
         private readonly GetPendingProductsHandler $pendingHandler,
-        private readonly GetAllProductsHandler     $allHandler,
-        private readonly ApproveProductHandler     $approveHandler,
-        private readonly RejectProductHandler      $rejectHandler,
+        private readonly GetAllProductsHandler $allHandler,
+        private readonly ApproveProductHandler $approveHandler,
+        private readonly RejectProductHandler $rejectHandler,
     ) {}
 
     public function pendingProducts(): JsonResponse
     {
-        $products = $this->pendingHandler->handle(new GetPendingProductsQuery());
+        $products = $this->pendingHandler->handle(new GetPendingProductsQuery);
 
         return AdminProductResource::collection($products)->response();
     }

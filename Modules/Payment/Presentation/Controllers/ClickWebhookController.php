@@ -21,7 +21,7 @@ class ClickWebhookController extends Controller
             $result = $this->handler->handle($request);
         } catch (\Throwable $e) {
             return response()->json([
-                'error'      => -9,
+                'error' => -9,
                 'error_note' => $e->getMessage(),
             ], 200);
         }

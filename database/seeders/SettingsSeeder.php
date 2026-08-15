@@ -18,7 +18,7 @@ class SettingsSeeder extends Seeder
     {
         SettingModel::insert([
             ['key' => 'delivery_city',              'value' => 'Toshkent', 'description' => 'Yetkazish shahri'],
-            ['key' => 'min_order_amount',           'value' => '50000',    'description' => "Minimal buyurtma summasi (so'm)"],
+            ['key' => 'min_order_amount',           'value' => '1000000',  'description' => "Minimal buyurtma summasi (so'm)"],
             ['key' => 'otp_expiry_seconds',         'value' => '120',      'description' => 'OTP amal qilish vaqti (soniya)'],
             ['key' => 'otp_max_attempts',           'value' => '5',        'description' => 'OTP maksimal urinishlar'],
             ['key' => 'otp_block_minutes',          'value' => '10',       'description' => 'OTP blok vaqti (daqiqa)'],

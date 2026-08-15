@@ -19,6 +19,11 @@ final class ReviewSellerProductRevisionHandler
 
             $product = $revision->product()->lockForUpdate()->firstOrFail();
             $payload = $revision->payload;
+            abort_if(
+                (int) $payload['stock'] < $product->reserved_stock,
+                422,
+                "Yangi stok {$product->reserved_stock} ta rezervdan kam bo‘lishi mumkin emas."
+            );
             $product->update([
                 'name' => $payload['name'],
                 'description' => $payload['description'],

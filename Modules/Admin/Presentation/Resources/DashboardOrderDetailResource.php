@@ -19,6 +19,8 @@ class DashboardOrderDetailResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'seller_profile_id' => $this->seller_profile_id,
+            'checkout_group_id' => $this->checkout_group_id,
             'status' => $this->status->value,
             'customer' => [
                 'name' => $this->whenLoaded('user', fn () => $this->user?->name),
@@ -45,11 +47,16 @@ class DashboardOrderDetailResource extends JsonResource
                 'quantity' => $item->quantity,
                 'price' => $item->price,
                 'subtotal' => $item->price * $item->quantity,
+                'unit' => $item->product?->unit,
+                'stock' => $item->product === null ? null : (
+                    $item->product->available_stock + ($this->stock_reserved_at !== null ? $item->quantity : 0)
+                ),
+                'minimum_order_quantity' => $item->product?->minimum_order_quantity,
             ])
             ),
             'pricing' => [
                 'total_price' => $this->total_price,   // mahsulotlar summasi (sotuvchiga)
-                'service_fee' => $this->service_fee,   // 15% xizmat haqi (mijoz to'laydi)
+                'service_fee' => $this->service_fee,   // platforma 10% (ichki)
                 'grand_total' => $this->grand_total,   // mijoz to'lagan jami
             ],
             // Narx breakdown (platform_fee, courier_fee, ...) — faqat admin/super.

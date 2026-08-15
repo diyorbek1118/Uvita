@@ -8,7 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
-use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
+use Modules\Seller\Application\Services\SellerShopResolver;
 use Symfony\Component\HttpFoundation\Response;
 
 final class EnsureVerifiedSeller
@@ -21,10 +21,12 @@ final class EnsureVerifiedSeller
             return $next($request);
         }
 
-        if (! $seller instanceof Staff || ! SellerProfileModel::query()
-            ->where('seller_id', $seller->id)
-            ->where('is_verified', true)
-            ->exists()) {
+        if (! $seller instanceof Staff) {
+            return response()->json(['message' => 'Seller akkaunti topilmadi'], 403);
+        }
+
+        $shop = app(SellerShopResolver::class)->resolve($request, $seller->id);
+        if (! $shop->is_verified) {
             return response()->json(['message' => 'Mahsulot joylash uchun sotuvchi profili admin tomonidan tasdiqlanishi kerak'], 403);
         }
 

@@ -14,9 +14,9 @@ use Modules\User\Domain\Repositories\UserRepositoryInterface;
 final class VerifyOtpHandler
 {
     public function __construct(
-        private readonly OtpVerifier                  $otpVerifier,
-        private readonly UserRepositoryInterface       $userRepository,
-        private readonly TokenServiceInterface         $tokenService,
+        private readonly OtpVerifier $otpVerifier,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly TokenServiceInterface $tokenService,
     ) {}
 
     /**
@@ -30,7 +30,7 @@ final class VerifyOtpHandler
 
         // 2. Foydalanuvchi topish yoki yangi yaratish
         $userEntity = $this->userRepository->findByPhone($phone->value);
-        $isNew      = $userEntity === null;
+        $isNew = $userEntity === null;
 
         if ($isNew) {
             $userEntity = $this->userRepository->save(UserEntity::create($phone->value));
@@ -41,8 +41,8 @@ final class VerifyOtpHandler
 
         // 4. Natija
         return [
-            'token'  => $token,
-            'user'   => $userEntity,
+            'token' => $token,
+            'user' => $userEntity,
             'is_new' => $isNew,
         ];
     }

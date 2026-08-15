@@ -18,7 +18,7 @@ final class GetAllProductsHandler
         if ($query->status !== null) {
             // "pending" — docs'da ishlatilgan alias, kod'da "inactive" deyiladi
             $statusValue = $query->status === 'pending' ? 'inactive' : $query->status;
-            $statusEnum  = ProductStatusEnum::tryFrom($statusValue);
+            $statusEnum = ProductStatusEnum::tryFrom($statusValue);
 
             if ($statusEnum !== null) {
                 $builder->where('status', $statusEnum->value);

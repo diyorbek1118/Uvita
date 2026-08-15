@@ -7,7 +7,7 @@ namespace Modules\Product\Application\Commands;
 final readonly class RejectProductCommand
 {
     public function __construct(
-        public int    $id,
+        public int $id,
         public string $reason,
     ) {}
 }

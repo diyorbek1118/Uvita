@@ -24,7 +24,7 @@ final class StaffAuthController extends Controller
         );
 
         return response()->json([
-            'data'    => $result,
+            'data' => $result,
             'message' => 'Kirish muvaffaqiyatli',
         ]);
     }

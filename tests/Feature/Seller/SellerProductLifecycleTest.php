@@ -84,6 +84,55 @@ final class SellerProductLifecycleTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_seller_product_media_rules_reject_invalid_count_dimensions_and_file_sizes(): void
+    {
+        Storage::fake('public');
+        $category = Category::create(['name' => 'Media test', 'slug' => 'media-test']);
+        $seller = $this->staff(StaffRole::SELLER, 'seller-media@uvita.uz');
+        SellerProfileModel::create($this->profile($seller->id, true));
+        $this->withToken($seller->createToken('seller-media')->plainTextToken);
+
+        $threeImages = array_map(
+            fn (int $index) => UploadedFile::fake()->image("short-$index.jpg", 1000, 1000),
+            range(1, 3),
+        );
+        $this->post('/api/seller/products', $this->productPayload($category->id, ['images' => $threeImages]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['images']);
+
+        $elevenImages = array_map(
+            fn (int $index) => UploadedFile::fake()->image("extra-$index.jpg", 1000, 1000),
+            range(1, 11),
+        );
+        $this->post('/api/seller/products', $this->productPayload($category->id, ['images' => $elevenImages]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['images']);
+
+        $nonSquareImages = $this->productPayload($category->id)['images'];
+        $nonSquareImages[0] = UploadedFile::fake()->image('non-square.jpg', 1200, 900);
+        $this->post('/api/seller/products', $this->productPayload($category->id, ['images' => $nonSquareImages]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['images.0']);
+
+        $differentSizedImages = $this->productPayload($category->id)['images'];
+        $differentSizedImages[1] = UploadedFile::fake()->image('different-size.jpg', 1200, 1200);
+        $this->post('/api/seller/products', $this->productPayload($category->id, ['images' => $differentSizedImages]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['images.1']);
+
+        $oversizedImages = $this->productPayload($category->id)['images'];
+        $oversizedImages[0] = UploadedFile::fake()->image('oversized.jpg', 1000, 1000)->size(5121);
+        $this->post('/api/seller/products', $this->productPayload($category->id, ['images' => $oversizedImages]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['images.0']);
+
+        $this->post('/api/seller/products', $this->productPayload($category->id, [
+            'video' => UploadedFile::fake()->create('oversized.mp4', 5121, 'video/mp4'),
+        ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['video']);
+    }
+
     public function test_seller_sees_only_orders_containing_own_products(): void
     {
         $category = Category::create(['name' => 'Poliz', 'slug' => 'poliz']);

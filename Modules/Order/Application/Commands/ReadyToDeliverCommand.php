@@ -7,7 +7,7 @@ namespace Modules\Order\Application\Commands;
 final readonly class ReadyToDeliverCommand
 {
     public function __construct(
-        public int     $orderId,
+        public int $orderId,
         public ?string $courierNote = null,
     ) {}
 }

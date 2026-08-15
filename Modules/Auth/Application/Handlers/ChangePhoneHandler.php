@@ -18,7 +18,7 @@ final class ChangePhoneHandler
 {
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
-        private readonly UserRepositoryInterface       $userRepository,
+        private readonly UserRepositoryInterface $userRepository,
     ) {}
 
     public function handle(int $userId, ChangePhoneCommand $command): User
@@ -26,7 +26,7 @@ final class ChangePhoneHandler
         $user = $this->userRepository->findById($userId);
 
         if ($user === null) {
-            throw new DomainException("Foydalanuvchi topilmadi.");
+            throw new DomainException('Foydalanuvchi topilmadi.');
         }
 
         // 1. Parol o'rnatilgan bo'lsa — joriy parolni tekshiramiz (raxam o'zgartirishda kimlikni tasdiqlash)
@@ -40,7 +40,7 @@ final class ChangePhoneHandler
 
         // 2. Yangi raqam joriy raqam bilan bir xil bo'lmasligi kerak
         if ($newPhone->value === $user->phone) {
-            throw new DomainException("Bu sizning joriy raqamingiz. Boshqa raqam kiriting.");
+            throw new DomainException('Bu sizning joriy raqamingiz. Boshqa raqam kiriting.');
         }
 
         // 3. Yangi raqam boshqa foydalanuvchida band bo'lmasligi kerak
@@ -52,7 +52,7 @@ final class ChangePhoneHandler
         // 4. Yangi raqam SMS orqali tasdiqlangan bo'lishi kerak (/auth/otp/confirm orqali)
         $verified = $this->otpRepository->findVerifiedByPhone($newPhone->value);
         if ($verified === null) {
-            throw new InvalidOtpException("Yangi raqam SMS orqali tasdiqlanmagan. Avval kodni tasdiqlang.");
+            throw new InvalidOtpException('Yangi raqam SMS orqali tasdiqlanmagan. Avval kodni tasdiqlang.');
         }
 
         // 5. Raqamni yangilash (parallel so'rovda unique constraint — xatosiz ushlaymiz)

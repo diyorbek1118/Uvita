@@ -12,7 +12,7 @@ final class OtpRateLimitException extends DomainException
     public function __construct(DateTimeImmutable $blockedUntil)
     {
         $minutesLeft = (int) ceil(
-            ($blockedUntil->getTimestamp() - (new DateTimeImmutable())->getTimestamp()) / 60
+            ($blockedUntil->getTimestamp() - (new DateTimeImmutable)->getTimestamp()) / 60
         );
 
         parent::__construct(

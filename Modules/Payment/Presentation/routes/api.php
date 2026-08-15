@@ -17,5 +17,5 @@ Route::middleware('auth:api')->group(function () {
 Route::prefix('payment')->group(function (): void {
     Route::post('payme/webhook', PaymeWebhookController::class);
     Route::post('click/webhook', ClickWebhookController::class);
-    Route::post('uzum/webhook',  UzumWebhookController::class);
+    Route::post('uzum/webhook', UzumWebhookController::class);
 });

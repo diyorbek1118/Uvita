@@ -19,8 +19,8 @@ final class RegisterHandler
 {
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
-        private readonly UserRepositoryInterface       $userRepository,
-        private readonly TokenServiceInterface         $tokenService,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly TokenServiceInterface $tokenService,
     ) {}
 
     /**
@@ -32,7 +32,7 @@ final class RegisterHandler
 
         // 1. OTP avval /auth/otp/confirm orqali tasdiqlangan bo'lishi kerak
         if ($this->otpRepository->findVerifiedByPhone($phone->value) === null) {
-            throw new InvalidOtpException("Tasdiqlash kodining muddati tugagan. Kodni qayta yuboring.");
+            throw new InvalidOtpException('Tasdiqlash kodining muddati tugagan. Kodni qayta yuboring.');
         }
 
         // 2. Raqam oldin ro'yxatdan o'tmagan bo'lishi kerak
@@ -42,14 +42,14 @@ final class RegisterHandler
 
         // 3. Yangi foydalanuvchi yaratish (profil + parol)
         $user = UserEntity::create(
-            phone:    $phone->value,
-            name:     $command->dto->name,
-            surname:  $command->dto->surname,
-            region:   $command->dto->region,
+            phone: $phone->value,
+            name: $command->dto->name,
+            surname: $command->dto->surname,
+            region: $command->dto->region,
             district: $command->dto->district,
-            address:  $command->dto->address,
-            lat:      $command->dto->lat,
-            lng:      $command->dto->lng,
+            address: $command->dto->address,
+            lat: $command->dto->lat,
+            lng: $command->dto->lng,
             password: Hash::make($command->dto->password),
         );
 

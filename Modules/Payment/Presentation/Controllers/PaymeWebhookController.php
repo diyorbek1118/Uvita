@@ -23,12 +23,12 @@ class PaymeWebhookController extends Controller
         } catch (InvalidSignatureException $e) {
             return response()->json([
                 'error' => ['code' => -32504, 'message' => $e->getMessage(), 'data' => null],
-                'id'    => $request->input('id'),
+                'id' => $request->input('id'),
             ], 401);
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => ['code' => -32400, 'message' => $e->getMessage(), 'data' => null],
-                'id'    => $request->input('id'),
+                'id' => $request->input('id'),
             ], 200);
         }
 

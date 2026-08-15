@@ -10,7 +10,7 @@ use Modules\Seller\Domain\Repositories\SellerOrderReadRepositoryInterface;
 
 final class EloquentSellerOrderReadRepository implements SellerOrderReadRepositoryInterface
 {
-    public function paginateForSeller(int $sellerId, int $perPage): LengthAwarePaginator
+    public function paginateForSeller(int $sellerId, int $perPage, ?int $sellerProfileId = null): LengthAwarePaginator
     {
         $netRate = 100 - (float) array_sum(config('seller.fees'));
 
@@ -19,6 +19,9 @@ final class EloquentSellerOrderReadRepository implements SellerOrderReadReposito
             ->join('order_items', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->where('products.seller_id', $sellerId)
+            ->when($sellerProfileId !== null, fn ($query) => $query->where(
+                fn ($scope) => $scope->where('products.seller_profile_id', $sellerProfileId)->orWhereNull('products.seller_profile_id')
+            ))
             ->whereIn('orders.status', ['paid', 'confirmed', 'ready_to_deliver', 'delivering', 'delivered'])
             ->select([
                 'orders.id', 'orders.status', 'orders.created_at',
@@ -35,6 +38,9 @@ final class EloquentSellerOrderReadRepository implements SellerOrderReadReposito
         $items = DB::table('order_items')
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->where('products.seller_id', $sellerId)
+            ->when($sellerProfileId !== null, fn ($query) => $query->where(
+                fn ($scope) => $scope->where('products.seller_profile_id', $sellerProfileId)->orWhereNull('products.seller_profile_id')
+            ))
             ->whereIn('order_items.order_id', $orderIds)
             ->select([
                 'order_items.order_id', 'order_items.product_id', 'products.name as product_name',

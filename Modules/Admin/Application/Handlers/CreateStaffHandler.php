@@ -20,8 +20,8 @@ final class CreateStaffHandler
         $actor = auth('sanctum')->user();
         if ($actor instanceof Staff
             && $actor->role === StaffRole::ADMIN
-            && !in_array($dto->role, [StaffRole::SELLER, StaffRole::MANAGER, StaffRole::COURIER], true)) {
-            abort(403, "Admin faqat menejer yoki kuryer yarata oladi");
+            && ! in_array($dto->role, [StaffRole::SELLER, StaffRole::MANAGER, StaffRole::COURIER], true)) {
+            abort(403, 'Admin faqat menejer yoki kuryer yarata oladi');
         }
 
         if (Staff::where('email', $dto->email)->exists()) {
@@ -29,10 +29,10 @@ final class CreateStaffHandler
         }
 
         $staff = Staff::create([
-            'name'      => $dto->name,
-            'email'     => $dto->email,
-            'password'  => Hash::make($dto->password),
-            'role'      => $dto->role,
+            'name' => $dto->name,
+            'email' => $dto->email,
+            'password' => Hash::make($dto->password),
+            'role' => $dto->role,
             'is_active' => true,
         ]);
 

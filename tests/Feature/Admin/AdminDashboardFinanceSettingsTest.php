@@ -57,7 +57,7 @@ class AdminDashboardFinanceSettingsTest extends TestCase
             'total_price' => $total,
             'service_fee' => $serviceFee,
             'courier_fee' => $courierFee,
-            'grand_total' => $total + $serviceFee,
+            'grand_total' => $total,
         ]);
         $order->forceFill(['created_at' => $date, 'updated_at' => $date])->saveQuietly();
 
@@ -134,20 +134,20 @@ class AdminDashboardFinanceSettingsTest extends TestCase
         $super = $this->staff(StaffRole::SUPER_ADMIN, 'finance');
         $admin = $this->staff(StaffRole::ADMIN, 'finance');
         $customer = User::create(['phone' => '+998903333333', 'name' => 'Ali']);
-        $this->order($customer, 'paid', 100000, 15000, 10000, '2026-07-10 10:00:00');
-        $this->order($customer, 'delivered', 200000, 30000, 15000, '2026-07-15 10:00:00');
-        $this->order($customer, 'cancelled', 900000, 135000, 50000, '2026-07-15 12:00:00');
+        $this->order($customer, 'paid', 100000, 10000, 5000, '2026-07-10 10:00:00');
+        $this->order($customer, 'delivered', 200000, 20000, 10000, '2026-07-15 10:00:00');
+        $this->order($customer, 'cancelled', 900000, 90000, 45000, '2026-07-15 12:00:00');
 
         $this->as($super)
             ->getJson('/api/dashboard/analytics/revenue?from=2026-07-01&to=2026-07-31')
             ->assertStatus(200)
             ->assertJsonPath('data.orders_count', 2)
             ->assertJsonPath('data.gross_sales', 300000)
-            ->assertJsonPath('data.seller_payouts', 300000)
-            ->assertJsonPath('data.platform_fee_gross', 45000)
-            ->assertJsonPath('data.courier_fees', 25000)
-            ->assertJsonPath('data.platform_fee_net', 20000)
-            ->assertJsonPath('data.customer_total', 345000);
+            ->assertJsonPath('data.seller_payouts', 243000)
+            ->assertJsonPath('data.platform_fee_gross', 30000)
+            ->assertJsonPath('data.courier_fees', 15000)
+            ->assertJsonPath('data.platform_fee_net', 42000)
+            ->assertJsonPath('data.customer_total', 300000);
 
         $this->getJson('/api/dashboard/analytics/sales?period=monthly')
             ->assertStatus(200)

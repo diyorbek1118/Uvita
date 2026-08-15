@@ -18,10 +18,10 @@ final class ConfirmDealHandler
     public function handle(ConfirmDealCommand $command): DealModel
     {
         $deal = $this->deals->findById($command->dealId)
-            ?? throw new DealNotFoundException("Bitim topilmadi.");
+            ?? throw new DealNotFoundException('Bitim topilmadi.');
 
         if ($deal->sellerId !== $command->sellerId) {
-            abort(403, "Bu bitim sizga tegishli emas.");
+            abort(403, 'Bu bitim sizga tegishli emas.');
         }
 
         $deal->confirm();

@@ -26,21 +26,21 @@ final class UpdateListingHandler
 
         $dto = $command->dto;
         $listing->update(
-            categoryId:  $dto->categoryId,
-            title:       $dto->title,
+            categoryId: $dto->categoryId,
+            title: $dto->title,
             description: $dto->description,
-            price:       $dto->price,
-            quantity:    $dto->quantity,
-            unit:        $dto->unit,
-            images:      $dto->images,
-            video:       $dto->video,
-            region:      $dto->region,
-            district:    $dto->district,
-            address:     $dto->address,
-            lat:         $dto->lat,
-            lng:         $dto->lng,
-            details:     $dto->details,
-            contacts:    $dto->contacts,
+            price: $dto->price,
+            quantity: $dto->quantity,
+            unit: $dto->unit,
+            images: $dto->images,
+            video: $dto->video,
+            region: $dto->region,
+            district: $dto->district,
+            address: $dto->address,
+            lat: $dto->lat,
+            lng: $dto->lng,
+            details: $dto->details,
+            contacts: $dto->contacts,
         );
 
         $this->listings->save($listing);

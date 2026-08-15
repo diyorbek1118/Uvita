@@ -15,7 +15,7 @@ final readonly class PhoneNumber
         if (! preg_match(self::PATTERN, $phone)) {
             throw new \InvalidArgumentException(
                 "Telefon raqami +998 va to'g'ri mobil operator kodi bilan bo'lishi kerak "
-                . "(masalan +998901234567). Berilgan: {$phone}"
+                ."(masalan +998901234567). Berilgan: {$phone}"
             );
         }
 

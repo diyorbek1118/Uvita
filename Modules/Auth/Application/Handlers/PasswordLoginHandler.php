@@ -16,7 +16,7 @@ final class PasswordLoginHandler
 {
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
-        private readonly TokenServiceInterface   $tokenService,
+        private readonly TokenServiceInterface $tokenService,
     ) {}
 
     /**
@@ -25,7 +25,7 @@ final class PasswordLoginHandler
     public function handle(PasswordLoginCommand $command): array
     {
         $phone = new PhoneNumber($command->dto->phone);
-        $user  = $this->userRepository->findByPhone($phone->value);
+        $user = $this->userRepository->findByPhone($phone->value);
 
         // 1. Foydalanuvchi mavjud va paroli o'rnatilgan bo'lishi kerak
         if ($user === null || $user->password === null || $user->password === '') {

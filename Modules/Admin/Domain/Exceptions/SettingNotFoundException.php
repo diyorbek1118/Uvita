@@ -10,6 +10,6 @@ final class SettingNotFoundException extends RuntimeException
 {
     public function __construct(string $key = '')
     {
-        parent::__construct("Sozlama topilmadi" . ($key !== '' ? ": {$key}" : ''));
+        parent::__construct('Sozlama topilmadi'.($key !== '' ? ": {$key}" : ''));
     }
 }

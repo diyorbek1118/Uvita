@@ -8,8 +8,8 @@ final readonly class GetAllTransactionsQuery
 {
     public function __construct(
         public ?string $provider = null,
-        public ?string $status   = null,
+        public ?string $status = null,
         public ?string $dateFrom = null,
-        public ?string $dateTo   = null,
+        public ?string $dateTo = null,
     ) {}
 }

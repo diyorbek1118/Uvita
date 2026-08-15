@@ -12,6 +12,7 @@ final class SellerProfileResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->id,
             'seller_id' => $this->seller_id,
             'business_name' => $this->business_name,
             'legal_type' => $this->legal_type,
@@ -22,6 +23,7 @@ final class SellerProfileResource extends JsonResource
             'address' => $this->address,
             'bank_account' => $this->bank_account,
             'bank_mfo' => $this->bank_mfo,
+            'is_active' => $this->is_active,
             'is_verified' => $this->is_verified,
             'verified_at' => $this->verified_at?->toISOString(),
         ];

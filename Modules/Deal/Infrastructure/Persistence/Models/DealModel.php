@@ -28,8 +28,8 @@ class DealModel extends Model
     ];
 
     protected $casts = [
-        'status'      => DealStatus::class,
-        'quantity'    => 'float',
+        'status' => DealStatus::class,
+        'quantity' => 'float',
         'total_price' => 'integer',
     ];
 

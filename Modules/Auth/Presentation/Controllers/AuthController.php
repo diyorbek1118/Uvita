@@ -39,15 +39,15 @@ use Modules\User\Domain\Entities\User as UserEntity;
 final class AuthController extends Controller
 {
     public function __construct(
-        private readonly SendOtpHandler         $sendOtpHandler,
-        private readonly VerifyOtpHandler       $verifyOtpHandler,
+        private readonly SendOtpHandler $sendOtpHandler,
+        private readonly VerifyOtpHandler $verifyOtpHandler,
         private readonly ChangePasswordHandler $changePasswordHandler,
-        private readonly ChangePhoneHandler     $changePhoneHandler,
-        private readonly CheckPhoneHandler      $checkPhoneHandler,
-        private readonly ConfirmOtpHandler      $confirmOtpHandler,
-        private readonly RegisterHandler        $registerHandler,
-        private readonly PasswordLoginHandler   $passwordLoginHandler,
-        private readonly ResetPasswordHandler   $resetPasswordHandler,
+        private readonly ChangePhoneHandler $changePhoneHandler,
+        private readonly CheckPhoneHandler $checkPhoneHandler,
+        private readonly ConfirmOtpHandler $confirmOtpHandler,
+        private readonly RegisterHandler $registerHandler,
+        private readonly PasswordLoginHandler $passwordLoginHandler,
+        private readonly ResetPasswordHandler $resetPasswordHandler,
     ) {}
 
     /** Raqam ro'yxatdan o'tganmi va paroli bormi — keyingi bosqichni tanlash uchun */
@@ -75,15 +75,15 @@ final class AuthController extends Controller
             VerifyOtpCommand::fromRequest($request)
         );
 
-        $isNew      = $result['is_new'];
+        $isNew = $result['is_new'];
         $statusCode = $isNew ? 201 : 200;
 
         return response()->json([
-            'data'  => [
+            'data' => [
                 'token' => $result['token'],
-                'user'  => $this->formatUser($result['user']),
+                'user' => $this->formatUser($result['user']),
             ],
-            'isNew'   => $isNew,
+            'isNew' => $isNew,
             'message' => 'Muvaffaqiyatli kirildi',
         ], $statusCode);
     }
@@ -148,7 +148,7 @@ final class AuthController extends Controller
         );
 
         return response()->json([
-            'data'    => ['user' => $this->formatUser($user)],
+            'data' => ['user' => $this->formatUser($user)],
             'message' => 'Telefon raqami yangilandi',
         ]);
     }
@@ -163,9 +163,9 @@ final class AuthController extends Controller
     private function authResponse(array $result, int $statusCode): JsonResponse
     {
         return response()->json([
-            'data'  => [
+            'data' => [
                 'token' => $result['token'],
-                'user'  => $this->formatUser($result['user']),
+                'user' => $this->formatUser($result['user']),
             ],
             'message' => 'Muvaffaqiyatli kirildi',
         ], $statusCode);
@@ -174,15 +174,15 @@ final class AuthController extends Controller
     private function formatUser(UserEntity $user): array
     {
         return [
-            'id'       => $user->id,
-            'name'     => $user->name,
-            'surname'  => $user->surname,
-            'phone'    => $user->phone,
-            'region'   => $user->region,
+            'id' => $user->id,
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'phone' => $user->phone,
+            'region' => $user->region,
             'district' => $user->district,
-            'address'  => $user->address,
-            'lat'         => $user->lat,
-            'lng'         => $user->lng,
+            'address' => $user->address,
+            'lat' => $user->lat,
+            'lng' => $user->lng,
             'has_password' => $user->password !== null && $user->password !== '',
         ];
     }

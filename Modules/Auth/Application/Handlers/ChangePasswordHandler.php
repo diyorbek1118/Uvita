@@ -20,7 +20,7 @@ final class ChangePasswordHandler
         $user = $this->userRepository->findById($userId);
 
         if ($user === null) {
-            throw new DomainException("Foydalanuvchi topilmadi.");
+            throw new DomainException('Foydalanuvchi topilmadi.');
         }
 
         // Parol o'rnatilgan bo'lsa — joriy parolni tekshiramiz

@@ -13,7 +13,7 @@ final class GetCourierOrdersHandler
 {
     public function handle(GetCourierOrdersQuery $query): LengthAwarePaginator
     {
-        return OrderModel::with(['items.product', 'deliveryAssignments', 'deliveryAttempts'])
+        return OrderModel::with(['items.product.sellerProfile', 'deliveryAssignments', 'deliveryAttempts'])
             ->where('courier_id', $query->courierId)
             ->whereIn('status', [
                 OrderStatus::READY_TO_DELIVER->value,

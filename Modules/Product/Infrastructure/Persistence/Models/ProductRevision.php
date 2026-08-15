@@ -12,7 +12,7 @@ use Modules\Product\Domain\Enums\ProductRevisionStatusEnum;
 final class ProductRevision extends Model
 {
     protected $fillable = [
-        'product_id', 'seller_id', 'version', 'payload', 'fee_snapshot', 'status',
+        'product_id', 'seller_id', 'seller_profile_id', 'version', 'payload', 'fee_snapshot', 'status',
         'rejection_reason', 'reviewed_by_id', 'reviewed_at',
     ];
 

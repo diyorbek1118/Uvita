@@ -7,6 +7,7 @@ namespace Modules\Listing\Infrastructure\Persistence\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Listing\Domain\Enums\ListingStatus;
@@ -44,15 +45,15 @@ class ListingModel extends Model
     ];
 
     protected $casts = [
-        'status'     => ListingStatus::class,
-        'images'     => 'array',
-        'details'    => 'array',
-        'contacts'   => 'array',
-        'price'      => 'integer',
-        'quantity'   => 'float',
-        'lat'        => 'float',
-        'lng'        => 'float',
-        'views'      => 'integer',
+        'status' => ListingStatus::class,
+        'images' => 'array',
+        'details' => 'array',
+        'contacts' => 'array',
+        'price' => 'integer',
+        'quantity' => 'float',
+        'lat' => 'float',
+        'lng' => 'float',
+        'views' => 'integer',
         'expires_at' => 'datetime',
     ];
 
@@ -67,13 +68,13 @@ class ListingModel extends Model
     }
 
     /** Sotuvchiga yozilgan baholashlar (rating statistika uchun) */
-    public function sellerRatings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function sellerRatings(): HasMany
     {
         return $this->hasMany(RatingModel::class, 'rated_id', 'seller_id');
     }
 
     /** Shu mahsulotga (e'longa) yozilgan sharhlar */
-    public function listingRatings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function listingRatings(): HasMany
     {
         return $this->hasMany(RatingModel::class, 'listing_id');
     }

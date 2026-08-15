@@ -18,8 +18,8 @@ final class ResetPasswordHandler
 {
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
-        private readonly UserRepositoryInterface       $userRepository,
-        private readonly TokenServiceInterface         $tokenService,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly TokenServiceInterface $tokenService,
     ) {}
 
     /**
@@ -31,7 +31,7 @@ final class ResetPasswordHandler
 
         // 1. OTP avval /auth/otp/confirm orqali tasdiqlangan bo'lishi kerak
         if ($this->otpRepository->findVerifiedByPhone($phone->value) === null) {
-            throw new InvalidOtpException("Tasdiqlash kodining muddati tugagan. Kodni qayta yuboring.");
+            throw new InvalidOtpException('Tasdiqlash kodining muddati tugagan. Kodni qayta yuboring.');
         }
 
         // 2. Foydalanuvchi mavjud bo'lishi kerak

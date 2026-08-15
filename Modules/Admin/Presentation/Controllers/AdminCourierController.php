@@ -18,9 +18,9 @@ final class AdminCourierController extends Controller
 {
     public function __construct(
         private readonly GetAvailableCouriersHandler $availableHandler,
-        private readonly GetAllCouriersHandler       $allHandler,
-        private readonly GetCourierByIdHandler       $byIdHandler,
-        private readonly ToggleCourierActiveHandler  $toggleHandler,
+        private readonly GetAllCouriersHandler $allHandler,
+        private readonly GetCourierByIdHandler $byIdHandler,
+        private readonly ToggleCourierActiveHandler $toggleHandler,
     ) {}
 
     public function available(): JsonResponse

@@ -17,7 +17,7 @@ final readonly class VerifyOtpDTO
     {
         return new self(
             phone: (string) $request->validated('phone'),
-            code:  (string) $request->validated('code'),
+            code: (string) $request->validated('code'),
         );
     }
 }

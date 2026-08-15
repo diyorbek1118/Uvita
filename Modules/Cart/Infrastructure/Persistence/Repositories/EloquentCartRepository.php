@@ -25,10 +25,11 @@ final class EloquentCartRepository implements CartRepositoryInterface
     {
         $cartModel = CartModel::firstOrCreate(['user_id' => $cart->userId]);
 
-        $productIds = array_map(fn(CartItem $item) => $item->productId, $cart->items);
+        $productIds = array_map(fn (CartItem $item) => $item->productId, $cart->items);
 
         if (empty($productIds)) {
             $cartModel->items()->delete();
+
             return;
         }
 
@@ -37,7 +38,7 @@ final class EloquentCartRepository implements CartRepositoryInterface
         foreach ($cart->items as $item) {
             $cartModel->items()->updateOrCreate(
                 ['product_id' => $item->productId],
-                ['quantity'   => $item->quantity],
+                ['quantity' => $item->quantity],
             );
         }
     }
@@ -51,18 +52,18 @@ final class EloquentCartRepository implements CartRepositoryInterface
     {
         $items = $model->items->map(function (CartItemModel $item): CartItem {
             return new CartItem(
-                id:        $item->id,
-                cartId:    $item->cart_id,
+                id: $item->id,
+                cartId: $item->cart_id,
                 productId: $item->product_id,
-                quantity:  $item->quantity,
-                price:     $item->product->price,
+                quantity: $item->quantity,
+                price: $item->product->price,
             );
         })->all();
 
         return new Cart(
-            id:     $model->id,
+            id: $model->id,
             userId: $model->user_id,
-            items:  $items,
+            items: $items,
         );
     }
 }

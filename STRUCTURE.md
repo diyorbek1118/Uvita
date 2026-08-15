@@ -696,20 +696,28 @@ backend/
 │   ├── Application/
 │   │   ├── DTOs/UpdateSellerProfileDTO.php
 │   │   ├── Queries/GetSellerOrdersQuery.php
+│   │   ├── Services/SellerShopResolver.php
 │   │   └── Handlers/
+│   │       ├── CreateSellerHandler.php
+│   │       ├── SellerLoginHandler.php
 │   │       ├── UpdateSellerProfileHandler.php
 │   │       └── GetSellerOrdersHandler.php
 │   ├── Infrastructure/Persistence/
 │   │   ├── Migrations/2026_08_13_000002_create_seller_profiles_table.php
+│   │   ├── Migrations/2026_08_13_000003_add_multi_shop_seller_support.php
 │   │   ├── Models/SellerProfileModel.php
 │   │   └── Repositories/EloquentSellerOrderReadRepository.php
 │   └── Presentation/
 │       ├── Controllers/SellerProfileController.php
 │       ├── Controllers/AdminSellerController.php
+│       ├── Controllers/SellerAuthController.php
 │       ├── Controllers/SellerOrderController.php
+│       ├── Requests/CreateSellerRequest.php
+│       ├── Requests/CreateSellerShopRequest.php
+│       ├── Requests/SellerLoginRequest.php
 │       ├── Requests/UpdateSellerProfileRequest.php
 │       ├── Resources/SellerProfileResource.php
-│       └── routes/api.php             # seller/profile, seller/orders | admin/sellers verify
+│       └── routes/api.php             # phone login, shops, seller scope | admin seller/shop CRUD+verify
 │
 ├── Modules/Product/                   # v4 seller qo'shimchalari
 │   ├── Domain/
@@ -755,5 +763,6 @@ uvita/
 
 ```
 tests/Feature/Seller/SellerProductLifecycleTest.php
+tests/Feature/Seller/MultiShopSellerTest.php
 tests/Unit/Domain/Product/ProductFeeCalculatorTest.php
 ```

@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Customer;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
+use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
+use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
+use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 use Modules\User\Infrastructure\Persistence\Models\User;
 use Tests\Feature\Concerns\SeedsSettings;
 use Tests\TestCase;
@@ -98,7 +102,7 @@ final class CustomerAppTest extends TestCase
     {
         $payload = $this->validPayload();
         $payload['phone'] = '901234567';
-        $payload['payment_method'] = 'cash';
+        $payload['payment_method'] = 'visa';
         $payload['items'][] = $payload['items'][0];
 
         $this->asCustomer()->postJson('/api/orders', $payload)
@@ -125,10 +129,87 @@ final class CustomerAppTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.total_price', 60000)
-            ->assertJsonPath('data.service_fee', 9000)
-            ->assertJsonPath('data.grand_total', 69000)
+            ->assertJsonPath('data.service_fee', 0)
+            ->assertJsonPath('data.grand_total', 60000)
             ->assertJsonPath('data.items.0.product_name', 'Mahsulot')
             ->assertJsonPath('data.address.street', 'Navoiy');
+    }
+
+    public function test_cash_order_has_no_online_payment_url_and_keeps_amount_due(): void
+    {
+        $response = $this->asCustomer()
+            ->postJson('/api/orders', $this->validPayload('cash'))
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.payment_method', 'cash')
+            ->assertJsonPath('data.payment_status', 'pending')
+            ->assertJsonPath('data.payment_url', null)
+            ->assertJsonPath('data.grand_total', 60000);
+
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $response->json('data.id'),
+            'provider' => 'cash',
+            'amount' => 6000000,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_cash_checkout_creates_separate_order_and_payment_for_each_seller_shop(): void
+    {
+        $firstSeller = Staff::create([
+            'name' => 'Navoiy Seller', 'email' => 'navoiy@test.uz', 'phone' => '+998901111111',
+            'password' => Hash::make('password'), 'role' => 'seller', 'is_active' => true,
+        ]);
+        $secondSeller = Staff::create([
+            'name' => 'Jizzax Seller', 'email' => 'jizzax@test.uz', 'phone' => '+998902222222',
+            'password' => Hash::make('password'), 'role' => 'seller', 'is_active' => true,
+        ]);
+        $firstShop = SellerProfileModel::create([
+            'seller_id' => $firstSeller->id, 'business_name' => 'Navoiy Ombori', 'legal_type' => 'MChJ',
+            'tin' => '111111111', 'phone' => '+998901111111', 'region' => 'Navoiy', 'district' => 'Navoiy',
+            'address' => '1-ombor', 'bank_account' => '202080001', 'bank_mfo' => '00001',
+            'terms_accepted' => true, 'is_active' => true, 'is_verified' => true,
+        ]);
+        $secondShop = SellerProfileModel::create([
+            'seller_id' => $secondSeller->id, 'business_name' => 'Jizzax Ombori', 'legal_type' => 'MChJ',
+            'tin' => '222222222', 'phone' => '+998902222222', 'region' => 'Jizzax', 'district' => 'Jizzax',
+            'address' => '2-ombor', 'bank_account' => '202080002', 'bank_mfo' => '00002',
+            'terms_accepted' => true, 'is_active' => true, 'is_verified' => true,
+        ]);
+        $this->product->update([
+            'seller_id' => $firstSeller->id,
+            'seller_profile_id' => $firstShop->id,
+            'origin_region' => 'Navoiy',
+        ]);
+        $secondProduct = Product::create([
+            'name' => 'Jizzax mahsuloti', 'slug' => 'jizzax-mahsuloti', 'description' => 'Tavsif',
+            'price' => 40000, 'stock' => 20, 'status' => 'active', 'images' => [],
+            'category_id' => $this->product->category_id, 'seller_id' => $secondSeller->id,
+            'seller_profile_id' => $secondShop->id, 'origin_region' => 'Jizzax', 'unit' => 'kg',
+            'minimum_order_quantity' => 1,
+        ]);
+        $payload = $this->validPayload('cash');
+        $payload['items'] = [
+            ['product_id' => $this->product->id, 'quantity' => 2],
+            ['product_id' => $secondProduct->id, 'quantity' => 3],
+        ];
+
+        $this->asCustomer()->postJson('/api/orders', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.orders_count', 2)
+            ->assertJsonCount(2, 'data.orders')
+            ->assertJsonPath('data.grand_total', 180000);
+
+        $this->assertSame(2, OrderModel::count());
+        $this->assertSame(2, PaymentModel::count());
+        $this->assertEqualsCanonicalizing(
+            [$firstShop->id, $secondShop->id],
+            OrderModel::pluck('seller_profile_id')->all(),
+        );
+        $this->assertSame(2, $this->product->fresh()->reserved_stock);
+        $this->assertSame(3, $secondProduct->fresh()->reserved_stock);
+        $this->assertSame(10, $this->product->fresh()->stock);
+        $this->assertSame(20, $secondProduct->fresh()->stock);
     }
 
     public function test_payme_click_and_uzum_checkout_urls_are_generated(): void

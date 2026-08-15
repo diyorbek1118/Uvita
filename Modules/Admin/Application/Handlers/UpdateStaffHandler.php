@@ -14,14 +14,14 @@ final class UpdateStaffHandler
     public function handle(UpdateStaffCommand $command): Staff
     {
         $staff = Staff::findOrFail($command->staffId);
-        $dto   = $command->dto;
+        $dto = $command->dto;
 
         // Admin faqat menejer/kuryerni tahrirlaydi va faqat menejer/kuryer roliga o'zgartiradi.
         $actor = auth('sanctum')->user();
         if ($actor instanceof Staff && $actor->role === StaffRole::ADMIN) {
             $managed = [StaffRole::SELLER, StaffRole::MANAGER, StaffRole::COURIER];
-            if (!in_array($staff->role, $managed, true) || !in_array($dto->role, $managed, true)) {
-                abort(403, "Admin faqat sotuvchi, menejer yoki kuryerni tahrirlashi mumkin");
+            if (! in_array($staff->role, $managed, true) || ! in_array($dto->role, $managed, true)) {
+                abort(403, 'Admin faqat sotuvchi, menejer yoki kuryerni tahrirlashi mumkin');
             }
         }
 
@@ -31,9 +31,9 @@ final class UpdateStaffHandler
 
         $wasCourier = $staff->role === StaffRole::COURIER;
         $staff->update([
-            'name'  => $dto->name,
+            'name' => $dto->name,
             'email' => $dto->email,
-            'role'  => $dto->role,
+            'role' => $dto->role,
         ]);
 
         if ($dto->role === StaffRole::COURIER) {

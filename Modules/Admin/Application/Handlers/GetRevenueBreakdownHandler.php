@@ -33,15 +33,18 @@ final class GetRevenueBreakdownHandler
         $gross = (int) ($row->gross_sales ?? 0);
         $platformGross = (int) ($row->platform_fee_gross ?? 0);
         $courier = (int) ($row->courier_fees ?? 0);
+        $tax = (int) round($gross * 0.01);
+        $payment = (int) round($gross * 0.03);
+        $sellerPayouts = $gross - $platformGross - $courier - $tax - $payment;
 
         return [
             'orders_count' => (int) ($row->orders_count ?? 0),
             'gross_sales' => $gross,           // mahsulotlar summasi
-            'seller_payouts' => $gross,           // sotuvchilarga
-            'platform_fee_gross' => $platformGross,   // 15% yalpi
+            'seller_payouts' => $sellerPayouts,
+            'platform_fee_gross' => $platformGross,   // platforma 10%
             'courier_fees' => $courier,         // kuryerlarga
-            'platform_fee_net' => $platformGross - $courier,  // platformada qoladi
-            'customer_total' => $gross + $platformGross,    // mijozlar to'lagan jami
+            'platform_fee_net' => $platformGross + $tax + $payment,
+            'customer_total' => $gross,
         ];
     }
 }

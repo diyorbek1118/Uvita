@@ -31,11 +31,12 @@ class OrderResource extends JsonResource
             'delivery_time' => $this->delivery_time,
             'courier_note' => $this->courier_note,
             'total_price' => $this->total_price,   // mahsulotlar summasi
-            'service_fee' => $this->service_fee,   // 15% xizmat haqi
-            'grand_total' => $this->grand_total,   // jami to'lov (mahsulot + xizmat)
+            'service_fee' => 0,                    // ichki ushlanmalar mijozga ko'rsatilmaydi
+            'grand_total' => $this->grand_total,   // mijoz to'laydigan mahsulotlar summasi
             // courier_fee mijozga KO'RSATILMAYDI
             'not_found_count' => $this->not_found_count,
             'payment_status' => $this->whenLoaded('latestPayment', fn () => $this->latestPayment?->status->value),
+            'payment_method' => $this->whenLoaded('latestPayment', fn () => $this->latestPayment?->provider->value),
             'payment_url' => $this->payment_url ?? null,
             'paid_at' => $this->paid_at?->toISOString(),
             'confirmed_at' => $this->confirmed_at?->toISOString(),

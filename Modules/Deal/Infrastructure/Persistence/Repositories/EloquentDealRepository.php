@@ -23,23 +23,23 @@ final class EloquentDealRepository implements DealRepositoryInterface
     {
         if ($deal->id === null) {
             $model = DealModel::create([
-                'listing_id'  => $deal->listingId,
-                'seller_id'   => $deal->sellerId,
-                'buyer_id'    => $deal->buyerId,
-                'quantity'    => $deal->quantity,
-                'unit'        => $deal->unit,
+                'listing_id' => $deal->listingId,
+                'seller_id' => $deal->sellerId,
+                'buyer_id' => $deal->buyerId,
+                'quantity' => $deal->quantity,
+                'unit' => $deal->unit,
                 'total_price' => $deal->totalPrice,
-                'status'      => $deal->status->value,
+                'status' => $deal->status->value,
             ]);
 
             return $model->id;
         }
 
         DealModel::where('id', $deal->id)->update([
-            'quantity'    => $deal->quantity,
-            'unit'        => $deal->unit,
+            'quantity' => $deal->quantity,
+            'unit' => $deal->unit,
             'total_price' => $deal->totalPrice,
-            'status'      => $deal->status->value,
+            'status' => $deal->status->value,
         ]);
 
         return $deal->id;
@@ -64,14 +64,14 @@ final class EloquentDealRepository implements DealRepositoryInterface
     private function toDomain(DealModel $model): Deal
     {
         return new Deal(
-            id:         $model->id,
-            listingId:  $model->listing_id,
-            sellerId:   $model->seller_id,
-            buyerId:    $model->buyer_id,
-            quantity:   (float) $model->quantity,
-            unit:       $model->unit,
+            id: $model->id,
+            listingId: $model->listing_id,
+            sellerId: $model->seller_id,
+            buyerId: $model->buyer_id,
+            quantity: (float) $model->quantity,
+            unit: $model->unit,
             totalPrice: $model->total_price,
-            status:     DealStatus::from($model->status->value),
+            status: DealStatus::from($model->status->value),
         );
     }
 }

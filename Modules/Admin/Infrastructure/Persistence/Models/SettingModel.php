@@ -17,9 +17,9 @@ class SettingModel extends Model
     public function toDomainEntity(): Setting
     {
         return new Setting(
-            id:          $this->id,
-            key:         SettingKey::from($this->key),
-            value:       $this->value,
+            id: $this->id,
+            key: SettingKey::from($this->key),
+            value: $this->value,
             description: $this->description,
         );
     }

@@ -14,7 +14,7 @@ final class OtpVerifier
 {
     public function __construct(
         private readonly OtpAttemptRepositoryInterface $otpRepository,
-        private readonly SettingService                $settingService,
+        private readonly SettingService $settingService,
     ) {}
 
     /**
@@ -31,7 +31,7 @@ final class OtpVerifier
         $attempt = $this->otpRepository->findActiveByPhone($phone->value);
 
         if ($attempt === null) {
-            throw new InvalidOtpException();
+            throw new InvalidOtpException;
         }
 
         // 3. Bloklangan bo'lsa
@@ -41,7 +41,7 @@ final class OtpVerifier
 
         // 4. Muddati o'tgan bo'lsa
         if ($attempt->isExpired()) {
-            throw new InvalidOtpException("OTP muddati tugagan.");
+            throw new InvalidOtpException('OTP muddati tugagan.');
         }
 
         // 5. Kod noto'g'ri bo'lsa — urinishni oshir

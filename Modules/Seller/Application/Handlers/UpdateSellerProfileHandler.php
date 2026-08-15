@@ -9,10 +9,10 @@ use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 
 final class UpdateSellerProfileHandler
 {
-    public function handle(int $sellerId, UpdateSellerProfileDTO $dto): SellerProfileModel
+    public function handle(int $sellerId, UpdateSellerProfileDTO $dto, ?int $shopId = null): SellerProfileModel
     {
         return SellerProfileModel::query()->updateOrCreate(
-            ['seller_id' => $sellerId],
+            $shopId === null ? ['seller_id' => $sellerId] : ['id' => $shopId, 'seller_id' => $sellerId],
             [
                 'business_name' => $dto->businessName,
                 'legal_type' => $dto->legalType,

@@ -14,11 +14,12 @@ use Modules\Cart\Domain\Repositories\CartRepositoryInterface;
 use Modules\Cart\Infrastructure\Persistence\Models\CartModel;
 use Modules\Product\Domain\Enums\ProductStatusEnum;
 use Modules\Product\Domain\Repositories\ProductRepositoryInterface;
+use Modules\Product\Infrastructure\Persistence\Models\Product as ProductModel;
 
 final class AddItemHandler
 {
     public function __construct(
-        private readonly CartRepositoryInterface    $cartRepository,
+        private readonly CartRepositoryInterface $cartRepository,
         private readonly ProductRepositoryInterface $productRepository,
     ) {}
 
@@ -34,26 +35,24 @@ final class AddItemHandler
             throw new DomainException('Bu mahsulot hozir mavjud emas.');
         }
 
-        if ($product->stock === 0) {
-            throw new InsufficientStockException('Mahsulot tugagan.');
-        }
+        $availableStock = ProductModel::query()->findOrFail($command->dto->productId)->available_stock;
 
-        if ($command->dto->quantity < $product->minimumOrderQuantity) {
-            throw new DomainException("Bu mahsulot uchun minimal buyurtma: {$product->minimumOrderQuantity}");
+        if ($availableStock === 0) {
+            throw new InsufficientStockException('Mahsulot tugagan.');
         }
 
         $cart = $this->cartRepository->findByUserId($command->userId)
             ?? new Cart(id: null, userId: $command->userId);
 
         $cartItem = new CartItem(
-            id:        null,
-            cartId:    $cart->id,
+            id: null,
+            cartId: $cart->id,
             productId: $command->dto->productId,
-            quantity:  $command->dto->quantity,
-            price:     $product->price,
+            quantity: $command->dto->quantity,
+            price: $product->price,
         );
 
-        $cart->addItem($cartItem, $product->stock);
+        $cart->addItem($cartItem, $availableStock);
 
         $this->cartRepository->save($cart);
 

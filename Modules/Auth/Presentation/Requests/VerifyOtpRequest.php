@@ -17,18 +17,18 @@ final class VerifyOtpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'regex:' . PhoneNumber::PATTERN],
-            'code'  => ['required', 'string', 'regex:/^(?:\d{4}|\d{6})$/'],
+            'phone' => ['required', 'string', 'regex:'.PhoneNumber::PATTERN],
+            'code' => ['required', 'string', 'regex:/^(?:\d{4}|\d{6})$/'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'phone.required' => "Telefon raqam kiritilishi shart.",
-            'phone.regex'    => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
-            'code.required'  => "Tasdiqlash kodi kiritilishi shart.",
-            'code.regex'     => "Tasdiqlash kodi 4 yoki 6 ta raqamdan iborat bo'lishi kerak.",
+            'phone.required' => 'Telefon raqam kiritilishi shart.',
+            'phone.regex' => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
+            'code.required' => 'Tasdiqlash kodi kiritilishi shart.',
+            'code.regex' => "Tasdiqlash kodi 4 yoki 6 ta raqamdan iborat bo'lishi kerak.",
         ];
     }
 }

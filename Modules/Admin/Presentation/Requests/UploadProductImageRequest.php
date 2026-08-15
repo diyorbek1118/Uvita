@@ -16,7 +16,7 @@ final class UploadProductImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image'  => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'folder' => ['nullable', 'string', 'in:products,categories'],
         ];
     }
@@ -25,9 +25,9 @@ final class UploadProductImageRequest extends FormRequest
     {
         return [
             'image.required' => 'Rasm tanlanishi shart.',
-            'image.image'    => "Fayl rasm bo'lishi kerak.",
-            'image.mimes'    => 'Ruxsat etilgan formatlar: JPG, PNG, WEBP.',
-            'image.max'      => "Rasm hajmi 5 MB dan oshmasligi kerak.",
+            'image.image' => "Fayl rasm bo'lishi kerak.",
+            'image.mimes' => 'Ruxsat etilgan formatlar: JPG, PNG, WEBP.',
+            'image.max' => 'Rasm hajmi 5 MB dan oshmasligi kerak.',
         ];
     }
 }

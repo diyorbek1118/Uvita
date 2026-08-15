@@ -17,8 +17,8 @@ final readonly class ResetPasswordDTO
     public static function fromRequest(FormRequest $request): self
     {
         return new self(
-            phone:    (string) $request->validated('phone'),
-            code:     (string) $request->validated('code'),
+            phone: (string) $request->validated('phone'),
+            code: (string) $request->validated('code'),
             password: (string) $request->validated('password'),
         );
     }

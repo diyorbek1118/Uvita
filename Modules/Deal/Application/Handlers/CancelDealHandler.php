@@ -18,10 +18,10 @@ final class CancelDealHandler
     public function handle(CancelDealCommand $command): DealModel
     {
         $deal = $this->deals->findById($command->dealId)
-            ?? throw new DealNotFoundException("Bitim topilmadi.");
+            ?? throw new DealNotFoundException('Bitim topilmadi.');
 
         if (! in_array($command->userId, [$deal->sellerId, $deal->buyerId], true)) {
-            abort(403, "Bu bitim sizga tegishli emas.");
+            abort(403, 'Bu bitim sizga tegishli emas.');
         }
 
         $deal->cancel();

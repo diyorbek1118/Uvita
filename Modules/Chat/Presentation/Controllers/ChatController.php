@@ -47,8 +47,8 @@ final class ChatController extends Controller
         $conversation = ConversationModel::firstOrCreate(
             [
                 'listing_id' => $listing->id,
-                'buyer_id'   => $buyerId,
-                'seller_id'  => $listing->seller_id,
+                'buyer_id' => $buyerId,
+                'seller_id' => $listing->seller_id,
             ],
             ['last_message_at' => now()]
         );
@@ -96,8 +96,8 @@ final class ChatController extends Controller
 
         $message = MessageModel::create([
             'conversation_id' => $conversation->id,
-            'sender_id'       => auth()->id(),
-            'body'            => $validated['body'],
+            'sender_id' => auth()->id(),
+            'body' => $validated['body'],
         ]);
 
         $conversation->update(['last_message_at' => now()]);

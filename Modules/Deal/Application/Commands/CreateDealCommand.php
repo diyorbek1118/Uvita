@@ -13,6 +13,6 @@ final readonly class CreateDealCommand
 
     public static function fromRequest(CreateDealRequest $request, int $buyerId, int $totalPrice): static
     {
-        return new static(dto: CreateDealDTO::fromRequest($request, $buyerId, $totalPrice));
+        return new self(dto: CreateDealDTO::fromRequest($request, $buyerId, $totalPrice));
     }
 }
