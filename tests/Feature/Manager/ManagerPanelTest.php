@@ -13,6 +13,7 @@ use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
+use Modules\Payment\Infrastructure\Persistence\Models\PaymentModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\User\Infrastructure\Persistence\Models\User;
 use Tests\TestCase;
@@ -281,6 +282,31 @@ final class ManagerPanelTest extends TestCase
         $this->getJson("/api/dashboard/orders/{$orders['paid']->id}")
             ->assertOk()
             ->assertJsonMissingPath('data.financials');
+    }
+
+    public function test_manager_sees_pending_cash_order_in_queue_and_detail(): void
+    {
+        $manager = $this->manager('cash-queue');
+        $cash = $this->order('pending');
+        PaymentModel::create([
+            'order_id' => $cash->id,
+            'provider' => 'cash',
+            'amount' => $cash->grand_total * 100,
+            'status' => 'pending',
+        ]);
+
+        $this->as($manager)
+            ->getJson('/api/dashboard/orders?status=pending')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $cash->id);
+
+        $this->getJson("/api/dashboard/orders/{$cash->id}")
+            ->assertOk()
+            ->assertJsonPath('data.payment.provider', 'cash');
+
+        $this->getJson('/api/manager/orders')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $cash->id]);
     }
 
     public function test_manager_can_confirm_only_paid_order(): void

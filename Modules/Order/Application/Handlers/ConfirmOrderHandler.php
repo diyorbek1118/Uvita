@@ -21,7 +21,7 @@ final class ConfirmOrderHandler
     public function handle(ConfirmOrderCommand $command): OrderModel
     {
         $order = $this->orders->findById($command->orderId)
-            ?? throw new ModelNotFoundException("Buyurtma topilmadi.");
+            ?? throw new ModelNotFoundException('Buyurtma topilmadi.');
 
         $payment = PaymentModel::where('order_id', $command->orderId)->latest('id')->first();
         if ($payment?->provider === PaymentProvider::CASH) {

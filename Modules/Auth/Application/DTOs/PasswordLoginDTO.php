@@ -16,7 +16,7 @@ final readonly class PasswordLoginDTO
     public static function fromRequest(FormRequest $request): self
     {
         return new self(
-            phone:    (string) $request->validated('phone'),
+            phone: (string) $request->validated('phone'),
             password: (string) $request->validated('password'),
         );
     }

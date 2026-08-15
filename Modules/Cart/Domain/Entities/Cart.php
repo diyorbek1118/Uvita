@@ -14,8 +14,8 @@ final class Cart
 
     public function __construct(
         public readonly ?int $id,
-        public readonly int  $userId,
-        array                $items = [],
+        public readonly int $userId,
+        array $items = [],
     ) {
         $this->items = $items;
     }
@@ -31,11 +31,11 @@ final class Cart
                 }
 
                 $this->items[$key] = new CartItem(
-                    id:        $existing->id,
-                    cartId:    $existing->cartId,
+                    id: $existing->id,
+                    cartId: $existing->cartId,
                     productId: $existing->productId,
-                    quantity:  $merged,
-                    price:     $newItem->price,
+                    quantity: $merged,
+                    price: $newItem->price,
                 );
 
                 return;
@@ -55,6 +55,7 @@ final class Cart
             if ($item->productId === $productId) {
                 unset($this->items[$key]);
                 $this->items = array_values($this->items);
+
                 return;
             }
         }
@@ -70,7 +71,7 @@ final class Cart
     public function totalPrice(): int
     {
         return (int) array_sum(
-            array_map(fn(CartItem $item) => $item->price * $item->quantity, $this->items)
+            array_map(fn (CartItem $item) => $item->price * $item->quantity, $this->items)
         );
     }
 }

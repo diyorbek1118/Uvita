@@ -22,10 +22,10 @@ use Modules\Cart\Presentation\Resources\CartResource;
 final class CartController extends Controller
 {
     public function __construct(
-        private readonly GetCartHandler    $getCartHandler,
-        private readonly AddItemHandler    $addItemHandler,
+        private readonly GetCartHandler $getCartHandler,
+        private readonly AddItemHandler $addItemHandler,
         private readonly RemoveItemHandler $removeItemHandler,
-        private readonly ClearCartHandler  $clearCartHandler,
+        private readonly ClearCartHandler $clearCartHandler,
     ) {}
 
     public function index(Request $request): JsonResponse

@@ -20,11 +20,11 @@ final class UpdateReviewHandler
         $review = $this->reviews->findById($command->reviewId);
 
         if ($review === null) {
-            throw new ReviewNotFoundException("Sharh topilmadi.");
+            throw new ReviewNotFoundException('Sharh topilmadi.');
         }
 
         if ($review->userId !== $command->userId) {
-            abort(403, "Bu sharh sizga tegishli emas.");
+            abort(403, 'Bu sharh sizga tegishli emas.');
         }
 
         $review->update($command->dto->rating, $command->dto->comment);

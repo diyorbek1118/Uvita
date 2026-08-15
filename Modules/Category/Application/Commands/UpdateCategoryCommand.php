@@ -10,7 +10,7 @@ use Modules\Category\Application\DTOs\UpdateCategoryDTO;
 final readonly class UpdateCategoryCommand
 {
     public function __construct(
-        public int               $id,
+        public int $id,
         public UpdateCategoryDTO $dto,
     ) {}
 

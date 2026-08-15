@@ -9,10 +9,10 @@ use Modules\Order\Domain\ValueObjects\Money;
 final readonly class OrderItem
 {
     public function __construct(
-        public ?int  $id,
-        public ?int  $orderId,
-        public int   $productId,
-        public int   $quantity,
+        public ?int $id,
+        public ?int $orderId,
+        public int $productId,
+        public int $quantity,
         public Money $price,
     ) {}
 

@@ -15,12 +15,12 @@ final class AdminOrderController extends Controller
 {
     public function __construct(
         private readonly GetDeliveryIssueOrdersHandler $deliveryIssueHandler,
-        private readonly GetOrderStatsHandler          $statsHandler,
+        private readonly GetOrderStatsHandler $statsHandler,
     ) {}
 
     public function deliveryIssues(): JsonResponse
     {
-        $orders = $this->deliveryIssueHandler->handle(new GetDeliveryIssueOrdersQuery());
+        $orders = $this->deliveryIssueHandler->handle(new GetDeliveryIssueOrdersQuery);
 
         return OrderResource::collection($orders)->response();
     }

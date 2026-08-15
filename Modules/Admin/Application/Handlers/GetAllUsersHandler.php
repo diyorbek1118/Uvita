@@ -20,7 +20,7 @@ final class GetAllUsersHandler
         if ($query->search !== null) {
             $builder->where(function ($q) use ($query): void {
                 $q->where('phone', 'like', "%{$query->search}%")
-                  ->orWhere('name', 'like', "%{$query->search}%");
+                    ->orWhere('name', 'like', "%{$query->search}%");
             });
         }
 

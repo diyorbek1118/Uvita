@@ -11,13 +11,13 @@ final readonly class UpdateSettingDTO
 {
     public function __construct(
         public SettingKey $key,
-        public string     $value,
+        public string $value,
     ) {}
 
     public static function fromRequest(Request $request): self
     {
         return new self(
-            key:   SettingKey::from($request->input('key')),
+            key: SettingKey::from($request->input('key')),
             value: (string) $request->input('value'),
         );
     }
@@ -25,7 +25,7 @@ final readonly class UpdateSettingDTO
     public static function fromArray(array $data): self
     {
         return new self(
-            key:   SettingKey::from($data['key']),
+            key: SettingKey::from($data['key']),
             value: (string) $data['value'],
         );
     }

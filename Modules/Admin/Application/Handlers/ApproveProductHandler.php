@@ -21,13 +21,13 @@ final class ApproveProductHandler
         }
 
         $product->update([
-            'status'           => ProductStatusEnum::Active,
+            'status' => ProductStatusEnum::Active,
             'rejection_reason' => null,
         ]);
 
         if ($product->manager_id) {
             dispatch(new SendTelegramJob(
-                role:    'manager',
+                role: 'manager',
                 message: "✅ Mahsulotingiz tasdiqlandi: {$product->name}",
             ));
         }

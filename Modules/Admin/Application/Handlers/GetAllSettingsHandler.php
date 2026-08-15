@@ -23,16 +23,16 @@ final class GetAllSettingsHandler
 
         return [
             'delivery' => [
-                'delivery_city'   => $all[SettingKey::DELIVERY_CITY->value]    ?? null,
-                'min_order_amount'=> $all[SettingKey::MIN_ORDER_AMOUNT->value] ?? null,
+                'delivery_city' => $all[SettingKey::DELIVERY_CITY->value] ?? null,
+                'min_order_amount' => $all[SettingKey::MIN_ORDER_AMOUNT->value] ?? null,
             ],
             'otp' => [
                 'otp_expiry_seconds' => $all[SettingKey::OTP_EXPIRY_SECONDS->value] ?? null,
-                'otp_max_attempts'   => $all[SettingKey::OTP_MAX_ATTEMPTS->value]   ?? null,
-                'otp_block_minutes'  => $all[SettingKey::OTP_BLOCK_MINUTES->value]  ?? null,
+                'otp_max_attempts' => $all[SettingKey::OTP_MAX_ATTEMPTS->value] ?? null,
+                'otp_block_minutes' => $all[SettingKey::OTP_BLOCK_MINUTES->value] ?? null,
             ],
             'order' => [
-                'max_not_found_attempts'   => $all[SettingKey::MAX_NOT_FOUND_ATTEMPTS->value] ?? null,
+                'max_not_found_attempts' => $all[SettingKey::MAX_NOT_FOUND_ATTEMPTS->value] ?? null,
                 'review_request_delay_hours' => $all[SettingKey::REVIEW_REQUEST_DELAY->value] ?? null,
             ],
         ];

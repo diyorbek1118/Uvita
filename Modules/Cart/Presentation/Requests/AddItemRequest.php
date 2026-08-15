@@ -17,7 +17,7 @@ final class AddItemRequest extends FormRequest
     {
         return [
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'quantity'   => ['required', 'integer', 'min:1', 'max:1000000'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
         ];
     }
 
@@ -25,10 +25,10 @@ final class AddItemRequest extends FormRequest
     {
         return [
             'product_id.required' => 'Mahsulot ID si kiritilishi shart.',
-            'product_id.exists'   => 'Bunday mahsulot topilmadi.',
-            'quantity.required'   => 'Miqdor kiritilishi shart.',
-            'quantity.min'        => 'Miqdor kamida 1 bo\'lishi kerak.',
-            'quantity.max'        => 'Miqdor ruxsat etilgan chegaradan oshdi.',
+            'product_id.exists' => 'Bunday mahsulot topilmadi.',
+            'quantity.required' => 'Miqdor kiritilishi shart.',
+            'quantity.min' => 'Miqdor kamida 1 bo\'lishi kerak.',
+            'quantity.max' => 'Miqdor ruxsat etilgan chegaradan oshdi.',
         ];
     }
 }

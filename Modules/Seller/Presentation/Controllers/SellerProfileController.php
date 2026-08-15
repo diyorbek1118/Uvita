@@ -9,10 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Seller\Application\DTOs\UpdateSellerProfileDTO;
 use Modules\Seller\Application\Handlers\UpdateSellerProfileHandler;
+use Modules\Seller\Application\Services\SellerShopResolver;
 use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 use Modules\Seller\Presentation\Requests\UpdateSellerProfileRequest;
 use Modules\Seller\Presentation\Resources\SellerProfileResource;
-use Modules\Seller\Application\Services\SellerShopResolver;
 
 final class SellerProfileController extends Controller
 {

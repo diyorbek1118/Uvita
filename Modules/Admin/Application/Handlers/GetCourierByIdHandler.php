@@ -17,10 +17,10 @@ final class GetCourierByIdHandler
             ->with('courierProfile')
             ->findOrFail($query->courierId);
 
-        $delivered   = OrderModel::where('courier_id', $courier->id)->where('status', 'delivered')->count();
-        $notFound    = (int) OrderModel::where('courier_id', $courier->id)->sum('not_found_count');
-        $active      = OrderModel::where('courier_id', $courier->id)->whereIn('status', ['delivering', 'ready_to_deliver'])->count();
-        $total       = $delivered + $notFound;
+        $delivered = OrderModel::where('courier_id', $courier->id)->where('status', 'delivered')->count();
+        $notFound = (int) OrderModel::where('courier_id', $courier->id)->sum('not_found_count');
+        $active = OrderModel::where('courier_id', $courier->id)->whereIn('status', ['delivering', 'ready_to_deliver'])->count();
+        $total = $delivered + $notFound;
         $successRate = $total > 0 ? round($delivered / $total * 100, 1) : 0.0;
 
         $recentDeliveries = OrderModel::where('courier_id', $courier->id)

@@ -18,14 +18,14 @@ use Modules\Admin\Presentation\Requests\UpdateSettingsRequest;
 class AdminSettingsController
 {
     public function __construct(
-        private readonly GetAllSettingsHandler  $getAllHandler,
-        private readonly UpdateSettingHandler   $updateOneHandler,
-        private readonly UpdateSettingsHandler  $updateManyHandler,
+        private readonly GetAllSettingsHandler $getAllHandler,
+        private readonly UpdateSettingHandler $updateOneHandler,
+        private readonly UpdateSettingsHandler $updateManyHandler,
     ) {}
 
     public function index(): JsonResponse
     {
-        $data = $this->getAllHandler->handle(new GetAllSettingsQuery());
+        $data = $this->getAllHandler->handle(new GetAllSettingsQuery);
 
         return response()->json(['data' => $data]);
     }

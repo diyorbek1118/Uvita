@@ -18,6 +18,8 @@ class AdminProductResource extends JsonResource
             'description' => $this->description,
             'price' => $this->price,
             'stock' => $this->stock,
+            'reserved_stock' => $this->reserved_stock,
+            'available_stock' => $this->available_stock,
             'status' => $this->status->value,
             'images' => $this->images,
             'rating' => $this->rating,

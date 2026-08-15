@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Seller\Application\Services;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 
@@ -28,7 +29,7 @@ final class SellerShopResolver
     {
         try {
             return $this->resolve($request, $sellerId);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+        } catch (ModelNotFoundException) {
             return null;
         }
     }

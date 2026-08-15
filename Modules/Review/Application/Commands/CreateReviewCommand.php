@@ -13,6 +13,6 @@ final readonly class CreateReviewCommand
 
     public static function fromRequest(CreateReviewRequest $request, int $userId): static
     {
-        return new static(dto: CreateReviewDTO::fromRequest($request, $userId));
+        return new self(dto: CreateReviewDTO::fromRequest($request, $userId));
     }
 }

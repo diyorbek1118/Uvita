@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -14,9 +15,9 @@ return new class extends Migration
             $table->string('phone', 20)->nullable()->unique()->after('email');
         });
 
-        \Illuminate\Support\Facades\DB::table('seller_profiles')->oldest('id')->get()
+        DB::table('seller_profiles')->oldest('id')->get()
             ->each(function (object $profile): void {
-                \Illuminate\Support\Facades\DB::table('staff')
+                DB::table('staff')
                     ->where('id', $profile->seller_id)
                     ->where('role', 'seller')
                     ->whereNull('phone')

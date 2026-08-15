@@ -15,8 +15,8 @@ final readonly class StaffLoginDTO
 
     public static function fromRequest(StaffLoginRequest $request): static
     {
-        return new static(
-            email:    $request->input('email'),
+        return new self(
+            email: $request->input('email'),
             password: $request->input('password'),
         );
     }

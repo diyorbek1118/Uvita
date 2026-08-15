@@ -9,10 +9,10 @@ use Modules\Admin\Domain\ValueObjects\SettingKey;
 final readonly class Setting
 {
     public function __construct(
-        public ?int       $id,
+        public ?int $id,
         public SettingKey $key,
-        public string     $value,
-        public ?string    $description,
+        public string $value,
+        public ?string $description,
     ) {}
 
     public function withValue(string $value): self

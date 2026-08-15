@@ -15,7 +15,7 @@ final class GetCategoryListHandler
         return CategoryModel::query()
             ->when(
                 $query->parentId !== null,
-                fn($q) => $q->where('parent_id', $query->parentId),
+                fn ($q) => $q->where('parent_id', $query->parentId),
             )
             ->orderBy('name')
             ->paginate($query->perPage);

@@ -21,7 +21,7 @@ final class GetDashboardOrderDetailHandler
             ->where('id', $query->id);
 
         if ($query->managerScope) {
-            $builder->whereIn('status', GetDashboardOrdersHandler::MANAGER_VISIBLE);
+            GetDashboardOrdersHandler::applyManagerVisibility($builder);
         }
 
         $order = $builder->firstOrFail();

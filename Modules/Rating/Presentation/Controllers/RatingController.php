@@ -20,7 +20,7 @@ final class RatingController extends Controller
     {
         $validated = $request->validate([
             'deal_id' => ['required', 'integer', 'exists:deals,id'],
-            'stars'   => ['required', 'integer', 'min:1', 'max:5'],
+            'stars' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -46,11 +46,11 @@ final class RatingController extends Controller
         }
 
         $rating = RatingModel::create([
-            'deal_id'  => $deal->id,
+            'deal_id' => $deal->id,
             'rater_id' => $userId,
             'rated_id' => $ratedId,
-            'stars'    => (int) $validated['stars'],
-            'comment'  => $validated['comment'] ?? null,
+            'stars' => (int) $validated['stars'],
+            'comment' => $validated['comment'] ?? null,
         ]);
 
         return RatingResource::make($rating->load(['rater', 'deal.listing']))
@@ -87,12 +87,12 @@ final class RatingController extends Controller
     public function storeListing(int $listingId, Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'stars'   => ['required', 'integer', 'min:1', 'max:5'],
+            'stars' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $listing = ListingModel::findOrFail($listingId);
-        $userId  = (int) auth()->id();
+        $userId = (int) auth()->id();
 
         // Faqat shu mahsulotni sotib olgan (yakunlangan bitimga ega) xaridor sharh yozadi
         $deal = DealModel::where('listing_id', $listingId)
@@ -102,7 +102,7 @@ final class RatingController extends Controller
             ->first();
 
         if ($deal === null) {
-            abort(403, "Bu mahsulotni sotib olmagansiz — sharh qoldira olmaysiz.");
+            abort(403, 'Bu mahsulotni sotib olmagansiz — sharh qoldira olmaysiz.');
         }
 
         $exists = RatingModel::where('listing_id', $listingId)
@@ -110,16 +110,16 @@ final class RatingController extends Controller
             ->exists();
 
         if ($exists) {
-            abort(422, "Bu mahsulotga sharh allaqachon yozilgan.");
+            abort(422, 'Bu mahsulotga sharh allaqachon yozilgan.');
         }
 
         $rating = RatingModel::create([
-            'deal_id'   => $deal->id,
-            'listing_id'=> $listingId,
-            'rater_id'  => $userId,
-            'rated_id'  => $listing->seller_id,
-            'stars'     => (int) $validated['stars'],
-            'comment'   => $validated['comment'] ?? null,
+            'deal_id' => $deal->id,
+            'listing_id' => $listingId,
+            'rater_id' => $userId,
+            'rated_id' => $listing->seller_id,
+            'stars' => (int) $validated['stars'],
+            'comment' => $validated['comment'] ?? null,
         ]);
 
         return RatingResource::make($rating->load(['rater', 'listing']))
@@ -145,7 +145,7 @@ final class RatingController extends Controller
 
         return response()->json([
             'can_review' => $canReview && $my === null,
-            'my_review'  => $my ? RatingResource::make($my)->resolve() : null,
+            'my_review' => $my ? RatingResource::make($my)->resolve() : null,
         ]);
     }
 }

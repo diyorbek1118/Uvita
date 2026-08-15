@@ -24,13 +24,13 @@ final class UpdateProductHandler
         }
 
         $updated = $entity->modify(
-            name:        $command->dto->name,
-            slug:        $command->dto->slug,
+            name: $command->dto->name,
+            slug: $command->dto->slug,
             description: $command->dto->description,
-            price:       $command->dto->price,
-            stock:       $command->dto->stock,
-            images:      $command->dto->images,
-            categoryId:  $command->dto->categoryId,
+            price: $command->dto->price,
+            stock: $command->dto->stock,
+            images: $command->dto->images,
+            categoryId: $command->dto->categoryId,
         );
 
         $this->products->save($updated);

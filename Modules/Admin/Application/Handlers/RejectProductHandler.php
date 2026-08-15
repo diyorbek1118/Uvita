@@ -16,13 +16,13 @@ final class RejectProductHandler
         $product = ProductModel::findOrFail($command->id);
 
         $product->update([
-            'status'           => ProductStatusEnum::Rejected,
+            'status' => ProductStatusEnum::Rejected,
             'rejection_reason' => $command->reason,
         ]);
 
         if ($product->manager_id) {
             dispatch(new SendTelegramJob(
-                role:    'manager',
+                role: 'manager',
                 message: "❌ Mahsulotingiz rad etildi: {$product->name}. Sabab: {$command->reason}",
             ));
         }

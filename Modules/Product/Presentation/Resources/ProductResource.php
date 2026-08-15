@@ -17,7 +17,7 @@ final class ProductResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'price' => $this->price,
-            'stock' => $this->stock,
+            'stock' => $this->available_stock,
             'rating' => $this->rating ?? 0.0,
             'average_rating' => $this->rating ?? 0.0,
             'reviews_count' => $this->reviews_count ?? 0,

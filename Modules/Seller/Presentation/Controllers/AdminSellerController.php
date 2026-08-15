@@ -7,14 +7,14 @@ namespace Modules\Seller\Presentation\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\Admin\Domain\Enums\StaffRole;
+use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\Admin\Presentation\Resources\StaffResource;
+use Modules\Seller\Application\Handlers\CreateSellerHandler;
 use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
-use Modules\Seller\Presentation\Resources\SellerProfileResource;
 use Modules\Seller\Presentation\Requests\CreateSellerRequest;
 use Modules\Seller\Presentation\Requests\CreateSellerShopRequest;
-use Modules\Seller\Application\Handlers\CreateSellerHandler;
-use Modules\Admin\Infrastructure\Persistence\Models\Staff;
-use Modules\Admin\Domain\Enums\StaffRole;
-use Modules\Admin\Presentation\Resources\StaffResource;
+use Modules\Seller\Presentation\Resources\SellerProfileResource;
 
 final class AdminSellerController extends Controller
 {

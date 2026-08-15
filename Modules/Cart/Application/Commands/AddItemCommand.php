@@ -10,7 +10,7 @@ use Modules\Cart\Application\DTOs\AddItemDTO;
 final readonly class AddItemCommand
 {
     public function __construct(
-        public int        $userId,
+        public int $userId,
         public AddItemDTO $dto,
     ) {}
 
@@ -18,7 +18,7 @@ final readonly class AddItemCommand
     {
         return new self(
             userId: $userId,
-            dto:    AddItemDTO::fromRequest($request),
+            dto: AddItemDTO::fromRequest($request),
         );
     }
 }

@@ -7,13 +7,13 @@ use Modules\Category\Presentation\Controllers\CategoryController;
 
 // Public
 Route::prefix('categories')->group(function (): void {
-    Route::get('/',            [CategoryController::class, 'index']);
-    Route::get('/{category}',  [CategoryController::class, 'show']);
+    Route::get('/', [CategoryController::class, 'index']);
+    Route::get('/{category}', [CategoryController::class, 'show']);
 });
 
 // Admin only
 Route::middleware(['auth:sanctum', 'role.admin'])->prefix('categories')->group(function (): void {
-    Route::post('/',             [CategoryController::class, 'store']);
-    Route::put('/{category}',    [CategoryController::class, 'update']);
+    Route::post('/', [CategoryController::class, 'store']);
+    Route::put('/{category}', [CategoryController::class, 'update']);
     Route::delete('/{category}', [CategoryController::class, 'destroy']);
 });

@@ -9,6 +9,8 @@ use Modules\Payment\Domain\Entities\Payment;
 interface PaymentRepositoryInterface
 {
     public function findByOrderId(int $orderId): ?Payment;
+
     public function findByTransactionId(string $txId): ?Payment;
+
     public function save(Payment $payment): void;
 }

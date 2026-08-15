@@ -26,10 +26,10 @@ final class GetTopProductsHandler
             ->limit($limit)
             ->get()
             ->map(fn ($row) => [
-                'id'         => (int) $row->id,
-                'name'       => $row->name,
+                'id' => (int) $row->id,
+                'name' => $row->name,
                 'units_sold' => (int) $row->units_sold,
-                'revenue'    => (int) $row->revenue,
+                'revenue' => (int) $row->revenue,
             ])
             ->all();
     }

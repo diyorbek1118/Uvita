@@ -26,9 +26,9 @@ final class OtpAttempt extends Model
     protected function casts(): array
     {
         return [
-            'blocked_until'  => 'datetime',
-            'expires_at'     => 'datetime',
-            'is_verified'    => 'boolean',
+            'blocked_until' => 'datetime',
+            'expires_at' => 'datetime',
+            'is_verified' => 'boolean',
             'attempts_count' => 'integer',
         ];
     }

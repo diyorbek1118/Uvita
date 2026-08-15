@@ -20,10 +20,10 @@ final class CheckPhoneHandler
     public function handle(CheckPhoneCommand $command): array
     {
         $phone = new PhoneNumber($command->dto->phone);
-        $user  = $this->userRepository->findByPhone($phone->value);
+        $user = $this->userRepository->findByPhone($phone->value);
 
         return [
-            'registered'   => $user !== null,
+            'registered' => $user !== null,
             'has_password' => $user !== null && $user->password !== null && $user->password !== '',
         ];
     }

@@ -9,14 +9,14 @@ use Modules\Product\Presentation\Controllers\SellerProductController;
 
 // Public
 Route::prefix('products')->group(function (): void {
-    Route::get('/',           [ProductController::class, 'index']);
-    Route::get('/{product}',  [ProductController::class, 'show']);
+    Route::get('/', [ProductController::class, 'index']);
+    Route::get('/{product}', [ProductController::class, 'show']);
 });
 
 // Manager — yaratish va tahrirlash
 Route::middleware(['auth:sanctum', 'role.manager'])->prefix('products')->group(function (): void {
-    Route::post('/',          [ProductController::class, 'store']);
-    Route::put('/{product}',  [ProductController::class, 'update']);
+    Route::post('/', [ProductController::class, 'store']);
+    Route::put('/{product}', [ProductController::class, 'update']);
 });
 
 // Admin — o'chirish

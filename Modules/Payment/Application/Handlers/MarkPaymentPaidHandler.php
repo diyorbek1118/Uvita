@@ -98,7 +98,7 @@ final class MarkPaymentPaidHandler
 
             foreach ($items as $item) {
                 $product = $products->get($item->product_id);
-                if ($product === null || $product->stock < $item->quantity) {
+                if ($product === null || $product->available_stock < $item->quantity) {
                     throw new InsufficientStockException(
                         "\"{$product?->name}\" mahsulotidan yetarli stok qolmagan."
                     );

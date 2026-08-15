@@ -17,7 +17,7 @@ final readonly class AddItemDTO
     {
         return new self(
             productId: (int) $request->validated('product_id'),
-            quantity:  (int) $request->validated('quantity'),
+            quantity: (int) $request->validated('quantity'),
         );
     }
 }

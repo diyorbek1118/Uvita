@@ -17,9 +17,9 @@ final class ResetPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone'    => ['required', 'string', 'regex:' . PhoneNumber::PATTERN],
+            'phone' => ['required', 'string', 'regex:'.PhoneNumber::PATTERN],
             // Kod qiymati bu yerda tekshirilmaydi — muhimi OTP /otp/confirm orqali tasdiqlangan bo'lishi.
-            'code'     => ['nullable', 'string', 'digits:4'],
+            'code' => ['nullable', 'string', 'digits:4'],
             'password' => ['required', 'string', 'min:6', 'max:100'],
         ];
     }
@@ -27,12 +27,12 @@ final class ResetPasswordRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.required'    => "Telefon raqam kiritilishi shart.",
-            'phone.regex'       => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
-            'code.required'     => "Tasdiqlash kodi kiritilishi shart.",
-            'code.digits'       => "Tasdiqlash kodi 4 ta raqamdan iborat bo'lishi kerak.",
-            'password.required' => "Yangi parol kiritilishi shart.",
-            'password.min'      => "Parol kamida 6 ta belgidan iborat bo'lishi kerak.",
+            'phone.required' => 'Telefon raqam kiritilishi shart.',
+            'phone.regex' => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
+            'code.required' => 'Tasdiqlash kodi kiritilishi shart.',
+            'code.digits' => "Tasdiqlash kodi 4 ta raqamdan iborat bo'lishi kerak.",
+            'password.required' => 'Yangi parol kiritilishi shart.',
+            'password.min' => "Parol kamida 6 ta belgidan iborat bo'lishi kerak.",
         ];
     }
 }

@@ -19,7 +19,7 @@ final class RejectReviewHandler
         $review = $this->reviews->findById($command->reviewId);
 
         if ($review === null) {
-            throw new ReviewNotFoundException("Sharh topilmadi.");
+            throw new ReviewNotFoundException('Sharh topilmadi.');
         }
 
         $review->reject($command->reason);

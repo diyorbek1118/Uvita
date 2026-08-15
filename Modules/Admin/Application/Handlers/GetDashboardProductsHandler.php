@@ -49,7 +49,7 @@ final class GetDashboardProductsHandler
         if ($query->status !== null) {
             // "pending" — docs alias, kod'da "inactive"
             $statusValue = $query->status === 'pending' ? 'inactive' : $query->status;
-            $statusEnum  = ProductStatusEnum::tryFrom($statusValue);
+            $statusEnum = ProductStatusEnum::tryFrom($statusValue);
             if ($statusEnum !== null) {
                 $builder->where('status', $statusEnum->value);
             }
@@ -60,11 +60,13 @@ final class GetDashboardProductsHandler
         }
 
         if ($query->search !== null && $query->search !== '') {
-            $builder->where('name', 'like', '%' . $query->search . '%');
+            $builder->where('name', 'like', '%'.$query->search.'%');
         }
 
         if ($query->maxStock !== null) {
-            $builder->where('stock', '<=', $query->maxStock)->reorder('stock', 'asc');
+            $builder->whereRaw('(stock - reserved_stock) <= ?', [$query->maxStock])
+                ->reorder()
+                ->orderByRaw('(stock - reserved_stock) asc');
         }
 
         return $builder->paginate($query->perPage);

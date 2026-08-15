@@ -18,7 +18,7 @@ final class UpdateSettingHandler
 
     public function handle(UpdateSettingCommand $command): void
     {
-        $dto     = $command->dto;
+        $dto = $command->dto;
         $setting = $this->settings->findByKey($dto->key);
 
         if ($setting === null) {
@@ -34,26 +34,26 @@ final class UpdateSettingHandler
     private function validateValue(SettingKey $key, string $value): void
     {
         match ($key) {
-            SettingKey::MIN_ORDER_AMOUNT       => $this->assertPositiveInt($value, 'Minimal buyurtma summasi'),
-            SettingKey::OTP_EXPIRY_SECONDS     => $this->assertIntInRange($value, 60, 600, 'OTP muddati'),
-            SettingKey::OTP_MAX_ATTEMPTS       => $this->assertIntInRange($value, 1, 10, 'OTP urinishlar soni'),
-            SettingKey::OTP_BLOCK_MINUTES      => $this->assertIntInRange($value, 1, 60, 'OTP blok vaqti'),
+            SettingKey::MIN_ORDER_AMOUNT => $this->assertPositiveInt($value, 'Minimal buyurtma summasi'),
+            SettingKey::OTP_EXPIRY_SECONDS => $this->assertIntInRange($value, 60, 600, 'OTP muddati'),
+            SettingKey::OTP_MAX_ATTEMPTS => $this->assertIntInRange($value, 1, 10, 'OTP urinishlar soni'),
+            SettingKey::OTP_BLOCK_MINUTES => $this->assertIntInRange($value, 1, 60, 'OTP blok vaqti'),
             SettingKey::MAX_NOT_FOUND_ATTEMPTS => $this->assertIntInRange($value, 1, 10, 'Topilmadi urinishlari'),
-            SettingKey::REVIEW_REQUEST_DELAY   => $this->assertIntInRange($value, 1, 168, 'Review kechikish vaqti'),
-            SettingKey::DELIVERY_CITY          => $this->assertNonEmpty($value, 'Shahar nomi'),
+            SettingKey::REVIEW_REQUEST_DELAY => $this->assertIntInRange($value, 1, 168, 'Review kechikish vaqti'),
+            SettingKey::DELIVERY_CITY => $this->assertNonEmpty($value, 'Shahar nomi'),
         };
     }
 
     private function assertPositiveInt(string $value, string $label): void
     {
-        if (!ctype_digit($value) || (int) $value <= 0) {
+        if (! ctype_digit($value) || (int) $value <= 0) {
             abort(422, "{$label} musbat son bo'lishi kerak");
         }
     }
 
     private function assertIntInRange(string $value, int $min, int $max, string $label): void
     {
-        if (!ctype_digit($value) || (int) $value < $min || (int) $value > $max) {
+        if (! ctype_digit($value) || (int) $value < $min || (int) $value > $max) {
             abort(422, "{$label} {$min} va {$max} orasida bo'lishi kerak");
         }
     }

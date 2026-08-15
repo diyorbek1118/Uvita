@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Modules\Admin\Infrastructure\Persistence\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Admin\Domain\Enums\StaffRole;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Courier\Infrastructure\Persistence\Models\CourierProfile;
+use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 
 class Staff extends Authenticatable
 {
@@ -33,9 +34,9 @@ class Staff extends Authenticatable
     ];
 
     protected $casts = [
-        'role'      => StaffRole::class,
+        'role' => StaffRole::class,
         'is_active' => 'boolean',
-        'password'  => 'hashed',
+        'password' => 'hashed',
     ];
 
     public function courierProfile(): HasOne
@@ -45,6 +46,6 @@ class Staff extends Authenticatable
 
     public function sellerProfiles(): HasMany
     {
-        return $this->hasMany(\Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel::class, 'seller_id');
+        return $this->hasMany(SellerProfileModel::class, 'seller_id');
     }
 }

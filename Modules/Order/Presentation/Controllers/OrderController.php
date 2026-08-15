@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Modules\Courier\Application\Handlers\GetDeliveryCodeHandler;
 use Modules\Courier\Presentation\Resources\CourierOrderResource;
+use Modules\Order\Application\Commands\AcceptCourierBatchCommand;
 use Modules\Order\Application\Commands\AssignCourierCommand;
 use Modules\Order\Application\Commands\CancelOrderCommand;
 use Modules\Order\Application\Commands\ConfirmOrderCommand;
@@ -18,12 +19,15 @@ use Modules\Order\Application\Commands\MarkDeliveringCommand;
 use Modules\Order\Application\Commands\NotFoundCommand;
 use Modules\Order\Application\Commands\ReadyToDeliverCommand;
 use Modules\Order\Application\Commands\RejectCourierAssignmentCommand;
+use Modules\Order\Application\Commands\UpdatePendingOrderItemsCommand;
+use Modules\Order\Application\Handlers\AcceptCourierBatchHandler;
 use Modules\Order\Application\Handlers\AssignCourierHandler;
 use Modules\Order\Application\Handlers\CancelOrderHandler;
 use Modules\Order\Application\Handlers\ConfirmOrderHandler;
 use Modules\Order\Application\Handlers\CreateOrderHandler;
 use Modules\Order\Application\Handlers\GetAdminOrdersHandler;
 use Modules\Order\Application\Handlers\GetAnyOrderByIdHandler;
+use Modules\Order\Application\Handlers\GetAvailableCourierRoutesHandler;
 use Modules\Order\Application\Handlers\GetCourierOrderByIdHandler;
 use Modules\Order\Application\Handlers\GetCourierOrdersHandler;
 use Modules\Order\Application\Handlers\GetMyOrdersHandler;
@@ -35,21 +39,25 @@ use Modules\Order\Application\Handlers\NotFoundHandler;
 use Modules\Order\Application\Handlers\ReadyToDeliverHandler;
 use Modules\Order\Application\Handlers\RejectCourierAssignmentHandler;
 use Modules\Order\Application\Handlers\ResolveIssueHandler;
+use Modules\Order\Application\Handlers\UpdatePendingOrderItemsHandler;
 use Modules\Order\Application\Queries\GetAdminOrdersQuery;
 use Modules\Order\Application\Queries\GetCourierOrdersQuery;
 use Modules\Order\Application\Queries\GetMyOrdersQuery;
 use Modules\Order\Application\Queries\GetOrderByIdQuery;
 use Modules\Order\Application\Queries\GetPaidOrdersQuery;
 use Modules\Order\Domain\Enums\OrderStatus;
+use Modules\Order\Presentation\Requests\AcceptCourierBatchRequest;
 use Modules\Order\Presentation\Requests\AssignCourierRequest;
 use Modules\Order\Presentation\Requests\CompleteDeliveryRequest;
 use Modules\Order\Presentation\Requests\CreateOrderRequest;
 use Modules\Order\Presentation\Requests\NotFoundRequest;
 use Modules\Order\Presentation\Requests\RejectCourierAssignmentRequest;
 use Modules\Order\Presentation\Requests\ResolveIssueRequest;
+use Modules\Order\Presentation\Requests\UpdatePendingOrderItemsRequest;
 use Modules\Order\Presentation\Resources\OrderResource;
 use Modules\Payment\Application\Commands\CreatePaymentCommand;
 use Modules\Payment\Application\Handlers\CreatePaymentHandler;
+use Modules\Payment\Domain\Enums\PaymentProvider;
 
 final class OrderController extends Controller
 {
@@ -62,6 +70,7 @@ final class OrderController extends Controller
         private readonly GetAdminOrdersHandler $getAdminOrdersHandler,
         private readonly GetCourierOrdersHandler $getCourierOrdersHandler,
         private readonly GetCourierOrderByIdHandler $getCourierOrderByIdHandler,
+        private readonly GetAvailableCourierRoutesHandler $getAvailableCourierRoutesHandler,
         private readonly ConfirmOrderHandler $confirmHandler,
         private readonly ReadyToDeliverHandler $readyToDeliverHandler,
         private readonly AssignCourierHandler $assignCourierHandler,
@@ -73,6 +82,8 @@ final class OrderController extends Controller
         private readonly GetDeliveryCodeHandler $getDeliveryCodeHandler,
         private readonly CancelOrderHandler $cancelHandler,
         private readonly CreatePaymentHandler $createPaymentHandler,
+        private readonly UpdatePendingOrderItemsHandler $updatePendingOrderItemsHandler,
+        private readonly AcceptCourierBatchHandler $acceptCourierBatchHandler,
     ) {}
 
     // ─── Customer ────────────────────────────────────────────────────────────
@@ -97,14 +108,30 @@ final class OrderController extends Controller
 
     public function store(CreateOrderRequest $request): JsonResponse
     {
-        $order = $this->createHandler->handle(
+        $result = $this->createHandler->handle(
             CreateOrderCommand::fromRequest($request, auth()->id())
         );
 
-        return OrderResource::make($order)
-            ->additional(['message' => 'Buyurtma yaratildi'])
-            ->response()
-            ->setStatusCode(201);
+        if ($result->orders->count() === 1) {
+            return OrderResource::make($result->orders->first())
+                ->additional(['message' => 'Buyurtma yaratildi'])
+                ->response()
+                ->setStatusCode(201);
+        }
+
+        $orders = $result->orders
+            ->map(fn ($order): array => OrderResource::make($order)->resolve($request))
+            ->values();
+
+        return response()->json([
+            'message' => $orders->count().' ta seller uchun alohida buyurtma yaratildi',
+            'data' => [
+                'orders' => $orders,
+                'orders_count' => $orders->count(),
+                'order_ids' => $orders->pluck('id'),
+                'grand_total' => $orders->sum('grand_total'),
+            ],
+        ], 201);
     }
 
     public function cancel(int $id): JsonResponse
@@ -159,13 +186,29 @@ final class OrderController extends Controller
 
     public function managerShow(int $id): JsonResponse
     {
-        $order = $this->getAnyByIdHandler->handle($id);
+        $order = $this->getAnyByIdHandler->handle($id)->load('latestPayment');
 
-        if (in_array($order->status, [OrderStatus::PENDING, OrderStatus::CANCELLED], true)) {
+        $pendingCash = $order->status === OrderStatus::PENDING
+            && $order->latestPayment?->provider === PaymentProvider::CASH;
+        if ($order->status === OrderStatus::CANCELLED || ($order->status === OrderStatus::PENDING && ! $pendingCash)) {
             abort(404, 'Buyurtma topilmadi');
         }
 
         return OrderResource::make($order)->response();
+    }
+
+    public function updateItems(int $id, UpdatePendingOrderItemsRequest $request): JsonResponse
+    {
+        $order = $this->updatePendingOrderItemsHandler->handle(
+            new UpdatePendingOrderItemsCommand(
+                orderId: $id,
+                items: $request->validated('items'),
+            )
+        );
+
+        return OrderResource::make($order)
+            ->additional(['message' => 'Buyurtma tarkibi yangilandi'])
+            ->response();
     }
 
     public function confirm(int $id): JsonResponse
@@ -185,6 +228,15 @@ final class OrderController extends Controller
 
         return OrderResource::make($order)
             ->additional(['message' => "Buyurtma yig'ildi, kuryerga topshirishga tayyor"])
+            ->response();
+    }
+
+    public function managerCancel(int $id): JsonResponse
+    {
+        $order = $this->cancelHandler->handle(new CancelOrderCommand(orderId: $id, userId: null));
+
+        return OrderResource::make($order)
+            ->additional(['message' => 'Buyurtma manager tomonidan bekor qilindi'])
             ->response();
     }
 
@@ -243,6 +295,23 @@ final class OrderController extends Controller
         );
 
         return CourierOrderResource::collection($orders)->response();
+    }
+
+    public function courierRoutes(): JsonResponse
+    {
+        return response()->json(['data' => $this->getAvailableCourierRoutesHandler->handle()]);
+    }
+
+    public function acceptCourierBatch(AcceptCourierBatchRequest $request): JsonResponse
+    {
+        $orders = $this->acceptCourierBatchHandler->handle(new AcceptCourierBatchCommand(
+            courierId: auth()->id(),
+            orderIds: $request->validated('order_ids'),
+        ));
+
+        return CourierOrderResource::collection($orders)
+            ->additional(['message' => $orders->count().' ta buyurtma qabul qilindi'])
+            ->response();
     }
 
     public function courierShow(int $id): JsonResponse

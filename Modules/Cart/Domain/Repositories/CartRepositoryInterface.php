@@ -9,6 +9,8 @@ use Modules\Cart\Domain\Entities\Cart;
 interface CartRepositoryInterface
 {
     public function findByUserId(int $userId): ?Cart;
+
     public function save(Cart $cart): void;
+
     public function clear(int $cartId): void;
 }

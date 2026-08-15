@@ -31,7 +31,7 @@ final class GetDashboardSummaryHandler
                 ->count(),
             'delivery_issues' => OrderModel::where('status', 'delivery_issue')->count(),
             'active_couriers' => Staff::where('role', 'courier')->where('is_active', true)->count(),
-            'low_stock' => ProductModel::where('stock', '<=', self::LOW_STOCK_THRESHOLD)->count(),
+            'low_stock' => ProductModel::whereRaw('(stock - reserved_stock) <= ?', [self::LOW_STOCK_THRESHOLD])->count(),
             'active_products' => ProductModel::where('status', 'active')->count(),
             'total_customers' => User::count(),
         ];

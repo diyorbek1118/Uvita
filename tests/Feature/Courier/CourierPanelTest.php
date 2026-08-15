@@ -9,8 +9,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Courier\Application\Services\DeliveryConfirmationService;
+use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
+use Modules\Order\Infrastructure\Persistence\Models\OrderItemModel;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
+use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\User\Infrastructure\Persistence\Models\User;
 use Tests\Feature\Concerns\SeedsSettings;
 use Tests\TestCase;
@@ -54,11 +58,11 @@ final class CourierPanelTest extends TestCase
         return $service->reveal($service->ensureForOrder($order->id));
     }
 
-    private function order(Staff $courier, string $status, int $notFoundCount = 0): OrderModel
+    private function order(?Staff $courier, string $status, int $notFoundCount = 0): OrderModel
     {
         return OrderModel::create([
             'user_id' => $this->customer->id,
-            'courier_id' => $courier->id,
+            'courier_id' => $courier?->id,
             'status' => $status,
             'address' => ['region' => 'Toshkent', 'district' => 'Yunusobod', 'street' => 'Navoiy', 'house' => '1'],
             'phone' => $this->customer->phone,
@@ -71,6 +75,42 @@ final class CourierPanelTest extends TestCase
             'grand_total' => 115000,
             'not_found_count' => $notFoundCount,
         ]);
+    }
+
+    private function routeOrder(string $origin, string $destination, int $quantity = 10): OrderModel
+    {
+        $order = $this->order(null, 'ready_to_deliver');
+        $order->update([
+            'address' => [
+                'region' => $destination,
+                'district' => 'Markaziy tuman',
+                'street' => 'Navoiy',
+                'house' => '1',
+            ],
+            'ready_at' => now(),
+        ]);
+        $category = Category::firstOrCreate(['slug' => 'courier-load'], ['name' => 'Kuryer yuki']);
+        $product = Product::create([
+            'name' => "Yuk {$order->id}",
+            'slug' => "courier-load-{$order->id}",
+            'description' => 'Yetkazish uchun test yuki',
+            'price' => 10000,
+            'stock' => 1000,
+            'status' => 'active',
+            'images' => [],
+            'category_id' => $category->id,
+            'origin_region' => $origin,
+            'unit' => 'kg',
+            'minimum_order_quantity' => 1,
+        ]);
+        OrderItemModel::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => $quantity,
+            'price' => $product->price,
+        ]);
+
+        return $order;
     }
 
     public function test_courier_profile_and_permissions_are_scoped(): void
@@ -119,6 +159,128 @@ final class CourierPanelTest extends TestCase
 
         $this->getJson("/api/courier/orders/{$ready->id}")->assertOk();
         $this->getJson("/api/courier/orders/{$foreign->id}")->assertNotFound();
+    }
+
+    public function test_available_routes_group_unassigned_orders_by_origin_and_destination(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'route-list');
+        $first = $this->routeOrder('Jizzax', 'Toshkent', 20);
+        $second = $this->routeOrder('Jizzax', 'Toshkent', 30);
+        $assigned = $this->routeOrder('Jizzax', 'Toshkent', 40);
+        $assigned->update(['courier_id' => $courier->id]);
+
+        $this->as($courier)
+            ->getJson('/api/courier/routes')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.origin_region', 'Jizzax')
+            ->assertJsonPath('data.0.destination_region', 'Toshkent')
+            ->assertJsonPath('data.0.orders_count', 2)
+            ->assertJsonPath('data.0.load_by_unit.kg', 50)
+            ->assertJsonPath('data.0.orders.0.id', $first->id)
+            ->assertJsonPath('data.0.orders.1.id', $second->id)
+            ->assertJsonMissing(['id' => $assigned->id]);
+    }
+
+    public function test_courier_selects_how_many_same_route_orders_to_accept(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'batch-accept');
+        $first = $this->routeOrder('Jizzax', 'Toshkent', 20);
+        $second = $this->routeOrder('Jizzax', 'Toshkent', 30);
+        $leftForAnotherCourier = $this->routeOrder('Jizzax', 'Toshkent', 40);
+
+        $this->as($courier)
+            ->putJson('/api/courier/routes/accept', ['order_ids' => [$first->id, $second->id]])
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.status', 'ready_to_deliver');
+
+        foreach ([$first, $second] as $accepted) {
+            $this->assertDatabaseHas('orders', [
+                'id' => $accepted->id,
+                'courier_id' => $courier->id,
+                'status' => 'ready_to_deliver',
+            ]);
+            $this->assertDatabaseHas('delivery_assignments', [
+                'order_id' => $accepted->id,
+                'courier_id' => $courier->id,
+                'status' => 'accepted',
+            ]);
+        }
+        $this->assertNull($leftForAnotherCourier->fresh()->courier_id);
+
+        $this->getJson('/api/courier/orders')->assertJsonCount(2, 'data');
+        $this->getJson('/api/courier/routes')->assertJsonPath('data.0.orders_count', 1);
+    }
+
+    public function test_batch_accept_rejects_mixed_routes_without_partial_assignment(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'mixed-routes');
+        $jizzax = $this->routeOrder('Jizzax', 'Toshkent');
+        $sirdaryo = $this->routeOrder('Sirdaryo', 'Toshkent');
+
+        $this->as($courier)
+            ->putJson('/api/courier/routes/accept', ['order_ids' => [$jizzax->id, $sirdaryo->id]])
+            ->assertUnprocessable();
+
+        $this->assertNull($jizzax->fresh()->courier_id);
+        $this->assertNull($sirdaryo->fresh()->courier_id);
+        $this->assertSame(0, DeliveryAssignment::count());
+    }
+
+    public function test_self_selected_order_starts_delivery_only_after_courier_confirms_pickup(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'pickup-start');
+        $order = $this->routeOrder('Jizzax', 'Toshkent');
+
+        $this->as($courier)
+            ->putJson('/api/courier/routes/accept', ['order_ids' => [$order->id]])
+            ->assertOk();
+        $this->assertSame('ready_to_deliver', $order->fresh()->status->value);
+
+        $this->putJson("/api/courier/orders/{$order->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'delivering');
+
+        $this->assertSame(1, DeliveryAssignment::where('order_id', $order->id)->count());
+        $this->assertDatabaseHas('delivery_assignments', [
+            'order_id' => $order->id,
+            'status' => 'accepted',
+        ]);
+    }
+
+    public function test_courier_can_return_self_selected_order_within_five_hours(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'cancel-accepted');
+        $order = $this->routeOrder('Jizzax', 'Toshkent');
+        $this->as($courier)
+            ->putJson('/api/courier/routes/accept', ['order_ids' => [$order->id]])
+            ->assertOk();
+
+        $this->putJson("/api/courier/orders/{$order->id}/reject", ['reason' => 'Yuk mashinaga sig‘madi'])
+            ->assertOk();
+
+        $this->assertNull($order->fresh()->courier_id);
+        $this->assertDatabaseHas('delivery_assignments', [
+            'order_id' => $order->id,
+            'status' => 'rejected',
+        ]);
+        $this->getJson('/api/courier/routes')->assertJsonPath('data.0.orders.0.id', $order->id);
+    }
+
+    public function test_courier_cannot_return_accepted_order_after_five_hours(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'cancel-expired');
+        $order = $this->routeOrder('Jizzax', 'Toshkent');
+        $this->as($courier)
+            ->putJson('/api/courier/routes/accept', ['order_ids' => [$order->id]])
+            ->assertOk();
+        DeliveryAssignment::where('order_id', $order->id)->update(['assigned_at' => now()->subHours(6)]);
+
+        $this->putJson("/api/courier/orders/{$order->id}/reject", ['reason' => 'Kech bekor qilish'])
+            ->assertUnprocessable();
+
+        $this->assertSame($courier->id, $order->fresh()->courier_id);
     }
 
     public function test_history_contains_only_own_delivered_orders(): void

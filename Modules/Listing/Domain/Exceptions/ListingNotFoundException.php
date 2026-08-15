@@ -6,6 +6,4 @@ namespace Modules\Listing\Domain\Exceptions;
 
 use App\Shared\Exceptions\DomainException;
 
-final class ListingNotFoundException extends DomainException
-{
-}
+final class ListingNotFoundException extends DomainException {}

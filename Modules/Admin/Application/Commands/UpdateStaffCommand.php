@@ -9,7 +9,7 @@ use Modules\Admin\Application\DTOs\UpdateStaffDTO;
 final readonly class UpdateStaffCommand
 {
     public function __construct(
-        public int           $staffId,
+        public int $staffId,
         public UpdateStaffDTO $dto,
     ) {}
 }

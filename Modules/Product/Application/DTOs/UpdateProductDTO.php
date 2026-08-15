@@ -12,10 +12,10 @@ final readonly class UpdateProductDTO
         public string $name,
         public string $slug,
         public string $description,
-        public int    $price,
-        public int    $stock,
-        public array  $images,
-        public int    $categoryId,
+        public int $price,
+        public int $stock,
+        public array $images,
+        public int $categoryId,
     ) {}
 
     public static function fromRequest(UpdateProductRequest $request): self
@@ -23,13 +23,13 @@ final readonly class UpdateProductDTO
         $name = $request->validated('name');
 
         return new self(
-            name:        $name,
-            slug:        $request->validated('slug'),
+            name: $name,
+            slug: $request->validated('slug'),
             description: $request->validated('description'),
-            price:       $request->validated('price'),
-            stock:       $request->validated('stock'),
-            images:      $request->validated('images', []),
-            categoryId:  $request->validated('category_id'),
+            price: $request->validated('price'),
+            stock: $request->validated('stock'),
+            images: $request->validated('images', []),
+            categoryId: $request->validated('category_id'),
         );
     }
 }

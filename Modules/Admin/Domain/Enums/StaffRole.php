@@ -6,19 +6,19 @@ namespace Modules\Admin\Domain\Enums;
 
 enum StaffRole: string
 {
-    case SELLER      = 'seller';
-    case MANAGER     = 'manager';
-    case COURIER     = 'courier';
-    case ADMIN       = 'admin';
+    case SELLER = 'seller';
+    case MANAGER = 'manager';
+    case COURIER = 'courier';
+    case ADMIN = 'admin';
     case SUPER_ADMIN = 'super_admin';
 
     public function label(): string
     {
         return match ($this) {
-            self::SELLER      => 'Sotuvchi',
-            self::MANAGER     => 'Menejer',
-            self::COURIER     => 'Kuryer',
-            self::ADMIN       => 'Admin',
+            self::SELLER => 'Sotuvchi',
+            self::MANAGER => 'Menejer',
+            self::COURIER => 'Kuryer',
+            self::ADMIN => 'Admin',
             self::SUPER_ADMIN => 'Bosh admin',
         };
     }

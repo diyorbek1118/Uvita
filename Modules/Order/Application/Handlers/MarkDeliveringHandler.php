@@ -38,7 +38,10 @@ final class MarkDeliveringHandler
             $assignment = DeliveryAssignment::query()
                 ->where('order_id', $command->orderId)
                 ->where('courier_id', $command->courierId)
-                ->where('status', DeliveryAssignmentStatus::ASSIGNED->value)
+                ->whereIn('status', [
+                    DeliveryAssignmentStatus::ASSIGNED->value,
+                    DeliveryAssignmentStatus::ACCEPTED->value,
+                ])
                 ->latest('id')
                 ->first();
 
@@ -65,6 +68,6 @@ final class MarkDeliveringHandler
         $savedModel = OrderModel::findOrFail($saved->id);
         dispatch(new SendSmsJob($savedModel->phone, "Kuryer yo'lda, tez orada yetkaziladi."));
 
-        return OrderModel::with(['items.product', 'deliveryAssignments'])->findOrFail($saved->id);
+        return OrderModel::with(['items.product.sellerProfile', 'deliveryAssignments'])->findOrFail($saved->id);
     }
 }

@@ -10,17 +10,17 @@ use Modules\Listing\Presentation\Requests\UpdateListingRequest;
 final readonly class UpdateListingCommand
 {
     public function __construct(
-        public int             $listingId,
-        public int             $sellerId,
+        public int $listingId,
+        public int $sellerId,
         public UpdateListingDTO $dto,
     ) {}
 
     public static function fromRequest(int $listingId, int $sellerId, UpdateListingRequest $request): static
     {
-        return new static(
+        return new self(
             listingId: $listingId,
-            sellerId:  $sellerId,
-            dto:       UpdateListingDTO::fromRequest($request),
+            sellerId: $sellerId,
+            dto: UpdateListingDTO::fromRequest($request),
         );
     }
 }

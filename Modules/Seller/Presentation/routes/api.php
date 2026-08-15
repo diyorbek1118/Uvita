@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\Seller\Presentation\Controllers\AdminSellerController;
-use Modules\Seller\Presentation\Controllers\SellerProfileController;
-use Modules\Seller\Presentation\Controllers\SellerOrderController;
 use Modules\Seller\Presentation\Controllers\SellerAuthController;
+use Modules\Seller\Presentation\Controllers\SellerOrderController;
+use Modules\Seller\Presentation\Controllers\SellerProfileController;
 
 Route::post('seller/login', [SellerAuthController::class, 'login'])
     ->middleware('throttle:staff-login');

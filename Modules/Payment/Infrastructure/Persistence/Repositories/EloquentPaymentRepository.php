@@ -32,15 +32,15 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
     {
         if ($payment->id === null) {
             PaymentModel::create([
-                'order_id'       => $payment->orderId,
-                'provider'       => $payment->provider->value,
+                'order_id' => $payment->orderId,
+                'provider' => $payment->provider->value,
                 'transaction_id' => $payment->transactionId,
-                'amount'         => $payment->amount,
-                'status'         => $payment->status->value,
+                'amount' => $payment->amount,
+                'status' => $payment->status->value,
             ]);
         } else {
             PaymentModel::where('id', $payment->id)->update([
-                'status'         => $payment->status->value,
+                'status' => $payment->status->value,
                 'transaction_id' => $payment->transactionId,
             ]);
         }
@@ -49,12 +49,12 @@ final class EloquentPaymentRepository implements PaymentRepositoryInterface
     private function toDomain(PaymentModel $model): Payment
     {
         return new Payment(
-            id:            $model->id,
-            orderId:       $model->order_id,
-            provider:      PaymentProvider::from($model->provider->value),
+            id: $model->id,
+            orderId: $model->order_id,
+            provider: PaymentProvider::from($model->provider->value),
             transactionId: $model->transaction_id,
-            amount:        $model->amount,
-            status:        PaymentStatus::from($model->status->value),
+            amount: $model->amount,
+            status: PaymentStatus::from($model->status->value),
         );
     }
 }

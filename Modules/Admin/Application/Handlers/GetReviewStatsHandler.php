@@ -17,10 +17,10 @@ final class GetReviewStatsHandler
             ->toArray();
 
         return [
-            'pending'  => (int) ($stats['pending']  ?? 0),
+            'pending' => (int) ($stats['pending'] ?? 0),
             'approved' => (int) ($stats['approved'] ?? 0),
             'rejected' => (int) ($stats['rejected'] ?? 0),
-            'total'    => (int) array_sum($stats),
+            'total' => (int) array_sum($stats),
         ];
     }
 }

@@ -8,8 +8,8 @@ use App\Shared\Services\Upload\ProductMediaUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Product\Application\DTOs\SellerProductDraftDTO;
 use Modules\Product\Application\Handlers\SaveSellerProductDraftHandler;
@@ -18,6 +18,7 @@ use Modules\Product\Infrastructure\Persistence\Models\Product;
 use Modules\Product\Presentation\Requests\CreateSellerProductRequest;
 use Modules\Product\Presentation\Resources\ProductRevisionResource;
 use Modules\Seller\Application\Services\SellerShopResolver;
+use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 
 final class SellerProductController extends Controller
 {
@@ -112,10 +113,11 @@ final class SellerProductController extends Controller
     {
         /** @var Staff $seller */
         $seller = auth('sanctum')->user();
+
         return $seller;
     }
 
-    private function shop(Request $request): \Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel
+    private function shop(Request $request): SellerProfileModel
     {
         return app(SellerShopResolver::class)->resolve($request, $this->seller()->id);
     }

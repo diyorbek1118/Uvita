@@ -8,6 +8,6 @@ final readonly class GetRevenueBreakdownQuery
 {
     public function __construct(
         public ?string $from = null,
-        public ?string $to   = null,
+        public ?string $to = null,
     ) {}
 }

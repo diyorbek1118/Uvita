@@ -17,7 +17,7 @@ final class PasswordLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone'    => ['required', 'string', 'regex:' . PhoneNumber::PATTERN],
+            'phone' => ['required', 'string', 'regex:'.PhoneNumber::PATTERN],
             'password' => ['required', 'string'],
         ];
     }
@@ -25,9 +25,9 @@ final class PasswordLoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.required'    => "Telefon raqam kiritilishi shart.",
-            'phone.regex'       => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
-            'password.required' => "Parol kiritilishi shart.",
+            'phone.required' => 'Telefon raqam kiritilishi shart.',
+            'phone.regex' => "Telefon raqam formati to'g'ri bo'lishi kerak (masalan +998901234567).",
+            'password.required' => 'Parol kiritilishi shart.',
         ];
     }
 }

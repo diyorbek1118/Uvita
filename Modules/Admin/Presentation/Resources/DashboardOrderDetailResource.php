@@ -19,6 +19,8 @@ class DashboardOrderDetailResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'seller_profile_id' => $this->seller_profile_id,
+            'checkout_group_id' => $this->checkout_group_id,
             'status' => $this->status->value,
             'customer' => [
                 'name' => $this->whenLoaded('user', fn () => $this->user?->name),
@@ -45,6 +47,11 @@ class DashboardOrderDetailResource extends JsonResource
                 'quantity' => $item->quantity,
                 'price' => $item->price,
                 'subtotal' => $item->price * $item->quantity,
+                'unit' => $item->product?->unit,
+                'stock' => $item->product === null ? null : (
+                    $item->product->available_stock + ($this->stock_reserved_at !== null ? $item->quantity : 0)
+                ),
+                'minimum_order_quantity' => $item->product?->minimum_order_quantity,
             ])
             ),
             'pricing' => [

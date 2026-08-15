@@ -20,9 +20,9 @@ final class CreateCategoryHandler
         $dto = $command->dto;
 
         $entity = CategoryEntity::create(
-            name:     $dto->name,
-            slug:     $dto->slug,
-            image:    $dto->image,
+            name: $dto->name,
+            slug: $dto->slug,
+            image: $dto->image,
             parentId: $dto->parentId,
         );
 

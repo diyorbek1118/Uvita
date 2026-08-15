@@ -114,6 +114,38 @@ class OrderLifecycleTest extends TestCase
         Queue::assertPushed(ClearCartJob::class);
     }
 
+    public function test_cash_order_reserves_stock_without_decreasing_physical_stock(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+
+        $this->assertSame(10, $this->product->fresh()->stock);
+        $this->assertSame(2, $this->product->fresh()->reserved_stock);
+        $this->assertSame(8, $this->product->fresh()->available_stock);
+        $this->assertNotNull(OrderModel::firstOrFail()->stock_reserved_at);
+    }
+
+    public function test_reserved_cash_stock_cannot_be_sold_to_another_customer(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $payload['items'][0]['quantity'] = 8;
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+
+        $other = User::create(['phone' => '+998901234568', 'name' => 'Vali']);
+        $otherToken = $other->createToken('test')->plainTextToken;
+        $payload['phone'] = $other->phone;
+        $payload['items'][0]['quantity'] = 3;
+        $this->withHeaders(['Authorization' => "Bearer {$otherToken}"])
+            ->postJson('/api/orders', $payload)
+            ->assertUnprocessable();
+
+        $this->assertSame(8, $this->product->fresh()->reserved_stock);
+        $this->assertSame(10, $this->product->fresh()->stock);
+    }
+
     public function test_create_order_requires_items(): void
     {
         $payload = $this->validOrderPayload();
@@ -206,6 +238,20 @@ class OrderLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_cancelling_pending_cash_order_releases_reserved_stock(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+        $this->assertSame(2, $this->product->fresh()->reserved_stock);
+
+        $this->deleteJson("/api/orders/{$order->id}")->assertOk();
+
+        $this->assertSame(0, $this->product->fresh()->reserved_stock);
+        $this->assertSame(10, $this->product->fresh()->stock);
+    }
+
     public function test_customer_cannot_cancel_paid_order(): void
     {
         $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
@@ -261,6 +307,154 @@ class OrderLifecycleTest extends TestCase
             'provider' => 'cash',
             'status' => 'pending',
         ]);
+    }
+
+    public function test_manager_can_cancel_pending_cash_order_and_release_reservation(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+        $this->assertSame(2, $this->product->fresh()->reserved_stock);
+
+        $this->asStaff(StaffRole::MANAGER)
+            ->deleteJson("/api/manager/orders/{$order->id}")
+            ->assertOk();
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled']);
+        $this->assertSame(0, $this->product->fresh()->reserved_stock);
+    }
+
+    public function test_manager_can_edit_pending_cash_order_before_confirmation(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+
+        $this->asStaff(StaffRole::MANAGER)
+            ->putJson("/api/manager/orders/{$order->id}/items", [
+                'items' => [['product_id' => $this->product->id, 'quantity' => 3]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.total_price', 90000)
+            ->assertJsonPath('data.items.0.quantity', 3);
+
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity' => 3,
+            'price' => 30000,
+        ]);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'provider' => 'cash',
+            'amount' => 9000000,
+        ]);
+        $this->assertDatabaseHas('products', ['id' => $this->product->id, 'stock' => 10]);
+        $this->assertSame(3, $this->product->fresh()->reserved_stock);
+    }
+
+    public function test_confirmed_cash_order_decrements_stock_only_when_marked_ready(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+
+        $this->asStaff(StaffRole::MANAGER)
+            ->putJson("/api/manager/orders/{$order->id}/confirm")
+            ->assertOk();
+        $this->assertSame(10, $this->product->fresh()->stock);
+        $this->assertSame(2, $this->product->fresh()->reserved_stock);
+
+        $this->putJson("/api/manager/orders/{$order->id}/ready")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready_to_deliver');
+        $this->assertSame(8, $this->product->fresh()->stock);
+        $this->assertSame(0, $this->product->fresh()->reserved_stock);
+        $this->assertNotNull($order->fresh()->stock_committed_at);
+        $this->assertNull($order->fresh()->stock_released_at);
+
+        $this->putJson("/api/manager/orders/{$order->id}/ready")
+            ->assertUnprocessable();
+        $this->assertSame(8, $this->product->fresh()->stock);
+    }
+
+    public function test_cancelling_cash_delivery_issue_restores_committed_stock_once(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+        $this->product->update(['stock' => 8]);
+        $order->update([
+            'status' => 'delivery_issue',
+            'stock_committed_at' => now(),
+        ]);
+        $this->asStaff(StaffRole::ADMIN)
+            ->putJson("/api/admin/orders/{$order->id}/resolve-issue", ['action' => 'cancel'])
+            ->assertOk();
+
+        $this->assertSame(10, $this->product->fresh()->stock);
+        $this->assertNotNull($order->fresh()->stock_released_at);
+    }
+
+    public function test_rescheduling_cash_delivery_issue_keeps_stock_committed(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+        $this->product->update(['stock' => 8]);
+        $order->update([
+            'status' => 'delivery_issue',
+            'stock_committed_at' => now(),
+        ]);
+
+        $this->asStaff(StaffRole::ADMIN)
+            ->putJson("/api/admin/orders/{$order->id}/resolve-issue", [
+                'action' => 'reschedule',
+                'delivery_time' => '2026-08-16 16:00',
+            ])
+            ->assertOk();
+
+        $this->assertSame(8, $this->product->fresh()->stock);
+        $this->assertNull($order->fresh()->stock_released_at);
+    }
+
+    public function test_cash_order_stays_confirmed_when_stock_is_insufficient_at_ready(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['payment_method'] = 'cash';
+        $this->asCustomer()->postJson('/api/orders', $payload)->assertCreated();
+        $order = OrderModel::firstOrFail();
+        $this->asStaff(StaffRole::MANAGER)
+            ->putJson("/api/manager/orders/{$order->id}/confirm")
+            ->assertOk();
+
+        $this->product->update(['stock' => 1]);
+        $this->putJson("/api/manager/orders/{$order->id}/ready")
+            ->assertUnprocessable();
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'confirmed']);
+        $this->assertSame(1, $this->product->fresh()->stock);
+    }
+
+    public function test_manager_cannot_edit_confirmed_or_online_pending_order(): void
+    {
+        $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload())->assertCreated();
+        $online = OrderModel::firstOrFail();
+        $items = [['product_id' => $this->product->id, 'quantity' => 3]];
+
+        $this->asStaff(StaffRole::MANAGER)
+            ->putJson("/api/manager/orders/{$online->id}/items", ['items' => $items])
+            ->assertUnprocessable();
+
+        $online->latestPayment()->update(['provider' => 'cash']);
+        $online->update(['status' => 'confirmed']);
+        $this->putJson("/api/manager/orders/{$online->id}/items", ['items' => $items])
+            ->assertUnprocessable();
     }
 
     public function test_manager_cannot_confirm_pending_order(): void

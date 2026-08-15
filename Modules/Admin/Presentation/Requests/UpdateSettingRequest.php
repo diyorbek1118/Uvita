@@ -14,7 +14,7 @@ class UpdateSettingRequest extends FormRequest
         $keys = array_column(SettingKey::cases(), 'value');
 
         return [
-            'key'   => ['required', 'string', 'in:' . implode(',', $keys)],
+            'key' => ['required', 'string', 'in:'.implode(',', $keys)],
             'value' => ['required', 'string'],
         ];
     }

@@ -14,10 +14,10 @@ class AdminCourierResource extends JsonResource
         $profile = $this->relationLoaded('courierProfile') ? $this->courierProfile : null;
 
         return [
-            'id'        => $this->id,
-            'name'      => $this->name,
-            'email'     => $this->email,
-            'role'      => $this->role->value,
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'role' => $this->role->value,
             'is_active' => $this->is_active,
             'is_online' => (bool) ($profile?->is_online ?? false),
             'phone' => $profile?->phone,
@@ -33,17 +33,17 @@ class AdminCourierResource extends JsonResource
                 fn () => [
                     'total_delivered' => $this->getAttribute('total_delivered'),
                     'total_not_found' => $this->getAttribute('total_not_found'),
-                    'total_active'    => $this->getAttribute('total_active'),
-                    'success_rate'    => $this->getAttribute('success_rate'),
+                    'total_active' => $this->getAttribute('total_active'),
+                    'success_rate' => $this->getAttribute('success_rate'),
                 ]
             ),
             'recent_deliveries' => $this->when(
                 $this->getAttribute('recent_deliveries') !== null,
                 fn () => collect($this->getAttribute('recent_deliveries'))->map(fn ($o) => [
-                    'id'          => $o->id,
-                    'address'     => $o->address,
+                    'id' => $o->id,
+                    'address' => $o->address,
                     'grand_total' => $o->grand_total,
-                    'created_at'  => $o->created_at?->toISOString(),
+                    'created_at' => $o->created_at?->toISOString(),
                 ])->values()
             ),
             'created_at' => $this->created_at?->toISOString(),

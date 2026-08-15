@@ -6,6 +6,7 @@ namespace Modules\Courier\Presentation\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Modules\Courier\Domain\Enums\DeliveryAssignmentStatus;
 use Modules\Order\Domain\Enums\OrderStatus;
 
 final class CourierOrderResource extends JsonResource
@@ -33,6 +34,23 @@ final class CourierOrderResource extends JsonResource
             'grand_total' => $this->grand_total,
             'courier_fee' => $this->courier_fee,
             'not_found_count' => $this->not_found_count,
+            'pickup_points' => $this->whenLoaded('items', function () {
+                return $this->items
+                    ->map(function ($item): array {
+                        $profile = $item->product?->sellerProfile;
+
+                        return [
+                            'key' => $profile?->id !== null ? 'seller-'.$profile->id : 'product-'.$item->product_id,
+                            'business_name' => $profile?->business_name,
+                            'phone' => $profile?->phone,
+                            'region' => $profile?->region ?: $item->product?->origin_region,
+                            'district' => $profile?->district,
+                            'address' => $profile?->address,
+                        ];
+                    })
+                    ->unique('key')
+                    ->values();
+            }),
             'assignment' => $this->whenLoaded('deliveryAssignments', function (): ?array {
                 $assignment = $this->deliveryAssignments->sortByDesc('id')->first();
 
@@ -42,6 +60,12 @@ final class CourierOrderResource extends JsonResource
                     'rejection_reason' => $assignment->rejection_reason,
                     'assigned_at' => $assignment->assigned_at?->toISOString(),
                     'responded_at' => $assignment->responded_at?->toISOString(),
+                    'cancel_until' => $assignment->status === DeliveryAssignmentStatus::ACCEPTED
+                        ? $assignment->assigned_at?->copy()->addHours(5)->toISOString()
+                        : null,
+                    'can_cancel' => $this->status === OrderStatus::READY_TO_DELIVER
+                        && $assignment->status === DeliveryAssignmentStatus::ACCEPTED
+                        && $assignment->assigned_at?->gte(now()->subHours(5)),
                 ] : null;
             }),
             'attempts' => $this->whenLoaded('deliveryAttempts', fn () => $this->deliveryAttempts->map(fn ($attempt): array => [
@@ -54,6 +78,7 @@ final class CourierOrderResource extends JsonResource
                 'product_id' => $item->product_id,
                 'product_name' => $item->product?->name,
                 'quantity' => $item->quantity,
+                'unit' => $item->product?->unit ?: 'dona',
                 'price' => $item->price,
                 'subtotal' => $item->price * $item->quantity,
             ])->values()),

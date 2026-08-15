@@ -19,9 +19,9 @@ use Modules\Deal\Application\Handlers\GetIncomingDealsHandler;
 use Modules\Deal\Application\Handlers\GetOutgoingDealsHandler;
 use Modules\Deal\Application\Queries\GetIncomingDealsQuery;
 use Modules\Deal\Application\Queries\GetOutgoingDealsQuery;
-use Modules\Listing\Infrastructure\Persistence\Models\ListingModel;
 use Modules\Deal\Presentation\Requests\CreateDealRequest;
 use Modules\Deal\Presentation\Resources\DealResource;
+use Modules\Listing\Infrastructure\Persistence\Models\ListingModel;
 
 final class DealController extends Controller
 {
@@ -37,7 +37,7 @@ final class DealController extends Controller
     public function store(CreateDealRequest $request): JsonResponse
     {
         $listing = ListingModel::findOrFail((int) $request->input('listing_id'));
-        $total   = (int) round($listing->price * (float) $request->input('quantity'));
+        $total = (int) round($listing->price * (float) $request->input('quantity'));
 
         $deal = $this->createHandler->handle(
             CreateDealCommand::fromRequest($request, auth()->id(), $total)

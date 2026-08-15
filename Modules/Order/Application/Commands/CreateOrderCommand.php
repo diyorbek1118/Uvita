@@ -13,6 +13,6 @@ final readonly class CreateOrderCommand
 
     public static function fromRequest(CreateOrderRequest $request, int $userId): static
     {
-        return new static(dto: CreateOrderDTO::fromRequest($request, $userId));
+        return new self(dto: CreateOrderDTO::fromRequest($request, $userId));
     }
 }

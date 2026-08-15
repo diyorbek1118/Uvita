@@ -50,6 +50,7 @@ final class ProductRevisionModerationController extends Controller
     {
         /** @var Staff $reviewer */
         $reviewer = auth('sanctum')->user();
+
         return $reviewer;
     }
 }

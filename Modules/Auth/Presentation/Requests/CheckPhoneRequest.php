@@ -17,15 +17,15 @@ final class CheckPhoneRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'regex:' . PhoneNumber::PATTERN],
+            'phone' => ['required', 'string', 'regex:'.PhoneNumber::PATTERN],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'phone.required' => "Telefon raqam kiritilishi shart.",
-            'phone.regex'    => "Telefon raqam +998 va to'g'ri mobil operator kodi bilan bo'lishi kerak (masalan +998901234567).",
+            'phone.required' => 'Telefon raqam kiritilishi shart.',
+            'phone.regex' => "Telefon raqam +998 va to'g'ri mobil operator kodi bilan bo'lishi kerak (masalan +998901234567).",
         ];
     }
 }

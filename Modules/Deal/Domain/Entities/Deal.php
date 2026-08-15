@@ -9,24 +9,27 @@ use Modules\Deal\Domain\Enums\DealStatus;
 final class Deal
 {
     public private(set) float $quantity;
+
     public private(set) string $unit;
+
     public private(set) int $totalPrice;
+
     public private(set) DealStatus $status;
 
     public function __construct(
         public readonly ?int $id,
-        public readonly int  $listingId,
-        public readonly int  $sellerId,
-        public readonly int  $buyerId,
-        float                $quantity,
-        string               $unit,
-        int                  $totalPrice,
-        DealStatus           $status = DealStatus::PENDING,
+        public readonly int $listingId,
+        public readonly int $sellerId,
+        public readonly int $buyerId,
+        float $quantity,
+        string $unit,
+        int $totalPrice,
+        DealStatus $status = DealStatus::PENDING,
     ) {
-        $this->quantity   = $quantity;
-        $this->unit       = $unit;
+        $this->quantity = $quantity;
+        $this->unit = $unit;
         $this->totalPrice = $totalPrice;
-        $this->status     = $status;
+        $this->status = $status;
     }
 
     public function confirm(): void

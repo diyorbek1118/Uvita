@@ -17,14 +17,14 @@ final class StaffDeviceTokenController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'token'    => ['required', 'string', 'max:512'],
+            'token' => ['required', 'string', 'max:512'],
             'platform' => ['nullable', 'string', 'max:20'],
         ]);
 
         StaffDeviceToken::updateOrCreate(
             [
                 'staff_id' => auth('sanctum')->id(),
-                'token'    => $validated['token'],
+                'token' => $validated['token'],
             ],
             [
                 'platform' => $validated['platform'] ?? 'android',
@@ -42,6 +42,6 @@ final class StaffDeviceTokenController extends Controller
             ->where('token', $request->input('token'))
             ->delete();
 
-        return response()->json(['message' => "Qurilma olib tashlandi"]);
+        return response()->json(['message' => 'Qurilma olib tashlandi']);
     }
 }

@@ -22,27 +22,27 @@ final class EloquentProductRepository implements ProductRepositoryInterface
         if ($product->id !== null) {
             $model = ProductModel::findOrFail($product->id);
             $model->update([
-                'name'             => $product->name,
-                'slug'             => $product->slug,
-                'description'      => $product->description,
-                'price'            => $product->price,
-                'stock'            => $product->stock,
-                'status'           => $product->status->value,
-                'images'           => $product->images,
-                'category_id'      => $product->categoryId,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'description' => $product->description,
+                'price' => $product->price,
+                'stock' => $product->stock,
+                'status' => $product->status->value,
+                'images' => $product->images,
+                'category_id' => $product->categoryId,
                 'rejection_reason' => $product->rejectionReason,
             ]);
         } else {
             $model = ProductModel::create([
-                'name'        => $product->name,
-                'slug'        => $product->slug,
+                'name' => $product->name,
+                'slug' => $product->slug,
                 'description' => $product->description,
-                'price'       => $product->price,
-                'stock'       => $product->stock,
-                'status'      => $product->status->value,
-                'images'      => $product->images,
+                'price' => $product->price,
+                'stock' => $product->stock,
+                'status' => $product->status->value,
+                'images' => $product->images,
                 'category_id' => $product->categoryId,
-                'manager_id'  => $product->managerId,
+                'manager_id' => $product->managerId,
             ]);
         }
 
@@ -64,19 +64,19 @@ final class EloquentProductRepository implements ProductRepositoryInterface
     private function toEntity(ProductModel $model): Product
     {
         return new Product(
-            id:              $model->id,
-            name:            $model->name,
-            slug:            $model->slug,
-            description:     $model->description,
-            price:           $model->price,
-            stock:           $model->stock,
-            status:          $model->status,
-            images:          $model->images ?? [],
-            categoryId:      $model->category_id,
-            managerId:       $model->manager_id,
+            id: $model->id,
+            name: $model->name,
+            slug: $model->slug,
+            description: $model->description,
+            price: $model->price,
+            stock: $model->stock,
+            status: $model->status,
+            images: $model->images ?? [],
+            categoryId: $model->category_id,
+            managerId: $model->manager_id,
             rejectionReason: $model->rejection_reason,
-            createdAt:       $model->created_at?->toDateTimeImmutable(),
-            updatedAt:       $model->updated_at?->toDateTimeImmutable(),
+            createdAt: $model->created_at?->toDateTimeImmutable(),
+            updatedAt: $model->updated_at?->toDateTimeImmutable(),
             minimumOrderQuantity: $model->minimum_order_quantity ?? 1,
         );
     }

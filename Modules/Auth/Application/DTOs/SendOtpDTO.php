@@ -9,14 +9,14 @@ use Illuminate\Foundation\Http\FormRequest;
 final readonly class SendOtpDTO
 {
     public function __construct(
-        public string  $phone,
+        public string $phone,
         public ?string $purpose,
     ) {}
 
     public static function fromRequest(FormRequest $request): self
     {
         return new self(
-            phone:   (string) $request->validated('phone'),
+            phone: (string) $request->validated('phone'),
             purpose: $request->validated('purpose'),
         );
     }

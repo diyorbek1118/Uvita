@@ -10,7 +10,7 @@ use Modules\Cart\Application\DTOs\RemoveItemDTO;
 final readonly class RemoveItemCommand
 {
     public function __construct(
-        public int           $userId,
+        public int $userId,
         public RemoveItemDTO $dto,
     ) {}
 
@@ -18,7 +18,7 @@ final readonly class RemoveItemCommand
     {
         return new self(
             userId: $userId,
-            dto:    RemoveItemDTO::fromRequest($request),
+            dto: RemoveItemDTO::fromRequest($request),
         );
     }
 }
