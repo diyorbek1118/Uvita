@@ -39,7 +39,7 @@ final class GetDashboardProductsHandler
             ->select('products.*')
             ->selectSub($soldSub, 'sold_count')
             ->selectSub($revenueSub, 'revenue')
-            ->with(['manager', 'category'])
+            ->with(['manager', 'category', 'latestPendingRevision'])
             ->latest();
 
         if ($query->managerId !== null) {

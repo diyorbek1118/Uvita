@@ -39,7 +39,16 @@ final class SellerProductLifecycleTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $productId, 'status' => 'inactive', 'seller_id' => $seller->id]);
 
         $this->app['auth']->forgetGuards();
-        $this->withToken($admin->createToken('admin')->plainTextToken)
+        $this->withToken($admin->createToken('admin')->plainTextToken);
+
+        $this->getJson('/api/dashboard/products')
+            ->assertOk()
+            ->assertJsonPath('data.0.pending_revision.id', $revisionId)
+            ->assertJsonPath('data.0.pending_revision.payload.unit', 'kg')
+            ->assertJsonPath('data.0.pending_revision.payload.minimum_order_quantity', 10)
+            ->assertJsonCount(4, 'data.0.pending_revision.payload.images');
+
+        $this
             ->putJson("/api/admin/product-revisions/{$revisionId}/approve")
             ->assertOk()
             ->assertJsonPath('data.status', 'approved');

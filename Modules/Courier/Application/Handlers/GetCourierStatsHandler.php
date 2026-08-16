@@ -18,6 +18,16 @@ final class GetCourierStatsHandler
             ->where('status', 'delivered')
             ->count();
 
+        $todayDelivered = OrderModel::where('courier_id', $id)
+            ->where('status', 'delivered')
+            ->where(function ($builder): void {
+                $builder->whereDate('delivered_at', today())
+                    ->orWhere(function ($legacy): void {
+                        $legacy->whereNull('delivered_at')->whereDate('updated_at', today());
+                    });
+            })
+            ->count();
+
         $totalNotFound = (int) OrderModel::where('courier_id', $id)
             ->sum('not_found_count');
 
@@ -27,6 +37,7 @@ final class GetCourierStatsHandler
 
         return new CourierStats(
             totalDelivered: $totalDelivered,
+            todayDelivered: $todayDelivered,
             totalNotFound: $totalNotFound,
             totalActive: $totalActive,
         );

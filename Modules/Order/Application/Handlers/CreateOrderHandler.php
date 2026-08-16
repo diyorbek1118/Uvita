@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Order\Application\Handlers;
 
-use App\Jobs\ClearCartJob;
 use App\Jobs\SendSmsJob;
 use App\Jobs\SendTelegramJob;
 use App\Shared\Exceptions\DomainException;
@@ -12,6 +11,7 @@ use App\Shared\Services\Fee\OrderFeeCalculator;
 use App\Shared\Services\Settings\SettingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Modules\Cart\Domain\Repositories\CartRepositoryInterface;
 use Modules\Order\Application\Commands\CreateOrderCommand;
 use Modules\Order\Application\DTOs\CreatedOrdersResult;
 use Modules\Order\Domain\Entities\Order;
@@ -37,6 +37,7 @@ final class CreateOrderHandler
         private readonly CreatePaymentHandler $createPaymentHandler,
         private readonly SettingService $settingService,
         private readonly OrderFeeCalculator $feeCalculator,
+        private readonly CartRepositoryInterface $carts,
     ) {}
 
     public function handle(CreateOrderCommand $command): CreatedOrdersResult
@@ -106,7 +107,7 @@ final class CreateOrderHandler
                 }
             }
 
-            return $groups->map(function ($entries) use ($dto, $isCash, $checkoutGroupId): OrderModel {
+            $orders = $groups->map(function ($entries) use ($dto, $isCash, $checkoutGroupId): OrderModel {
                 $groupTotal = (int) $entries->sum('subtotal');
                 $financials = $this->feeCalculator->calculate($groupTotal);
                 $orderItems = $entries->map(fn (array $entry): OrderItem => new OrderItem(
@@ -160,9 +161,15 @@ final class CreateOrderHandler
 
                 return $model;
             })->values();
+
+            $cart = $this->carts->findByUserId($dto->userId);
+            if ($cart !== null && $cart->id !== null) {
+                $this->carts->clear($cart->id);
+            }
+
+            return $orders;
         });
 
-        dispatch(new ClearCartJob($dto->userId));
         $ids = $createdOrders->pluck('id')->implode(', #');
         dispatch(new SendSmsJob($dto->phone, "Buyurtmalar #{$ids} yaratildi."));
         foreach ($createdOrders as $order) {

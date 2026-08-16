@@ -1,10 +1,12 @@
-# Uvita — B2B va B2B2C Farm Marketplace
+# Uvita — B2B va B2B2C Marketplace
 
-Fermer/dehqon mahsulotlarini sellerlar orqali biznes xaridorlar va customerlarga
-yetkazish uchun Laravel 12 asosida qurilgan modular monolith REST API.
+Seller mahsulotlarini biznes xaridorlar va customerlarga sotish hamda yetkazish
+uchun Laravel 12 asosida qurilgan modular monolith REST API. Platforma qishloq
+xo‘jaligi bilan cheklanmaydi va boshqa ishlab chiqarish kategoriyalariga kengaya oladi.
 
 ## Dokumentatsiya
 
+- [Loyihaning barcha qismlari bo‘yicha to‘liq, oddiy tildagi hujjat](docs/UVITA_FULL_DOCUMENTATION.md)
 - [Buyurtma va yetkazish jarayoni](docs/ORDER_LIFECYCLE.md)
 
 ## Texnologiyalar

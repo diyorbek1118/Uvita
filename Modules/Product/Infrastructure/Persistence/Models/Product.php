@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category as CategoryModel;
@@ -96,5 +97,12 @@ final class Product extends Model
     public function revisions(): HasMany
     {
         return $this->hasMany(ProductRevision::class);
+    }
+
+    public function latestPendingRevision(): HasOne
+    {
+        return $this->hasOne(ProductRevision::class)
+            ->where('status', 'pending')
+            ->latestOfMany('version');
     }
 }

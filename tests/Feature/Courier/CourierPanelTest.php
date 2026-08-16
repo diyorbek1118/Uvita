@@ -433,6 +433,7 @@ final class CourierPanelTest extends TestCase
             ->getJson('/api/courier/stats')
             ->assertOk()
             ->assertJsonPath('data.total_delivered', 2)
+            ->assertJsonPath('data.today_delivered', 2)
             ->assertJsonPath('data.total_not_found', 3)
             ->assertJsonPath('data.total_active', 2)
             ->assertJsonPath('data.success_rate', 40);

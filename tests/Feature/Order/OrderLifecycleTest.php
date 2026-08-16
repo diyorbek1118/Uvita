@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Order;
 
-use App\Jobs\ClearCartJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -109,9 +108,16 @@ class OrderLifecycleTest extends TestCase
 
     public function test_create_order_clears_cart(): void
     {
+        $this->asCustomer()->postJson('/api/cart/items', [
+            'product_id' => $this->product->id,
+            'quantity' => 2,
+        ])->assertOk();
+
         $this->asCustomer()->postJson('/api/orders', $this->validOrderPayload());
 
-        Queue::assertPushed(ClearCartJob::class);
+        $this->asCustomer()->getJson('/api/cart')
+            ->assertOk()
+            ->assertJsonCount(0, 'data.items');
     }
 
     public function test_cash_order_reserves_stock_without_decreasing_physical_stock(): void

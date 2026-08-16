@@ -28,6 +28,23 @@ class DashboardProductResource extends JsonResource
             'rating' => $this->rating,
             'reviews_count' => $this->reviews_count,
             'rejection_reason' => $this->rejection_reason,
+            'pending_revision' => $this->whenLoaded('latestPendingRevision', function (): ?array {
+                if ($this->latestPendingRevision === null) {
+                    return null;
+                }
+
+                $payload = $this->latestPendingRevision->payload;
+                $payload['images'] = ImageUrlNormalizer::normalizeArray($payload['images'] ?? []);
+
+                return [
+                    'id' => $this->latestPendingRevision->id,
+                    'version' => $this->latestPendingRevision->version,
+                    'status' => $this->latestPendingRevision->status->value,
+                    'payload' => $payload,
+                    'pricing' => $this->latestPendingRevision->fee_snapshot,
+                    'submitted_at' => $this->latestPendingRevision->created_at?->toISOString(),
+                ];
+            }),
             'category' => $this->whenLoaded('category', fn () => $this->category ? [
                 'id' => $this->category->id,
                 'name' => $this->category->name,

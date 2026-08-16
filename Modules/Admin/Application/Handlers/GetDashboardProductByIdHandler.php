@@ -28,7 +28,7 @@ final class GetDashboardProductByIdHandler
             ->select('products.*')
             ->selectSub($soldSub, 'sold_count')
             ->selectSub($revenueSub, 'revenue')
-            ->with(['manager', 'category'])
+            ->with(['manager', 'category', 'latestPendingRevision'])
             ->where('products.id', $query->id);
 
         if ($query->managerId !== null) {

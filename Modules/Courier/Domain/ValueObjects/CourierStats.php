@@ -12,6 +12,7 @@ final readonly class CourierStats
         public int $totalDelivered,
         public int $totalNotFound,
         public int $totalActive,
+        public int $todayDelivered = 0,
     ) {
         $total = $this->totalDelivered + $this->totalNotFound;
         $this->successRate = $total > 0
