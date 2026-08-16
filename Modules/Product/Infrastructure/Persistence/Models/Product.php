@@ -42,6 +42,7 @@ final class Product extends Model
         'origin_region',
         'farmer_name',
         'unit',
+        'unit_weight_kg',
         'minimum_order_quantity',
         'rejection_reason',
     ];
@@ -63,6 +64,7 @@ final class Product extends Model
             'fee_snapshot' => 'array',
             'primary_image_index' => 'integer',
             'minimum_order_quantity' => 'integer',
+            'unit_weight_kg' => 'decimal:3',
         ];
     }
 

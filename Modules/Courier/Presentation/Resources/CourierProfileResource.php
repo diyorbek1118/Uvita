@@ -22,6 +22,8 @@ class CourierProfileResource extends JsonResource
             'phone' => $profile?->phone,
             'vehicle_type' => $profile?->vehicle_type,
             'vehicle_number' => $profile?->vehicle_number,
+            'vehicle_capacity_kg' => (float) ($profile?->vehicle_capacity_kg ?? config('courier.trip.default_capacity_kg', 1000)),
+            'max_orders_per_trip' => (int) ($profile?->max_orders_per_trip ?? config('courier.trip.default_max_orders', 10)),
             'photo' => $profile?->photo,
             'is_online' => (bool) ($profile?->is_online ?? false),
             'shift_started_at' => $profile?->shift_started_at?->toISOString(),

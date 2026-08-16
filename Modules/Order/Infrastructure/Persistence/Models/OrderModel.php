@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierTripOrder;
 use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
 use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAttempt;
 use Modules\Courier\Infrastructure\Persistence\Models\DeliveryProof;
@@ -37,6 +38,7 @@ class OrderModel extends Model
         'lat',
         'lng',
         'geo_level',
+        'delivery_scope',
         'phone',
         'phone_secondary',
         'delivery_time',
@@ -120,5 +122,10 @@ class OrderModel extends Model
     public function deliveryProof(): HasOne
     {
         return $this->hasOne(DeliveryProof::class, 'order_id');
+    }
+
+    public function tripOrder(): HasOne
+    {
+        return $this->hasOne(CourierTripOrder::class, 'order_id');
     }
 }

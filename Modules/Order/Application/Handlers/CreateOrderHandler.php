@@ -146,6 +146,7 @@ final class CreateOrderHandler
                     'seller_profile_id' => $sellerProfileId,
                     'checkout_group_id' => $checkoutGroupId,
                     'stock_reserved_at' => $isCash ? now() : null,
+                    'delivery_scope' => $dto->deliveryScope,
                 ]);
 
                 $paymentResult = $this->createPaymentHandler->handle(new CreatePaymentCommand(

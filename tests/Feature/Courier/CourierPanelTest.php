@@ -11,6 +11,8 @@ use Modules\Admin\Domain\Enums\StaffRole;
 use Modules\Admin\Infrastructure\Persistence\Models\Staff;
 use Modules\Category\Infrastructure\Persistence\Models\Category;
 use Modules\Courier\Application\Services\DeliveryConfirmationService;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierProfile;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierTrip;
 use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
 use Modules\Order\Infrastructure\Persistence\Models\OrderItemModel;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
@@ -182,18 +184,24 @@ final class CourierPanelTest extends TestCase
             ->assertJsonMissing(['id' => $assigned->id]);
     }
 
-    public function test_courier_selects_how_many_same_route_orders_to_accept(): void
+    public function test_courier_cannot_cherry_pick_and_profile_limit_controls_trip_size(): void
     {
         $courier = $this->staff(StaffRole::COURIER, 'batch-accept');
         $first = $this->routeOrder('Jizzax', 'Toshkent', 20);
         $second = $this->routeOrder('Jizzax', 'Toshkent', 30);
         $leftForAnotherCourier = $this->routeOrder('Jizzax', 'Toshkent', 40);
 
+        CourierProfile::create([
+            'courier_id' => $courier->id,
+            'vehicle_capacity_kg' => 100,
+            'max_orders_per_trip' => 2,
+        ]);
         $this->as($courier)
-            ->putJson('/api/courier/routes/accept', ['order_ids' => [$first->id, $second->id]])
-            ->assertOk()
-            ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.status', 'ready_to_deliver');
+            ->putJson('/api/courier/routes/accept', ['order_ids' => [$second->id]])
+            ->assertNotFound();
+        $this->postJson('/api/courier/trips', ['route_key' => 'jizzax|toshkent'])
+            ->assertCreated()
+            ->assertJsonPath('data.orders_count', 2);
 
         foreach ([$first, $second] as $accepted) {
             $this->assertDatabaseHas('orders', [
@@ -213,19 +221,20 @@ final class CourierPanelTest extends TestCase
         $this->getJson('/api/courier/routes')->assertJsonPath('data.0.orders_count', 1);
     }
 
-    public function test_batch_accept_rejects_mixed_routes_without_partial_assignment(): void
+    public function test_automatic_trip_never_mixes_routes(): void
     {
         $courier = $this->staff(StaffRole::COURIER, 'mixed-routes');
         $jizzax = $this->routeOrder('Jizzax', 'Toshkent');
         $sirdaryo = $this->routeOrder('Sirdaryo', 'Toshkent');
 
         $this->as($courier)
-            ->putJson('/api/courier/routes/accept', ['order_ids' => [$jizzax->id, $sirdaryo->id]])
-            ->assertUnprocessable();
+            ->postJson('/api/courier/trips', ['route_key' => 'jizzax|toshkent'])
+            ->assertCreated()
+            ->assertJsonPath('data.orders_count', 1);
 
-        $this->assertNull($jizzax->fresh()->courier_id);
+        $this->assertSame($courier->id, $jizzax->fresh()->courier_id);
         $this->assertNull($sirdaryo->fresh()->courier_id);
-        $this->assertSame(0, DeliveryAssignment::count());
+        $this->assertSame(1, DeliveryAssignment::count());
     }
 
     public function test_self_selected_order_starts_delivery_only_after_courier_confirms_pickup(): void
@@ -233,12 +242,12 @@ final class CourierPanelTest extends TestCase
         $courier = $this->staff(StaffRole::COURIER, 'pickup-start');
         $order = $this->routeOrder('Jizzax', 'Toshkent');
 
-        $this->as($courier)
-            ->putJson('/api/courier/routes/accept', ['order_ids' => [$order->id]])
-            ->assertOk();
+        $created = $this->as($courier)
+            ->postJson('/api/courier/trips', ['route_key' => 'jizzax|toshkent'])
+            ->assertCreated();
         $this->assertSame('ready_to_deliver', $order->fresh()->status->value);
 
-        $this->putJson("/api/courier/orders/{$order->id}/accept")
+        $this->putJson("/api/courier/trips/{$created->json('data.id')}/pickups/{$created->json('data.pickup_points.0.key')}")
             ->assertOk()
             ->assertJsonPath('data.status', 'delivering');
 
@@ -253,17 +262,17 @@ final class CourierPanelTest extends TestCase
     {
         $courier = $this->staff(StaffRole::COURIER, 'cancel-accepted');
         $order = $this->routeOrder('Jizzax', 'Toshkent');
-        $this->as($courier)
-            ->putJson('/api/courier/routes/accept', ['order_ids' => [$order->id]])
-            ->assertOk();
+        $created = $this->as($courier)
+            ->postJson('/api/courier/trips', ['route_key' => 'jizzax|toshkent'])
+            ->assertCreated();
 
-        $this->putJson("/api/courier/orders/{$order->id}/reject", ['reason' => 'Yuk mashinaga sig‘madi'])
+        $this->putJson("/api/courier/trips/{$created->json('data.id')}/cancel", ['reason' => 'Yuk mashinaga sig‘madi'])
             ->assertOk();
 
         $this->assertNull($order->fresh()->courier_id);
         $this->assertDatabaseHas('delivery_assignments', [
             'order_id' => $order->id,
-            'status' => 'rejected',
+            'status' => 'cancelled',
         ]);
         $this->getJson('/api/courier/routes')->assertJsonPath('data.0.orders.0.id', $order->id);
     }
@@ -272,12 +281,12 @@ final class CourierPanelTest extends TestCase
     {
         $courier = $this->staff(StaffRole::COURIER, 'cancel-expired');
         $order = $this->routeOrder('Jizzax', 'Toshkent');
-        $this->as($courier)
-            ->putJson('/api/courier/routes/accept', ['order_ids' => [$order->id]])
-            ->assertOk();
-        DeliveryAssignment::where('order_id', $order->id)->update(['assigned_at' => now()->subHours(6)]);
+        $created = $this->as($courier)
+            ->postJson('/api/courier/trips', ['route_key' => 'jizzax|toshkent'])
+            ->assertCreated();
+        CourierTrip::whereKey($created->json('data.id'))->update(['accepted_at' => now()->subHours(6)]);
 
-        $this->putJson("/api/courier/orders/{$order->id}/reject", ['reason' => 'Kech bekor qilish'])
+        $this->putJson("/api/courier/trips/{$created->json('data.id')}/cancel", ['reason' => 'Kech bekor qilish'])
             ->assertUnprocessable();
 
         $this->assertSame($courier->id, $order->fresh()->courier_id);
@@ -427,5 +436,86 @@ final class CourierPanelTest extends TestCase
             ->assertJsonPath('data.total_not_found', 3)
             ->assertJsonPath('data.total_active', 2)
             ->assertJsonPath('data.success_rate', 40);
+    }
+
+    public function test_trip_is_selected_automatically_and_addresses_are_hidden_until_all_pickups(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'trip-auto');
+        CourierProfile::create([
+            'courier_id' => $courier->id,
+            'vehicle_capacity_kg' => 25,
+            'max_orders_per_trip' => 2,
+        ]);
+        $oldest = $this->routeOrder('Jizzax', 'Toshkent', 10);
+        $second = $this->routeOrder('Jizzax', 'Toshkent', 10);
+        $left = $this->routeOrder('Jizzax', 'Toshkent', 10);
+        $oldest->forceFill(['created_at' => now()->subHours(3)])->saveQuietly();
+
+        $response = $this->as($courier)
+            ->postJson('/api/courier/trips', [
+                'route_key' => 'jizzax|toshkent',
+                'capacity_kg' => 25,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'picking_up')
+            ->assertJsonPath('data.orders_count', 2)
+            ->assertJsonPath('data.customer_addresses_revealed', false)
+            ->assertJsonMissingPath('data.deliveries.0.address');
+
+        $tripId = $response->json('data.id');
+        $this->assertNotNull($oldest->fresh()->courier_id);
+        $this->assertNotNull($second->fresh()->courier_id);
+        $this->assertNull($left->fresh()->courier_id);
+
+        $pickups = $response->json('data.pickup_points');
+        $this->putJson("/api/courier/trips/{$tripId}/pickups/{$pickups[0]['key']}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'picking_up')
+            ->assertJsonPath('data.customer_addresses_revealed', false);
+        $this->putJson("/api/courier/trips/{$tripId}/pickups/{$pickups[1]['key']}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'delivering')
+            ->assertJsonPath('data.customer_addresses_revealed', true)
+            ->assertJsonPath('data.deliveries.0.address.region', 'Toshkent');
+    }
+
+    public function test_trip_cash_delivery_finishes_with_platform_handover_summary(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'trip-cash');
+        $order = $this->routeOrder('Jizzax', 'Toshkent', 10);
+        $created = $this->as($courier)->postJson('/api/courier/trips', [
+            'route_key' => 'jizzax|toshkent',
+        ])->assertCreated();
+        $tripId = $created->json('data.id');
+        $pickupKey = $created->json('data.pickup_points.0.key');
+        $this->putJson("/api/courier/trips/{$tripId}/pickups/{$pickupKey}")->assertOk();
+
+        $this->putJson("/api/courier/trips/{$tripId}/orders/{$order->id}/delivered", [
+            'pin' => $this->deliveryPin($order),
+            'cash_received' => 1,
+        ])->assertUnprocessable();
+
+        $this->putJson("/api/courier/trips/{$tripId}/orders/{$order->id}/delivered", [
+            'pin' => $this->deliveryPin($order),
+            'cash_received' => $order->grand_total,
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'completed')
+            ->assertJsonPath('data.cash_collected', $order->grand_total)
+            ->assertJsonPath('data.platform_cash_due', $order->grand_total - $order->courier_fee);
+    }
+
+    public function test_trip_never_exceeds_fifty_million_cargo_value(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'trip-limit');
+        $first = $this->routeOrder('Jizzax', 'Toshkent', 10);
+        $second = $this->routeOrder('Jizzax', 'Toshkent', 10);
+        $first->update(['grand_total' => 30000000]);
+        $second->update(['grand_total' => 30000000]);
+
+        $this->as($courier)->postJson('/api/courier/trips', [
+            'route_key' => 'jizzax|toshkent',
+        ])->assertCreated()
+            ->assertJsonPath('data.orders_count', 1)
+            ->assertJsonPath('data.cargo_value', 30000000);
     }
 }

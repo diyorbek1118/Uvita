@@ -6,6 +6,7 @@ namespace Modules\Courier\Presentation\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Modules\Courier\Domain\Enums\CourierTripStatus;
 use Modules\Courier\Domain\Enums\DeliveryAssignmentStatus;
 use Modules\Order\Domain\Enums\OrderStatus;
 
@@ -15,17 +16,24 @@ final class CourierOrderResource extends JsonResource
     {
         $completed = $this->status === OrderStatus::DELIVERED;
         $address = $this->address ?? [];
+        $tripPickingUp = $this->relationLoaded('tripOrder')
+            && $this->tripOrder?->relationLoaded('trip')
+            && $this->tripOrder?->trip?->status === CourierTripStatus::PICKING_UP;
 
         return [
             'id' => $this->id,
             'status' => $this->status->value,
-            'phone' => $completed ? $this->maskPhone((string) $this->phone) : $this->phone,
-            'phone_secondary' => $completed ? null : $this->phone_secondary,
-            'address' => $completed ? [
+            'phone' => $tripPickingUp ? null : ($completed ? $this->maskPhone((string) $this->phone) : $this->phone),
+            'phone_secondary' => $completed || $tripPickingUp ? null : $this->phone_secondary,
+            'address' => $tripPickingUp ? null : ($completed ? [
                 'region' => $address['region'] ?? null,
                 'district' => $address['district'] ?? null,
-            ] : $address,
-            'delivery_location' => ! $completed && $this->delivery_latitude !== null ? [
+            ] : $address),
+            'destination_area' => $tripPickingUp ? [
+                'region' => $address['region'] ?? null,
+                'district' => $address['district'] ?? null,
+            ] : null,
+            'delivery_location' => ! $completed && ! $tripPickingUp && $this->delivery_latitude !== null ? [
                 'latitude' => (float) $this->delivery_latitude,
                 'longitude' => (float) $this->delivery_longitude,
             ] : null,

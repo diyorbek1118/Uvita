@@ -21,15 +21,20 @@ final class UpdateCourierProfileHandler
                 ->findOrFail($command->courierId);
             $courier->update(['name' => $command->name]);
 
-            CourierProfile::updateOrCreate(
-                ['courier_id' => $courier->id],
-                [
-                    'phone' => $command->phone,
-                    'vehicle_type' => $command->vehicleType,
-                    'vehicle_number' => $command->vehicleNumber,
-                    'photo' => $command->photo,
-                ]
-            );
+            $profile = CourierProfile::firstOrNew(['courier_id' => $courier->id]);
+            $profile->fill([
+                'phone' => $command->phone,
+                'vehicle_type' => $command->vehicleType,
+                'vehicle_number' => $command->vehicleNumber,
+                'photo' => $command->photo,
+            ]);
+            if ($command->vehicleCapacityKg !== null) {
+                $profile->vehicle_capacity_kg = $command->vehicleCapacityKg;
+            }
+            if ($command->maxOrdersPerTrip !== null) {
+                $profile->max_orders_per_trip = $command->maxOrdersPerTrip;
+            }
+            $profile->save();
 
             return $courier->fresh()->load('courierProfile');
         });

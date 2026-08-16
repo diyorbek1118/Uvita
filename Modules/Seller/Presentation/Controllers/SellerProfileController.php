@@ -44,6 +44,8 @@ final class SellerProfileController extends Controller
             bankAccount: $request->validated('bank_account'),
             bankMfo: $request->validated('bank_mfo'),
             termsAccepted: true,
+            pickupLatitude: $request->filled('pickup_latitude') ? $request->float('pickup_latitude') : null,
+            pickupLongitude: $request->filled('pickup_longitude') ? $request->float('pickup_longitude') : null,
         ), $shop->id);
 
         return SellerProfileResource::make($profile)

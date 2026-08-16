@@ -356,6 +356,7 @@ final class OrderController extends Controller
             recipientName: $request->input('recipient_name'),
             latitude: $request->filled('latitude') ? $request->float('latitude') : null,
             longitude: $request->filled('longitude') ? $request->float('longitude') : null,
+            cashReceived: $request->filled('cash_received') ? $request->integer('cash_received') : null,
         ));
 
         return CourierOrderResource::make($order)

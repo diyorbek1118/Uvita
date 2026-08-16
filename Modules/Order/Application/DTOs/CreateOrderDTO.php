@@ -22,6 +22,7 @@ final readonly class CreateOrderDTO
         public ?float $lat = null,
         public ?float $lng = null,
         public ?string $geoLevel = null,
+        public string $deliveryScope = 'district_center',
     ) {}
 
     public static function fromRequest(CreateOrderRequest $request, int $userId): static
@@ -40,6 +41,10 @@ final readonly class CreateOrderDTO
             lat: is_numeric($request->input('lat')) ? (float) $request->input('lat') : null,
             lng: is_numeric($request->input('lng')) ? (float) $request->input('lng') : null,
             geoLevel: $request->input('geo_level') ?: null,
+            deliveryScope: $request->input('delivery_scope')
+                ?: (str_contains(mb_strtolower((string) $request->input('address.district')), 'shahr')
+                    ? 'city'
+                    : 'district_center'),
         );
     }
 }

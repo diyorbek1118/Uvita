@@ -16,7 +16,7 @@ final class SellerProfileModel extends Model
 
     protected $fillable = [
         'seller_id', 'business_name', 'legal_type', 'tin', 'phone', 'region', 'district',
-        'address', 'bank_account', 'bank_mfo', 'terms_accepted', 'is_active', 'is_verified', 'verified_at', 'verified_by_id',
+        'address', 'pickup_latitude', 'pickup_longitude', 'bank_account', 'bank_mfo', 'terms_accepted', 'is_active', 'is_verified', 'verified_at', 'verified_by_id',
     ];
 
     protected function casts(): array
@@ -26,6 +26,8 @@ final class SellerProfileModel extends Model
             'is_active' => 'boolean',
             'is_verified' => 'boolean',
             'verified_at' => 'datetime',
+            'pickup_latitude' => 'decimal:7',
+            'pickup_longitude' => 'decimal:7',
         ];
     }
 

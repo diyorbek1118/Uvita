@@ -13,5 +13,6 @@ final readonly class MarkDeliveredCommand
         public ?string $recipientName = null,
         public ?float $latitude = null,
         public ?float $longitude = null,
+        public ?int $cashReceived = null,
     ) {}
 }

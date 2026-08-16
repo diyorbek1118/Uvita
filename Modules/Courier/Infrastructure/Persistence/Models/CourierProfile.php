@@ -12,11 +12,14 @@ final class CourierProfile extends Model
 {
     protected $fillable = [
         'courier_id', 'phone', 'vehicle_type', 'vehicle_number', 'photo',
+        'vehicle_capacity_kg', 'max_orders_per_trip',
         'is_online', 'shift_started_at', 'shift_ended_at', 'last_seen_at',
     ];
 
     protected $casts = [
         'is_online' => 'boolean',
+        'vehicle_capacity_kg' => 'decimal:3',
+        'max_orders_per_trip' => 'integer',
         'shift_started_at' => 'datetime',
         'shift_ended_at' => 'datetime',
         'last_seen_at' => 'datetime',

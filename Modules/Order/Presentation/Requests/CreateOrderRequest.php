@@ -30,6 +30,7 @@ class CreateOrderRequest extends FormRequest
             'delivery_time' => ['required', 'string'],
             'courier_note' => ['nullable', 'string', 'max:500'],
             'payment_method' => ['required', 'string', 'in:cash,payme,click,uzum'],
+            'delivery_scope' => ['nullable', 'string', 'in:city,district_center'],
         ];
     }
 

@@ -17,5 +17,7 @@ final readonly class UpdateSellerProfileDTO
         public string $bankAccount,
         public string $bankMfo,
         public bool $termsAccepted,
+        public ?float $pickupLatitude = null,
+        public ?float $pickupLongitude = null,
     ) {}
 }

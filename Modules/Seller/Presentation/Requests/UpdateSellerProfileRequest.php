@@ -24,6 +24,8 @@ final class UpdateSellerProfileRequest extends FormRequest
             'bank_account' => ['required', 'digits_between:20,32'],
             'bank_mfo' => ['required', 'digits:5'],
             'terms_accepted' => ['accepted'],
+            'pickup_latitude' => ['nullable', 'required_with:pickup_longitude', 'numeric', 'between:-90,90'],
+            'pickup_longitude' => ['nullable', 'required_with:pickup_latitude', 'numeric', 'between:-180,180'],
         ];
     }
 }

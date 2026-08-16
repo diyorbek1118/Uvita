@@ -12,6 +12,8 @@ final readonly class UpdateCourierProfileCommand
         public ?string $phone,
         public ?string $vehicleType,
         public ?string $vehicleNumber,
+        public ?float $vehicleCapacityKg,
+        public ?int $maxOrdersPerTrip,
         public ?string $photo,
     ) {}
 }

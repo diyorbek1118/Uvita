@@ -10,7 +10,7 @@ final class GetCourierOrderByIdHandler
 {
     public function handle(int $orderId, int $courierId): OrderModel
     {
-        return OrderModel::with(['items.product.sellerProfile', 'deliveryAssignments', 'deliveryAttempts'])
+        return OrderModel::with(['items.product.sellerProfile', 'deliveryAssignments', 'deliveryAttempts', 'tripOrder.trip'])
             ->where('id', $orderId)
             ->where('courier_id', $courierId)
             ->firstOrFail();

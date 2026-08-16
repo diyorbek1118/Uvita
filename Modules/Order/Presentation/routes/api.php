@@ -36,7 +36,6 @@ Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(functi
 // ─── Courier ─────────────────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', 'role.courier', 'throttle:courier-actions'])->prefix('courier')->group(function (): void {
     Route::get('routes', [OrderController::class, 'courierRoutes']);
-    Route::put('routes/accept', [OrderController::class, 'acceptCourierBatch']);
     Route::get('orders', [OrderController::class, 'courierOrders']);
     Route::get('orders/{id}', [OrderController::class, 'courierShow']);
     Route::put('orders/{id}/accept', [OrderController::class, 'accept']);

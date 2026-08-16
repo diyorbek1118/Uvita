@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Modules\Order\Application\Handlers;
 
 use App\Jobs\SendSmsJob;
+use App\Shared\Exceptions\DomainException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Modules\Courier\Application\Services\DeliveryConfirmationService;
 use Modules\Courier\Domain\Enums\DeliveryAssignmentStatus;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierTripOrder;
 use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
 use Modules\Order\Application\Commands\MarkDeliveringCommand;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
@@ -30,6 +32,9 @@ final class MarkDeliveringHandler
 
             if ($order->courierId !== $command->courierId) {
                 throw new ModelNotFoundException('Buyurtma topilmadi.');
+            }
+            if (CourierTripOrder::query()->where('order_id', $command->orderId)->exists()) {
+                throw new DomainException('Reys buyurtmasini alohida boshlash mumkin emas. Yuk olish nuqtalarini ketma-ket tasdiqlang.');
             }
 
             $order->markDelivering();

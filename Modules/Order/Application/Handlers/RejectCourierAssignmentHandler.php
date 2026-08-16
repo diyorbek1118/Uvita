@@ -9,6 +9,7 @@ use App\Shared\Exceptions\DomainException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Modules\Courier\Domain\Enums\DeliveryAssignmentStatus;
+use Modules\Courier\Infrastructure\Persistence\Models\CourierTripOrder;
 use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
 use Modules\Order\Application\Commands\RejectCourierAssignmentCommand;
 use Modules\Order\Domain\Repositories\OrderRepositoryInterface;
@@ -24,6 +25,9 @@ final class RejectCourierAssignmentHandler
             OrderModel::query()->lockForUpdate()->findOrFail($command->orderId);
             $order = $this->orders->findById($command->orderId)
                 ?? throw new ModelNotFoundException('Buyurtma topilmadi.');
+            if (CourierTripOrder::query()->where('order_id', $command->orderId)->exists()) {
+                throw new DomainException('Reysdagi bitta zakazdan voz kechib bo‘lmaydi. Yuk olinmagan bo‘lsa reysni to‘liq bekor qiling.');
+            }
 
             $assignment = DeliveryAssignment::query()
                 ->where('order_id', $command->orderId)

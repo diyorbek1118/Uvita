@@ -21,6 +21,13 @@ Route::middleware(['auth:sanctum', 'role.courier', 'throttle:courier-actions'])-
         ->middleware('throttle:courier-location');
     Route::get('support', [CourierController::class, 'support']);
     Route::post('support', [CourierController::class, 'createSupport']);
+    Route::get('trip-routes', [CourierController::class, 'routes']);
+    Route::post('trips/preview', [CourierController::class, 'previewTrip']);
+    Route::post('trips', [CourierController::class, 'createTrip']);
+    Route::get('trips/active', [CourierController::class, 'activeTrip']);
+    Route::put('trips/{trip}/pickups/{pickupKey}', [CourierController::class, 'completePickup']);
+    Route::put('trips/{trip}/orders/{order}/delivered', [CourierController::class, 'completeTripDelivery']);
+    Route::put('trips/{trip}/cancel', [CourierController::class, 'cancelTrip']);
 });
 
 Route::middleware(['auth:sanctum', 'role.admin'])->prefix('admin')->group(function (): void {

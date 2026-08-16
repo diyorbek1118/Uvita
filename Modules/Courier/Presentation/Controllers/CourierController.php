@@ -28,7 +28,12 @@ use Modules\Courier\Application\Handlers\UpdateCourierProfileHandler;
 use Modules\Courier\Application\Queries\GetCourierHistoryQuery;
 use Modules\Courier\Application\Queries\GetCourierProfileQuery;
 use Modules\Courier\Application\Queries\GetCourierStatsQuery;
+use Modules\Courier\Application\Services\CourierTripManager;
+use Modules\Courier\Application\Services\TripBundlePlanner;
+use Modules\Courier\Presentation\Requests\CancelCourierTripRequest;
+use Modules\Courier\Presentation\Requests\CompleteTripDeliveryRequest;
 use Modules\Courier\Presentation\Requests\CreateSupportTicketRequest;
+use Modules\Courier\Presentation\Requests\PlanCourierTripRequest;
 use Modules\Courier\Presentation\Requests\RegisterCourierDeviceRequest;
 use Modules\Courier\Presentation\Requests\SaveCourierLocationRequest;
 use Modules\Courier\Presentation\Requests\SetCourierAvailabilityRequest;
@@ -39,6 +44,7 @@ use Modules\Courier\Presentation\Resources\CourierOrderResource;
 use Modules\Courier\Presentation\Resources\CourierProfileResource;
 use Modules\Courier\Presentation\Resources\CourierStatsResource;
 use Modules\Courier\Presentation\Resources\CourierSupportTicketResource;
+use Modules\Courier\Presentation\Resources\CourierTripResource;
 
 final class CourierController extends Controller
 {
@@ -56,6 +62,8 @@ final class CourierController extends Controller
         private readonly GetCourierEarningsHandler $earningsHandler,
         private readonly CreateCourierSupportTicketHandler $createSupportHandler,
         private readonly GetCourierSupportTicketsHandler $supportHandler,
+        private readonly TripBundlePlanner $tripPlanner,
+        private readonly CourierTripManager $tripManager,
     ) {}
 
     public function profile(): JsonResponse
@@ -93,6 +101,8 @@ final class CourierController extends Controller
             phone: $request->input('phone'),
             vehicleType: $request->input('vehicle_type'),
             vehicleNumber: $request->input('vehicle_number'),
+            vehicleCapacityKg: $request->filled('vehicle_capacity_kg') ? $request->float('vehicle_capacity_kg') : null,
+            maxOrdersPerTrip: $request->filled('max_orders_per_trip') ? $request->integer('max_orders_per_trip') : null,
             photo: $request->input('photo'),
         ));
 
@@ -186,5 +196,98 @@ final class CourierController extends Controller
         ));
 
         return CourierSupportTicketResource::make($ticket)->response()->setStatusCode(201);
+    }
+
+    public function routes(): JsonResponse
+    {
+        return response()->json(['data' => $this->tripPlanner->availableRoutes()]);
+    }
+
+    public function previewTrip(PlanCourierTripRequest $request): JsonResponse
+    {
+        $plan = $this->tripManager->preview(
+            auth('sanctum')->id(),
+            $request->string('route_key')->toString(),
+            $request->filled('capacity_kg') ? $request->float('capacity_kg') : null,
+        );
+
+        return response()->json(['data' => [
+            'route' => $plan['route'],
+            'capacity_kg' => $plan['capacity_kg'],
+            'max_orders' => $plan['max_orders'],
+            'orders_count' => $plan['orders']->count(),
+            'total_weight_kg' => $plan['total_weight_kg'],
+            'cargo_value' => $plan['cargo_value'],
+            'total_courier_fee' => $plan['total_courier_fee'],
+            'pickup_points_count' => count($plan['pickup_sequences']),
+            'customer_addresses_revealed' => false,
+        ]]);
+    }
+
+    public function createTrip(PlanCourierTripRequest $request): JsonResponse
+    {
+        $trip = $this->tripManager->create(
+            auth('sanctum')->id(),
+            $request->string('route_key')->toString(),
+            $request->filled('capacity_kg') ? $request->float('capacity_kg') : null,
+        );
+
+        return CourierTripResource::make($trip)
+            ->additional(['message' => 'Reys avtomatik shakllantirildi'])
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function activeTrip(): JsonResponse
+    {
+        $trip = $this->tripManager->active(auth('sanctum')->id());
+
+        return $trip === null
+            ? response()->json(['data' => null])
+            : CourierTripResource::make($trip)->response();
+    }
+
+    public function completePickup(int $trip, string $pickupKey): JsonResponse
+    {
+        $updated = $this->tripManager->completePickup($trip, $pickupKey, auth('sanctum')->id());
+
+        return CourierTripResource::make($updated)
+            ->additional(['message' => $updated->pickups_completed_at !== null
+                ? 'Barcha yuklar olindi'
+                : 'Yuk olindi'])
+            ->response();
+    }
+
+    public function completeTripDelivery(int $trip, int $order, CompleteTripDeliveryRequest $request): JsonResponse
+    {
+        $updated = $this->tripManager->completeDelivery(
+            $trip,
+            $order,
+            auth('sanctum')->id(),
+            $request->string('pin')->toString(),
+            $request->integer('cash_received'),
+            $request->input('recipient_name'),
+            $request->filled('latitude') ? $request->float('latitude') : null,
+            $request->filled('longitude') ? $request->float('longitude') : null,
+        );
+
+        return CourierTripResource::make($updated)
+            ->additional(['message' => $updated->completed_at !== null
+                ? 'Barcha buyurtmalar yetkazildi'
+                : 'Buyurtma yetkazildi'])
+            ->response();
+    }
+
+    public function cancelTrip(int $trip, CancelCourierTripRequest $request): JsonResponse
+    {
+        $cancelled = $this->tripManager->cancel(
+            $trip,
+            auth('sanctum')->id(),
+            $request->string('reason')->toString(),
+        );
+
+        return CourierTripResource::make($cancelled)
+            ->additional(['message' => 'Reys bekor qilindi, yuklar boshqa kuryerlarga qaytarildi'])
+            ->response();
     }
 }
