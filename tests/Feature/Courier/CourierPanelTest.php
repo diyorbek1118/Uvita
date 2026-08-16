@@ -476,7 +476,10 @@ final class CourierPanelTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'delivering')
             ->assertJsonPath('data.customer_addresses_revealed', true)
-            ->assertJsonPath('data.deliveries.0.address.region', 'Toshkent');
+            ->assertJsonPath('data.deliveries.0.address.region', 'Toshkent')
+            ->assertJsonPath('data.deliveries.0.address.delivery_point', 'Tuman markazi')
+            ->assertJsonMissingPath('data.deliveries.0.address.street')
+            ->assertJsonPath('data.deliveries.0.location', null);
     }
 
     public function test_trip_cash_delivery_finishes_with_platform_handover_summary(): void
