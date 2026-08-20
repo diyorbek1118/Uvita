@@ -17,6 +17,7 @@ use Modules\Courier\Infrastructure\Persistence\Models\DeliveryAssignment;
 use Modules\Order\Infrastructure\Persistence\Models\OrderItemModel;
 use Modules\Order\Infrastructure\Persistence\Models\OrderModel;
 use Modules\Product\Infrastructure\Persistence\Models\Product;
+use Modules\Seller\Infrastructure\Persistence\Models\SellerProfileModel;
 use Modules\User\Infrastructure\Persistence\Models\User;
 use Tests\Feature\Concerns\SeedsSettings;
 use Tests\TestCase;
@@ -182,6 +183,42 @@ final class CourierPanelTest extends TestCase
             ->assertJsonPath('data.0.orders.0.id', $first->id)
             ->assertJsonPath('data.0.orders.1.id', $second->id)
             ->assertJsonMissing(['id' => $assigned->id]);
+    }
+
+    public function test_trip_route_and_preview_use_the_same_pickup_group_for_legacy_orders(): void
+    {
+        $courier = $this->staff(StaffRole::COURIER, 'pickup-consistency');
+        $seller = $this->staff(StaffRole::SELLER, 'pickup-consistency');
+        $profile = SellerProfileModel::create([
+            'seller_id' => $seller->id,
+            'business_name' => 'Bir xil pickup',
+            'legal_type' => 'MChJ',
+            'tin' => '309999991',
+            'phone' => '+998901119991',
+            'region' => 'Jizzax',
+            'district' => 'Jizzax shahri',
+            'address' => 'Sanoat ko‘chasi, 1',
+            'bank_account' => '20208000999999999991',
+            'bank_mfo' => '00991',
+            'terms_accepted' => true,
+            'is_active' => true,
+            'is_verified' => true,
+        ]);
+
+        $first = $this->routeOrder('Jizzax', 'Toshkent', 20);
+        $second = $this->routeOrder('Jizzax', 'Toshkent', 30);
+        $first->items()->first()->product()->update(['seller_profile_id' => $profile->id]);
+        $second->items()->first()->product()->update(['seller_profile_id' => $profile->id]);
+
+        $this->as($courier)
+            ->getJson('/api/courier/trip-routes')
+            ->assertOk()
+            ->assertJsonPath('data.0.pickup_points_count', 1);
+
+        $this->postJson('/api/courier/trips/preview', ['route_key' => 'jizzax|toshkent'])
+            ->assertOk()
+            ->assertJsonPath('data.pickup_points_count', 1)
+            ->assertJsonPath('data.orders_count', 2);
     }
 
     public function test_courier_cannot_cherry_pick_and_profile_limit_controls_trip_size(): void

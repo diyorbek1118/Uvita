@@ -152,8 +152,21 @@ final class TripBundlePlanner
 
     public function pickupKey(OrderModel $order): string
     {
-        return $order->seller_profile_id !== null
-            ? 'seller-'.$order->seller_profile_id
+        if ($order->seller_profile_id !== null) {
+            return 'seller-'.$order->seller_profile_id;
+        }
+
+        // Legacy orders may not have seller_profile_id even though all their
+        // products belong to one seller shop. Route cards already group those
+        // products by that shop, so trip preview must use the same fallback.
+        $productProfileIds = $order->items
+            ->map(fn ($item): ?int => $item->product?->seller_profile_id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        return $productProfileIds->count() === 1
+            ? 'seller-'.$productProfileIds->first()
             : 'order-'.$order->id;
     }
 
