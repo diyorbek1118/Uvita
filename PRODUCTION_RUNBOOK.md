@@ -6,7 +6,8 @@
 2. Barcha majburiy qiymatlarni kiriting va `scripts/validate-production-env.sh` bilan tekshiring.
 3. Domainning HTTPS reverse proxy sozlamasida backendni faqat `127.0.0.1:8000` ga yo'naltiring.
 4. Frontendda `VITE_API_URL=https://api.example.uz/api` ni production build vaqtida kiriting.
-5. Birinchi deploydan oldin Payme, Click, Uzum callback URLlarini aynan HTTPS API manzillariga sozlang.
+5. Birinchi reliz cash-only. Online payment va fiskal providerlarni productionda
+   alohida biznes/buxgalter tasdig'isiz yoqmang.
 
 ## Deploy
 
@@ -16,6 +17,11 @@ ENV_FILE=.env.production scripts/deploy-production.sh
 
 Skript immutable release tegli backend va nginx image yaratadi, migratsiyani bajaradi,
 app/queue/scheduler xizmatlarini yangilaydi va `/up` health endpointini tekshiradi.
+
+Deploydan keyin operator review, stock reservation, seller ready, courier pickup,
+delivery PIN, seller ledger va courier cash handover bo'yicha smoke test o'tkazing.
+Queue failure, scheduler va ledger reconciliation alertlarini tekshirmasdan trafficni
+to'liq ochmang.
 
 ## Backup
 

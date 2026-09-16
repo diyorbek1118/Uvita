@@ -30,6 +30,5 @@ Makefile
 /.codex
 /.github
 /.cursor
-/AGENTS.md
 /.mcp.json
 /boost.json

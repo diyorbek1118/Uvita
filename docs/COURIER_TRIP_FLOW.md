@@ -1,86 +1,151 @@
-# Kuryer reysi: ishlash tartibi
+# Courier trip lifecycle - texnik mapping
 
-## Maqsad
+Asosiy biznes manba: [`../LIFECYCLE.md`](../LIFECYCLE.md). Ushbu hujjat courier
+offer, trip, pickup, delivery va naqd pul oqimini aniqlashtiradi.
 
-Kuryer alohida foydali buyurtmalarni tanlamaydi. U faqat yo‘nalishni tanlaydi,
-tizim esa yuk sig‘imi, zakaz limiti, 50 mln so‘mlik xavfsizlik limiti, masofa va
-navbat asosida reys paketini avtomatik shakllantiradi.
+## Courier eligibility
 
-## Buyurtma tanlash qoidalari
+Courierga offer chiqishi uchun:
 
-1. Faqat `ready_to_deliver` va hali kuryeri yo‘q buyurtmalar olinadi.
-2. Bitta reysda jo‘nash va yetkazish viloyati bir xil bo‘ladi.
-3. Eng oldin tushgan buyurtma reysning boshlang‘ich nuqtasi bo‘ladi.
-4. Qolgan buyurtmalar pickup yaqinligi, delivery yaqinligi va tushgan vaqti
-   bo‘yicha saralanadi.
-5. Umumiy og‘irlik profilning `vehicle_capacity_kg` qiymatidan oshmaydi.
-6. Zakazlar soni `max_orders_per_trip` qiymatidan oshmaydi.
-7. Reysdagi jami naqd yuk qiymati 50 000 000 so‘mdan oshmaydi.
-8. Pickup va delivery ketma-ketligi nearest-neighbour usulida tuziladi.
-9. Ikki parallel so‘rov bir buyurtma yoki bir kuryer uchun ikki reys yarata
-   olmaydi: tanlash transaction va database lock ichida bajariladi.
+- akkaunt `active`;
+- courier `online`;
+- tanlangan vehicle active;
+- vehicle og'irlik, hajm, masofa va maxsus yuk talabiga mos;
+- courier yangi trip olish bo'yicha cash-debt blokida emas;
+- bir vaqtdagi active trip qoidasi buzilmaydi.
 
-`kg` to‘g‘ridan-to‘g‘ri, `tonna` 1000 kg sifatida hisoblanadi. Dona, litr va
-boshqa birliklar uchun mahsulotdagi `unit_weight_kg` ishlatiladi.
+`is_active`, `is_online` va `cash_debt_blocked` bitta boolean sifatida aralashtirilmaydi.
 
-## Holatlar
+## Matching
 
-```text
-picking_up -> delivering -> completed
-     |
-     +-----> cancelled (5 soat ichida va pickup boshlanmagan bo‘lsa)
-```
+Matching faqat masofa yaqinligiga qaramaydi:
 
-- `picking_up`: seller/pickup nuqtalari ketma-ket ko‘rsatiladi.
-- `delivering`: barcha yuklar olingan, xaridorlar manzili ochilgan.
-- `completed`: barcha buyurtmalar PIN va naqd summa bilan yakunlangan.
-- `cancelled`: buyurtmalar yana bo‘sh reyslar ro‘yxatiga qaytarilgan.
+- active route va schedule;
+- origin/destination hududi;
+- route corridor va maksimal detour;
+- pickup/drop ketma-ketligi;
+- jami og'irlik va qolgan capacity;
+- jami fizik hajm;
+- courier maksimal masofasi;
+- mahsulotlarning birga tashishga mosligi;
+- maxsus tashish sharti;
+- ETA va vaqt oynasi.
 
-Reysdagi bitta zakazni alohida rad etish mumkin emas. Bu cherry-pick qilish va
-reysning qolgan yukini buzishni oldini oladi.
+Mos kelmagan delivery uchun rad sababi saqlanadi. Og'ir geospatial hisob provider
+interface ortida va aniq invalidationli cache bilan ishlashi mumkin.
 
-## Manzil maxfiyligi
+## Offer
 
-Oxirgi pickup olinmaguncha API xaridor telefoni, aniq manzili va koordinatasini
-umuman yubormaydi. Kuryer faqat reysning umumiy destination hududini ko‘radi.
+Courier quyidagilarni ko'radi:
 
-- Shahar (`city`) yetkazishida to‘liq ko‘cha, uy va navigator koordinatasi
-  ochiladi.
-- Tuman (`district_center`) yetkazishida faqat viloyat, tuman va “Tuman
-  markazi” ko‘rsatiladi; xaridorning uy manzili kuryerga berilmaydi.
+- yo'nalish;
+- pickup va drop-off soni;
+- jami og'irlik/hajm;
+- taxminiy masofa/vaqt;
+- customerlardan olinadigan naqd summa;
+- taxminiy courier daromadi.
 
-## Naqd hisob
+Accept transactionida eligibility va capacity qayta tekshiriladi. Ikki courier bir
+deliveryni parallel accept qila olmaydi.
 
-Har delivery yakunida kuryerga aynan `grand_total` miqdorida olinadigan summa
-ko‘rsatiladi. Server boshqa summani qabul qilmaydi. PIN to‘g‘ri bo‘lsa naqd
-payment `paid` bo‘ladi va reys hisobiga qo‘shiladi.
+## Bekor qilish
 
-```text
-platformaga topshiriladi = mijozlardan olingan naqd - kuryer haqi
-```
+Courier offer/tripni accept qilgandan keyin default 1 soat ichida, pickup hali
+tasdiqlanmagan bo'lsa sabab bilan bekor qilishi mumkin.
 
-Kuryer haqi hozir buyurtmada oldindan hisoblangan `courier_fee` qiymatidan
-olinadi. Masofaga bog‘liq foizni alohida modul hisoblaydi.
+- Bir soatdan keyin oddiy cancel yo'q.
+- Pickupdan keyin oddiy cancel yo'q.
+- Oldin rad qilingan aynan shu taklif oddiy qayta so'rovda shu courierga berilmaydi.
+- Istisno faqat Logistics Manager override, sabab va audit bilan.
 
-## API
+## Pickup
 
-- `GET /api/courier/trip-routes` — mavjud yo‘nalishlar.
-- `POST /api/courier/trips/preview` — tizim tanlaydigan paket xulosasi.
-- `POST /api/courier/trips` — reysni atomar yaratish.
-- `GET /api/courier/trips/active` — faol reys.
-- `PUT /api/courier/trips/{trip}/pickups/{pickupKey}` — pickupdagi barcha
-  yuklarni “oldim” qilish.
-- `PUT /api/courier/trips/{trip}/orders/{order}/delivered` — naqd summa va
-  4 xonali PIN bilan delivery yakunlash.
-- `PUT /api/courier/trips/{trip}/cancel` — pickup boshlanmagan reysni 5 soat
-  ichida bekor qilish.
+Har seller pickupida courier:
 
-Eski `PUT /api/courier/routes/accept` endpointi olib tashlangan: u kuryerga
-zakaz IDlarini qo‘lda tanlash imkonini berardi.
+1. order item va kutilgan miqdorni ko'radi;
+2. miqdor, sifat/brak va qadoqni tekshiradi;
+3. maxsus tashish shartini qabul qiladi;
+4. kerakli foto, vaqt va GPS dalilini beradi;
+5. seller bilan xavfsiz handover tasdig'ini bajaradi.
 
-## Ma’lumot sifati
+Courierning o'zi seller tomon tasdig'ini soxtalashtira olmaydi. GPS bo'lmasa faqat
+permissionli override va sabab bilan davom etiladi.
 
-Aniq masofa uchun seller profilida `pickup_latitude/pickup_longitude`, orderda
-delivery koordinatasi bo‘lishi kerak. Eski seller koordinatasi yo‘q bo‘lsa tizim
-bir xil tuman nomini yaqin deb oladi va neytral masofa bilan navbatni saqlaydi.
-Bu holatda eng eski buyurtma baribir birinchi tanlanadi.
+Pickup tasdiqlangach tashish davridagi kamomad, buzilish yoki yo'qotish javobgarligi
+courierga o'tadi. Uvita omboriga topshirish bosqichi yo'q.
+
+## In-transit va qo'shimcha delivery
+
+Trip davomida yo'ldagi qo'shimcha order faqat:
+
+- qolgan weight/volume capacityga sig'sa;
+- detour va ETA limitini buzmasa;
+- mahsulot mosligi saqlansa;
+- courier qabul qilsa
+
+tripga qo'shiladi. Har order status va hisob-kitobda mustaqil qoladi.
+
+GPS faqat active trip/delivery davomida, minimal kerakli chastotada olinadi.
+
+## Full delivery
+
+1. Courier `Topshirish`ni boshlaydi.
+2. Backend olinadigan aniq cash summani ko'rsatadi.
+3. Courier `Pulni oldim`ni bosadi.
+4. Customerga delivery PIN yuboriladi.
+5. To'g'ri PIN idempotent transactionda deliveryni yopadi.
+6. Courier cash liability va earning ledger yoziladi.
+
+Courier cash summani erkin tahrirlamaydi. PINsiz delivered yo'q.
+
+## Partial delivery
+
+Courier actual quantity, sabab, dalolatnoma va media dalil yuboradi. Seller 4 soat
+ichida qaror qiladi. Approve bo'lsa actual summa; reject/timeout bo'lsa manual review.
+Final qarorgacha ledger ikki marta yoki taxminiy summa bilan yopilmaydi.
+
+## Courier earning
+
+Courier earning delivered mahsulot qiymati va orderga snapshot qilingan masofa bandi
+foizidan hisoblanadi. Foiz 0.1%-7% oralig'ida setting bilan boshqariladi.
+
+Courier earning va customerdan olingan naqd liability alohida ledgerlarda yuritiladi.
+Ularni yashirincha net qilib bitta mutable balancega aylantirmaslik kerak.
+
+## Cash handover
+
+Trip yakunlangach courier Uvita oldida olgan cash bo'yicha qarzdor:
+
+1. cash handover request yuboradi;
+2. expected, oldin topshirilgan va hozirgi summa ko'rsatiladi;
+3. accountant real olingan summani tasdiqlaydi;
+4. faqat tasdiqdan keyin liability kamayadi.
+
+Kamida 90% topshirilmaguncha yangi trip blok. 90%ga yetgach yangi trip mumkin, lekin
+qolgan 10% uchun 3 kun deadline. Deadline o'tsa qarz to'liq yopilguncha blok va alert.
+
+## Query va concurrency talabi
+
+- Offer list pagination/limit bilan va faqat kerakli summary ustunlari bilan.
+- Trip detail relationlari bitta rejalashtirilgan eager-load graph bilan.
+- Har delivery uchun loop ichida seller/order/address query ochilmaydi.
+- Capacity va accept transactionda row lock/unique constraint bilan himoyalanadi.
+- Location history listlari vaqt oralig'i va limit bilan; cheklanmagan GPS export yo'q.
+- Active offer, route corridor va debt eligibility querylari real datasetda `EXPLAIN`
+  bilan tekshiriladi.
+- Query-count test tripdagi delivery soni oshganda N+1 bo'lmasligini isbotlaydi.
+
+## Minimal test matrix
+
+- mos va nomos vehicle;
+- weight/volume/distance chegaralari;
+- parallel accept race;
+- 1 soat ichida va undan keyin cancel;
+- rejected offer qayta chiqmasligi;
+- pickupdan keyin cancel bloklanishi;
+- forged/duplicate pickup;
+- PINsiz va expired PIN bilan delivery yopilmasligi;
+- duplicate confirm ledgerni takrorlamasligi;
+- 90% unblock va 3 kun deadline;
+- duplicate accountant acceptance;
+- offer/trip detail N+1 query regressiyasi.

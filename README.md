@@ -1,122 +1,85 @@
-# Uvita — B2B va B2B2C Marketplace
+# Uvita backend
 
-Seller mahsulotlarini biznes xaridorlar va customerlarga sotish hamda yetkazish
-uchun Laravel 12 asosida qurilgan modular monolith REST API. Platforma qishloq
-xo‘jaligi bilan cheklanmaydi va boshqa ishlab chiqarish kategoriyalariga kengaya oladi.
+Uvita - omborsiz ulgurji marketplace va logistika platformasining Laravel API'si.
+Mahsulot seller manzilidan courier orqali to'g'ridan-to'g'ri xaridorga yetkaziladi.
 
-## Dokumentatsiya
+## Asosiy hujjatlar
 
-- [Loyihaning barcha qismlari bo‘yicha to‘liq, oddiy tildagi hujjat](docs/UVITA_FULL_DOCUMENTATION.md)
-- [Buyurtma va yetkazish jarayoni](docs/ORDER_LIFECYCLE.md)
+- [Yagona biznes lifecycle](LIFECYCLE.md)
+- [Agent va kod sifati qoidalari](AGENTS.md)
+- [Loyiha strukturasi](STRUCTURE.md)
+- [Texnik hujjatlar indeksi](docs/README.md)
+- [Order lifecycle tafsiloti](docs/ORDER_LIFECYCLE.md)
+- [Courier trip tafsiloti](docs/COURIER_TRIP_FLOW.md)
 
-## Texnologiyalar
+`LIFECYCLE.md` boshqa eski hujjat yoki kodga zid bo'lsa, lifecycle ustuvor.
 
-- **Laravel 12** — PHP framework
-- **PHP 8.4** — dasturlash tili
-- **MySQL 8** — asosiy ma'lumotlar bazasi
-- **Redis** — OTP saqlash, cache, session
-- **Docker** — konteynerizatsiya
-- **Laravel Sanctum** — token autentifikatsiya
+## Stack
 
-## O'rnatish
+- Laravel 12
+- PHP `composer.json` talabiga mos, production target PHP 8.4
+- MySQL 8
+- Redis
+- Sanctum
+- PHPUnit
 
-### Talablar
-
-- Docker
-- Docker Compose
-- Git
-
-### Qadamlar
+## Lokal ishga tushirish
 
 ```bash
-# 1. Reponi klonlash
-git clone https://github.com/diyorbek1118/Uvita.git
-cd Uvita
-
-# 2. .env faylini sozlash
 cp .env.example .env
-
-# 3. Docker konteynerlarini ishga tushirish
-docker-compose up -d --build
-
-# 4. App kalitini yaratish
-docker exec app php artisan key:generate
-
-# 5. Migratsiyalarni ishga tushirish
-docker exec app php artisan migrate
+docker compose up -d --build
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate --seed
+docker compose exec app php artisan test
 ```
 
-## API
+Servis nomlari amaldagi `docker-compose.yml`dan olinadi. Global `/redis` kabi umumiy
+container nomidan foydalanilmaydi; loyiha prefiksi yoki Compose project nomi ishlatiladi.
 
-Base URL: `http://localhost:8000/api`
-
-### Auth
-
-| Method | Endpoint | Tavsif |
-|--------|----------|--------|
-| POST | `/auth/otp/send` | OTP kod yuborish |
-| POST | `/auth/otp/verify` | OTP kodni tasdiqlash |
-| POST | `/auth/logout` | Chiqish |
-
-### send-otp
-
-```json
-POST /api/auth/otp/send
-Content-Type: application/json
-
-{
-    "phone": "+998901234567",
-    "type": "login"
-}
-```
-
-### verify-otp
-
-```json
-POST /api/auth/otp/verify
-Content-Type: application/json
-
-{
-    "phone": "+998901234567",
-    "code": "123456",
-    "type": "login"
-}
-```
-
-### logout
-
-```json
-POST /api/auth/logout
-Authorization: Bearer {token}
-```
-
-## Loyiha strukturasi
-
-```
-Modules/
-├── Auth/         — autentifikatsiya
-├── User/         — foydalanuvchi
-├── Product/      — mahsulot, media, fee va versiyalangan moderatsiya
-├── Cart/         — savat
-├── Order/        — buyurtmalar
-├── Seller/       — seller profil/KYB va tasdiqlash
-├── Payment/      — Payme, Click, Uzum
-├── Review/       — moderatsiyali sharhlar
-├── Courier/      — assignment, PIN, GPS, payout
-└── Admin/        — moderatsiya va analitika
-```
-
-Seller dashboard backenddan mustaqil `../uvita_frontend_seller/` loyihasida joylashgan. Seller mahsulot
-yaratganda kamida 4 ta rasm va bitta video yuklaydi, server komissiyalarni hisoblaydi
-va mahsulot/tahrir admin tasdig'idan keyingina marketga chiqadi.
-
-Frontendlar alohida deploy qilinadi:
+## API guruhlari
 
 ```text
-uvita_frontend/             Customer va B2B xaridor marketi
-uvita_frontend_dashboard/   Manager, admin va super-admin paneli
-uvita_frontend_seller/      Seller kabineti
+/api/*             public va customer
+/api/seller/*      seller panel
+/api/dashboard/*   xodimlar dashboardi
+/api/admin/*       admin compatibility endpointlari
+/api/super/*       super admin compatibility endpointlari
+/api/courier/*     courier ilovasi
 ```
+
+Route mavjudligi va aniq endpointlar modul ichidagi
+`Presentation/routes/api.php` fayllaridan tekshiriladi.
+
+## Asosiy modullar
+
+- Auth va User
+- Seller
+- Category va Product
+- Cart va Order
+- Courier
+- Admin/Dashboard
+- Payment - mavjud legacy/integration boundary; birinchi relizda real online payment emas
+- Review/Rating va boshqa yordamchi modullar
+
+Birinchi reliz naqd to'lov bilan ishlaydi. Soliq va fiskal chek integratsiyasi hali
+ochiq masala; productionga yuborish alohida tasdiqsiz yoqilmaydi.
+
+## Sifat tekshiruvi
+
+```bash
+php artisan test
+vendor/bin/pint --test
+```
+
+Queryga ta'sir qilgan har o'zgarishda N+1, pagination, query count, index va muhim
+query plan `AGENTS.md` qoidalari bo'yicha tekshiriladi.
+
+## Xavfsizlik
+
+- `.env`, token, OTP/PIN va provider secretlari commit qilinmaydi.
+- Har private endpoint permission va ownershipni backendda tekshiradi.
+- Muhim stock, status va moliyaviy amallar transaction/idempotency bilan bajariladi.
+- Production loglari maxfiy ma'lumot saqlamaydi.
 
 ## Litsenziya
 

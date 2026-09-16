@@ -1,157 +1,154 @@
-# Uvita buyurtma va yetkazish jarayoni
+# Order lifecycle - texnik mapping
 
-Ushbu hujjat xaridor buyurtma yuborgan vaqtdan mahsulot yetkazilib, naqd to‘lov yopilguncha bo‘lgan amaldagi jarayonni tushuntiradi.
+Asosiy biznes manba: [`../LIFECYCLE.md`](../LIFECYCLE.md). Ushbu hujjat order,
+stock va statuslarni implementatsiya qilishda kerak bo'ladigan qisqa mapping.
 
-## Asosiy model
+## Asosiy obyektlar
 
-Uvita savatchasi bitta checkout bo‘lishi mumkin, lekin logistika birligi — alohida `order`.
+- **Cart** - customerning vaqtinchalik savatchasi.
+- **Order** - bitta sellerga tegishli xarid va moliyaviy hisob birligi.
+- **Order item** - mahsulot, narx, birlik va miqdorning snapshoti.
+- **Stock reservation** - active order uchun band qilingan miqdor.
+- **Delivery** - bitta orderni sellerdan customerga olib borish vazifasi.
+- **Trip** - bitta courier olib boradigan bir yoki ko'p delivery.
 
-- Bir do‘kon/seller mahsulotlari bitta orderga birlashadi.
-- Turli seller yoki seller do‘konlari mahsulotlari alohida orderlarga ajraladi.
-- Bir checkoutdan yaratilgan orderlar umumiy `checkout_group_id` bilan bog‘lanadi.
-- Har bir orderning alohida summasi, payment yozuvi, stok rezervi va kuryeri bor.
+Turli seller mahsulotlari bitta orderga aralashmaydi. Ular yaqin bo'lsa faqat bitta
+tripga guruhlanadi.
 
-```text
-Savatcha
-  ├─ Navoiy selleri → Order #101 → Kuryer A → alohida naqd to‘lov
-  ├─ Jizzax selleri → Order #102 → Kuryer B → alohida naqd to‘lov
-  └─ Buxoro selleri → Order #103 → Kuryer C → alohida naqd to‘lov
-```
+## Checkout
 
-Hozirgi faol to‘lov usuli — naqd. Multi-seller checkout onlayn to‘lov bilan vaqtincha bloklangan.
+Backend checkout vaqtida har itemni qayta tekshiradi:
 
-## Buyurtma yaratilishi
+1. seller va product active;
+2. approved product revision ishlatilmoqda;
+3. current price va stock mavjud;
+4. quantity minimum, maximum va stepga mos;
+5. delivery address xizmat hududida;
+6. delivery quote va ETA hisoblangan.
 
-Xaridor checkoutda yetkazish manzili, telefon, yetkazish vaqti va savatdagi miqdorlarni yuboradi. Backend bitta tranzaksiya ichida:
+Har seller uchun alohida order yaratiladi. Narx, komissiya, tarif, manzil va item
+ma'lumotlari keyingi o'zgarishlardan himoyalanish uchun snapshot qilinadi.
 
-1. Mahsulotlarni bloklab o‘qiydi va faol ekanini tekshiradi.
-2. Miqdorni sotish uchun mavjud stok bilan solishtiradi.
-3. Seller belgilagan minimal mahsulot miqdorini tekshiradi.
-4. Butun savatcha platformadagi minimal umumiy summaga yetganini tekshiradi.
-5. Mahsulotlarni seller do‘koni bo‘yicha guruhlaydi.
-6. Har bir guruhga alohida order va naqd payment yaratadi.
-7. Miqdorni `reserved_stock`ga qo‘shadi.
-8. Savatchani tozalaydi va managerga xabar yuboradi.
+Checkout idempotency key bilan himoyalanadi. Ikki marta bosish duplicate order yaratmaydi.
 
-Sotish uchun mavjud miqdor:
+## Operator review
 
-```text
-available_stock = stock - reserved_stock
-```
+Yangi order `operator_review` biznes holatiga tushadi.
 
-Buyurtma yaratilganda haqiqiy `stock` kamaymaydi. Mahsulot manager qarorigacha boshqa xaridorga sotilib ketmasligi uchun rezerv qilinadi.
+- Customer olishni tasdiqlasa - order `active`.
+- Customer rad etsa - `deactive/cancelled`.
+- Javob bermasa - `callback_required`.
+- Default uchta urinishdan keyin - `deactive/cancelled`.
 
-## Manager jarayoni
+Har call attempt append-only tarixda operator, vaqt, natija va izoh bilan saqlanadi.
 
-Naqd buyurtma dastlab `pending` holatida manager paneliga tushadi. Manager:
+## Stock reservation
 
-- xaridor bilan bog‘lanadi;
-- buyurtma tarkibi va miqdorini tahrirlaydi;
-- buyurtmani tasdiqlaydi;
-- mijoz fikridan qaytsa bekor qiladi;
-- mahsulot yig‘ilgach `Tayyor` holatiga o‘tkazadi.
+Stock checkoutda kamaymaydi. Operator orderni active qilayotgan transactionda:
 
-Tarkib tahrirlanganda eski rezerv qaytarilib, yangi tarkib uchun rezerv qayta hisoblanadi. Boshqa seller mahsulotini mavjud orderga qo‘shib bo‘lmaydi — u alohida order bo‘lishi kerak.
+1. product qatorlari ID bo'yicha bir xil tartibda olinadi;
+2. `SELECT ... FOR UPDATE`/`lockForUpdate` qilinadi;
+3. har item uchun available stock qayta tekshiriladi;
+4. reservation aynan bir marta yaratiladi;
+5. order active bo'ladi;
+6. commitdan keyin sellerga notification yuboriladi.
 
-Manager bekor qilsa order `cancelled` bo‘ladi va foydalanilmagan rezerv qaytariladi.
+Yetarli stock bo'lmasa transaction to'liq rollback bo'ladi. Order yashirincha qisman
+active qilinmaydi.
 
-Manager `Tayyor` qilsa:
+Bekor/deactive order reservationni idempotent ravishda aynan bir marta qaytaradi.
 
-- rezerv qilingan miqdor haqiqiy stokdan ayriladi;
-- shu miqdor `reserved_stock`dan chiqariladi;
-- `stock_committed_at` yoziladi;
-- order `ready_to_deliver` bo‘ladi va kuryer reyslarida ko‘rinadi.
+## Seller fulfillment
 
-## Kuryer reysi
-
-Reys hozircha alohida jadval emas, bir yo‘nalishdagi tayyor orderlarning virtual guruhi.
-
-- Bir xil jo‘nash va yetkazish yo‘nalishidagi orderlar bitta reys ko‘rinishida guruhlanadi.
-- Kuryer mashinasi sig‘imini o‘zi bilganligi sababli kerakli orderlarni o‘zi belgilaydi.
-- Kuryer bitta yoki bir nechta orderni bir urinishda qabul qilishi mumkin.
-- Har bir order mustaqil qoladi: alohida oluvchi, summa, PIN va naqd hisob.
-
-Kuryer orderni qabul qilganda assignment `accepted` bo‘ladi. Assignment vaqtiga nisbatan 5 soat ichida sabab ko‘rsatib voz kechish mumkin. Voz kechilgan order yana `ready_to_deliver` holatida reysga qaytadi. 5 soatdan keyin manager/admin aralashuvi talab qilinadi.
-
-Kuryer mahsulotni olib yo‘lga chiqqanda order `delivering` holatiga o‘tadi. Tafsilotda seller/pickup nuqtalari, xaridor manzili va bog‘lanish ma’lumotlari beriladi.
-
-## Yetkazishni yakunlash
-
-Kuryer xaridor manziliga borgach:
-
-1. Har bir order summasini alohida naqd oladi.
-2. Har bir orderni alohida yakunlaydi.
-3. Xaridor bergan 4 xonali PIN, qabul qiluvchi va mavjud koordinatalarni yuboradi.
-4. PIN to‘g‘ri bo‘lsa order `delivered`, naqd payment esa `paid` bo‘ladi.
-
-Xaridor topilmasa kuryer sabab va koordinata bilan `not-found` yuboradi. Order `delivery_issue` holatiga o‘tadi. Admin uni qayta yetkazishga yuborishi yoki bekor qilishi mumkin. Tayyor bosqichida stokdan chiqarilgan order butunlay bekor qilinsa, stok qaytariladi.
-
-## Holatlar ketma-ketligi
+Active order sellerga ko'rinadi va default 5 soatlik tayyorlash SLA boshlanadi.
 
 ```text
-pending → confirmed → ready_to_deliver → delivering → delivered
+active -> preparing -> ready_for_pickup
 ```
 
-Qo‘shimcha yo‘llar:
+5 soat o'tishi orderni avtomatik bekor qilmaydi. Overdue flag, seller notification va
+Dashboard alert yaratiladi.
 
-- `pending → cancelled`: mijoz/manager bekor qilgan, rezerv qaytariladi.
-- `ready_to_deliver → ready_to_deliver`: kuryer voz kechgan, assignment almashadi.
-- `delivering → delivery_issue`: xaridor yoki manzil bilan muammo.
-- `delivery_issue → ready_to_deliver`: qayta yetkazish.
-- `delivery_issue → cancelled`: yakuniy bekor qilish va committed stokni qaytarish.
+## Delivery mapping
 
-`paid` holati onlayn oqim uchun mavjud, ammo hozirgi operatsion rejim naqd to‘lovdir.
+`ready_for_pickup` order uchun delivery route/capacity matchingga kiradi.
 
-## Moliyaviy hisob
-
-Market xaridorga faqat mahsulotlarning yakuniy narxini ko‘rsatadi. Ichki hisob seller kiritgan summadan olinadi:
-
-- platforma: 10%;
-- kuryer: hozircha 5% gacha;
-- soliq: 1%;
-- to‘lov tizimi: 3%;
-- standart seller sof tushumi: 81%.
-
-Kuryer foizini masofaga qarab hisoblash keyingi bosqich vazifasi. Hozir standart 5% qo‘llanadi. Naqd ishlayotgan bo‘lsa ham 3% ichki konfiguratsiyada platforma tomonidan ushlab qolinadi.
-
-## Asosiy API endpointlar
-
-Xaridor:
-
-- `POST /api/orders` — checkout va sellerlar bo‘yicha order yaratish.
-- `GET /api/orders` / `GET /api/orders/{id}` — orderlarni ko‘rish.
-- `DELETE /api/orders/{id}` — ruxsat etilgan bosqichda bekor qilish.
-- `GET /api/orders/{id}/delivery-code` — yetkazish PIN kodi.
-
-Manager:
-
-- `GET /api/manager/orders` — ishlov beriladigan buyurtmalar.
-- `PUT /api/manager/orders/{id}/items` — pending tarkibni tahrirlash.
-- `PUT /api/manager/orders/{id}/confirm` — tasdiqlash.
-- `PUT /api/manager/orders/{id}/ready` — yig‘ildi/tayyor.
-- `DELETE /api/manager/orders/{id}` — mijoz nomidan bekor qilish.
-
-Kuryer:
-
-- `GET /api/courier/routes` — virtual reyslar.
-- `PUT /api/courier/routes/accept` — tanlangan orderlar guruhini olish.
-- `PUT /api/courier/orders/{id}/accept` — mahsulotni olib, yetkazishni boshlash.
-- `PUT /api/courier/orders/{id}/reject` — 5 soat ichida voz kechish.
-- `PUT /api/courier/orders/{id}/delivered` — PIN bilan yakunlash.
-- `PUT /api/courier/orders/{id}/not-found` — muammoni qayd etish.
-
-Admin:
-
-- `PUT /api/admin/orders/{id}/assign-courier` — qo‘lda kuryer tayinlash.
-- `PUT /api/admin/orders/{id}/resolve-issue` — yetkazish muammosini hal qilish.
-
-## Deploy talablari
-
-Yangi stok va fulfillment ustunlari uchun deploy vaqtida:
-
-```bash
-php artisan migrate --force
+```text
+ready_for_pickup -> assigned -> in_transit
 ```
 
-Queue worker SMS, Telegram va savatchani asinxron tozalash vazifalari uchun doimiy ishlashi kerak. Productionda scheduler, queue va log monitoring ham yoqilgan bo‘lishi kerak.
+Assigned faqat courier offerni qabul qilgach. In-transit faqat sellerdan yuk xavfsiz
+topshirilgani tasdiqlangach.
 
+## To'liq delivery
+
+Courier customerga yetib borganda backend snapshotdan olinadigan naqd summani ko'rsatadi.
+
+```text
+in_transit -> delivery_confirmation -> delivered
+```
+
+`delivered` faqat quyidagilar bitta idempotent transactionda muvaffaqiyatli bo'lganda:
+
+- assigned courier `Pulni oldim` oqimini boshlagan;
+- customerning delivery PIN'i to'g'ri va muddati o'tmagan;
+- cash collection yozuvi yaratilgan;
+- courier liability ledger yozilgan;
+- seller settlement processing eventi yaratilgan;
+- audit yozilgan.
+
+PIN noto'g'ri yoki expired bo'lsa order yopilmaydi.
+
+## Qisman delivery
+
+```text
+in_transit -> partial_review -> delivered(partial)
+```
+
+Courier actual quantity, sabab, dalolatnoma va media dalil yuboradi. Sellerga 4 soat
+beriladi. Approve bo'lsa actual quantity bo'yicha summa va ledger final qilinadi. Reject
+yoki timeout bo'lsa manual Dashboard review; avtomatik approve yo'q.
+
+## Moliyaviy vaqtlar
+
+- PIN tasdig'idan keyin 2 soat: `processing`.
+- Keyin seller balansida `pending`.
+- Delivered vaqtidan 48 soat o'tgach: `withdrawable`.
+- Withdrawal request summani transactionda hold qiladi.
+
+Vaqt va foiz settinglari order/deliveryda snapshot bo'ladi.
+
+## Status o'tish qoidasi
+
+Status to'g'ridan controllerda o'zgartirilmaydi. Markazlashgan transition service/handler:
+
+- current statusni tekshiradi;
+- actor permission va ownershipni tekshiradi;
+- invariantlarni tekshiradi;
+- transaction va idempotency ishlatadi;
+- status history va audit yozadi;
+- notificationni commitdan keyin jo'natadi.
+
+## Query talabi
+
+- Order listlar pagination va qat'iy max limit bilan.
+- Items, seller, delivery va kerakli counts eager loaded.
+- Resource/accessorda query yo'q.
+- Dashboard summary `withCount`, `withSum`, DB aggregate yoki projection bilan.
+- `status + created_at`, `seller_id + status`, `customer_id + created_at` kabi real
+  querylarga mos composite indexlar query plan bilan tekshiriladi.
+- Collection feature testi itemlar soni oshganda N+1 bo'lmasligini tekshiradi.
+
+## Minimal test matrix
+
+- turli seller cartining alohida orderlarga ajralishi;
+- duplicate checkout idempotency;
+- parallel active qilishda stock manfiy bo'lmasligi;
+- cancellation reservationni bir marta qaytarishi;
+- uchta callback attempt;
+- 5 soat SLA boundary;
+- PINsiz delivered bo'lmasligi;
+- duplicate PIN confirm ledgerni ikki marta yozmasligi;
+- partial approve/reject/4h timeout;
+- 2h/48h seller balance boundary;
+- order listda query-count regressiyasi.

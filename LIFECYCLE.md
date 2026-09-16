@@ -1,791 +1,467 @@
-# Uvita — B2B va B2B2C Marketplace Life Cycle (v4)
-
-> Ushbu hujjat platformadagi barcha ishtirokchilarning harakatlari,
-> tizim ichidagi oqimlar, status o'zgarishlari va ruxsatlar tizimini
-> to'liq va aniq tasvirlaydi.
->
-> **Versiya:** 4.0
->
-> **v3 yangilanishi:** kuryer smenasi, tayinlovni qabul/rad etish,
-> GPS nuqtasi, yetkazish PIN tasdig'i, urinishlar auditi va qayta
-> tayinlash oqimi aniq belgilandi.
-
-> **v4 yangilanishi:** platforma fermer/dehqon mahsulotlarini professional
-> sotuvchilar orqali biznes xaridorlar va customerlarga yetkazadigan B2B/B2B2C
-> modeliga o'tdi. Seller profili, mahsulot media talablari, komissiya kalkulyatori
-> va versiyalangan moderatsiya qo'shildi.
-
----
-
-## B2B / B2B2C Yo'nalishi
+# Uvita - yagona biznes lifecycle
+
+> Bu hujjat Uvita qanday ishlashining yagona asosiy manbasi.
+> Texnik kod qoidalari `AGENTS.md`da, loyiha tuzilishi `STRUCTURE.md`da.
+
+## 1. Uvita nima?
+
+Uvita - ishlab chiqaruvchi, yetishtiruvchi, importchi, distributor va ulgurji
+sotuvchilarni savdogar, do'kon, restoran, tashkilot va boshqa xaridorlar bilan
+bog'laydigan marketplace va logistika platformasi.
 
-```
-Dehqon / fermer → Seller → Uvita moderatsiya → Market
-                                             ├── B2B xaridor
-                                             └── B2C customer
-```
-
-- `Seller` — mahsulot manbasi, narxi, qoldig'i va haqiqiy mediasini boshqaradi.
-- `Manager` — buyurtmani operatsion qabul qilish va yig'ishni davom ettiradi.
-- `Admin / Super Admin` — seller profilini va har bir mahsulot versiyasini tasdiqlaydi.
-- Seller profili tasdiqlanmaguncha mahsulot moderatsiyasiga yubora olmaydi.
-
-### Seller akkaunti va ko‘p do‘kon
-
-```
-Admin → seller telefon raqami + boshlang‘ich parol + birinchi do‘konni yaratadi
-Seller → telefon/parol bilan kiradi
-       → o‘ziga biriktirilgan do‘konlardan birini tanlaydi
-       → mahsulot, buyurtma va analitikani tanlangan do‘kon kesimida boshqaradi
-Admin → shu sellerga qo‘shimcha do‘konlar biriktira oladi
-```
-
-- Telefon raqami seller akkaunti bo‘yicha unique.
-- Bitta seller akkauntida bir nechta do‘kon bo‘lishi mumkin.
-- Har do‘kon alohida KYB/verifikatsiyadan o‘tadi.
-- Seller faqat o‘z akkauntiga tegishli faol do‘konni tanlay oladi.
-- Mahsulot va product revision `seller_profile_id` orqali do‘konga bog‘lanadi.
-- Seller API tanlangan do‘konni `X-Seller-Shop-Id` header orqali oladi.
-
-### Seller mahsulot qo'shish formasi
-
-Majburiy maydonlar:
+Uvita mahsulotni o'z omborida saqlamaydi. Mahsulot sellerning o'z joyida turadi.
+Kurier yukni sellerdan olib, to'g'ridan-to'g'ri xaridorga yetkazadi.
+
+Kod butun O'zbekiston uchun umumiy ishlaydi. Boshlanishida faqat Dashboarddan
+yoqilgan reyslar, masalan Jizzax -> Toshkent va Qashqadaryo -> Toshkent ishlaydi.
 
+```mermaid
+flowchart LR
+    S["Seller"] --> M["Uvita Market"]
+    M --> B["Xaridor"]
+    S -->|"Yukni olib ketish"| C["Kurier"]
+    C -->|"To'g'ridan-to'g'ri yetkazish"| B
+    D["Dashboard"] -.->|"Nazorat"| M
+    D -.->|"Logistika va moliya"| C
 ```
-Mahsulot nomi, kategoriya, batafsil tavsif
-Fermer/xo'jalik nomi va kelib chiqish hududi
-O'lchov birligi: kg | tonna | dona | quti | bog'
-Ombordagi qoldiq va minimal buyurtma miqdori
-Sotuv narxi
-4–10 ta haqiqiy rasm; bittasi asosiy
-Kamida 1 ta haqiqiy video
-Komissiya va moderatsiya shartlariga rozilik
-```
-
-Media cheklovlari:
-
-```
-Rasm: JPG/JPEG/PNG/WEBP, har biri max 5 MB, kamida 800×800 px
-Video: MP4/MOV/WEBM, max 50 MB
-```
 
-### Seller narxi va sof tushumi
+## 2. Platformaning asosiy qismlari
 
-Seller kiritgan narxdan server quyidagi snapshotni hisoblaydi:
+| Qism | Vazifasi |
+|---|---|
+| Market | Mahsulot ko'rish, savatcha, manzil, buyurtma va yetkazish narxi |
+| Seller panel | Mahsulot, stock, order, statistika, balans va pul yechish |
+| Kurier ilovasi | Reys olish, pickup, yetkazish va naqd pulni topshirish |
+| Dashboard | Moderatsiya, order, logistika, moliya, xodim, setting va audit |
+| Backend | Barcha biznes qoidalari va ma'lumotlarning yagona markazi |
 
-```
-Platforma fee: 10%
-Kuryer fee:     5%
-Soliq:          1%
-To'lov tizimi:  3%
-Seller net:    81%
-```
-
-Masalan, narx `100 000 so'm` bo'lsa seller sof `81 000 so'm` oladi.
-Foizlar `config/seller.php` va environment orqali boshqariladi; har moderatsiya
-versiyasida hisob snapshot sifatida saqlanadi.
-
-### Versiyalangan moderatsiya
-
-```
-Yangi mahsulot → inactive + revision:pending
-Admin approve  → revision:approved + product:active → marketda ko'rinadi
-Admin reject   → revision:rejected + sabab → sellerga ko'rinadi
-
-Active mahsulot tahriri → yangi revision:pending
-Market                  → avvalgi approved_version ko'rinishda qoladi
-Admin approve           → yangi versiya atomik tarzda marketga chiqadi
-```
+## 3. Rollar
 
-Shu sabab seller tahriri moderatsiyadan o'tmaguncha customer va B2B xaridor
-tasdiqlanmagan narx, media yoki tavsifni ko'rmaydi.
+Boshlang'ich Dashboard rollari:
 
----
+| Rol | Asosiy vazifa |
+|---|---|
+| Super Admin | To'liq boshqaruv, rol, permission va setting |
+| Admin | Umumiy operatsion nazorat |
+| Operator | Xaridorga qo'ng'iroq va orderni faollashtirish |
+| Moderator | Mahsulotlarni tekshirish |
+| Seller Manager | Sellerlar bilan ishlash |
+| Logistics Manager | Reys, kurier va yetkazmalar |
+| Accountant | Kurier naqd puli va seller pul yechishi |
+| Support | Muammo va murojaatlar |
 
-## Ishtirokchilar
+Super Admin har rol qaysi bo'limni ko'rishi va qanday amal bajarishini Dashboardda
+belgilaydi. UI tugmani yashirishi yetarli emas; backend ham permissionni tekshiradi.
 
-| Rol | Kim | Kirish usuli |
-|-----|-----|-------------|
-| **Customer** | Xaridor | OTP (telefon) |
-| **Seller** | Fermer mahsulotini marketga chiqaruvchi sotuvchi | Email + parol |
-| **Manager** | Do'kon xodimi | Email + parol |
-| **Courier** | Yetkazuvchi | Email + parol |
-| **Admin** | Tizim boshqaruvchisi | Email + parol |
-| **Super Admin** | Tizim egasi / platforma rahbari | Email + parol |
+## 4. Seller va mahsulot
 
----
+Seller ro'yxatdan o'tadi yoki xodim tomonidan ochiladi. Profil tasdiqlangach mahsulot
+joylay oladi.
 
-## Buyurtma Statuslari
+Mahsulotda quyidagilar bo'ladi:
 
-```
-pending          → Buyurtma yaratildi, to'lov kutilmoqda
-paid             → To'lov webhook tasdiqladi
-confirmed        → Manager qabul qildi, yig'ilmoqda
-ready_to_deliver → Manager yig'di va kuryerga topshirdi
-delivering       → Kuryer qabul qildi, yetkazilmoqda
-delivered        → Buyurtma yetkazildi
-cancelled        → Bekor qilindi
-delivery_issue   → Kuryer 3 marta topa olmadi, admin hal qilmoqda
-```
+- nom, kategoriya va tavsif;
+- rasm va video;
+- sotuv narxi va mavjud stock;
+- o'lchov birligi: kg, litr, dona, quti, tonna, metr va boshqalar;
+- minimal buyurtma miqdori;
+- maksimal buyurtma miqdori;
+- miqdor qadami, masalan 5 kg yoki 10 dona;
+- og'irlik va fizik hajm;
+- maxsus tashish sharti;
+- sellerdan olib ketish manzili;
+- mavjud bo'lsa sertifikat yoki boshqa hujjat.
+
+Minimum, maksimum va qadamni seller belgilaydi. Tizim xavfsiz umumiy chegaralarni
+setting orqali nazorat qilishi mumkin.
 
-### Status O'zgarish Diagrammasi
+Qoidalar:
 
-```
-pending ──────────────────────────────────────────── cancelled
-   │                                                  (customer, to'lovsiz)
-   │ [to'lov webhook keladi]
-   ▼
-paid
-   │
-   │ [manager buyurtmani qabul qiladi]
-   ▼
-confirmed
-   │
-   │ [manager yig'adi va "Kuryerga topshirish" bosadi]
-   ▼
-ready_to_deliver ◄── [kuryer rad etsa → tayinlov yopiladi, admin boshqa kuryer tayinlaydi]
-   │
-   │ [admin kuryer tayinlaydi → kuryer qabul qiladi]
-   ▼
-delivering
-   │                    ┌─── 1-chi yoki 2-chi "Topilmadi"
-   │ ◄──────────────────┘    (status o'zgarmaydi, vaqt yangilanadi)
-   │
-   │ [3-chi marta "Topilmadi"]
-   ▼
-delivery_issue
-   │
-   ├──► Admin mijoz bilan bog'lanadi:
-   │         ├──► Yangi vaqt kelishiladi → ready_to_deliver (kuryer qayta qabul qiladi)
-   │         └──► Bekor + refund (agar mijoz xohlasa) → cancelled
-   │
-   │ [Kuryer muvaffaqiyatli topshiradi]
-   ▼
-delivered
-   │
-   │ [24 soat o'tgach — avtomatik]
-   ▼
-[Review so'rovi yuboriladi]
-```
+- minimum maksimumdan katta bo'lmaydi;
+- buyurtma miqdori belgilangan qadamga mos bo'ladi;
+- maksimal buyurtma sotish mumkin bo'lgan stockdan oshmaydi;
+- birlikka mos kasr/butun miqdor ishlatiladi;
+- og'irlik va fizik hajm logistika uchun majburiy darajada to'ldiriladi.
 
----
-
-## Rollar va Ruxsatlar
-
-### Umumiy Ruxsatlar Jadvali
-
-| Amal | Customer | Manager | Courier | Admin | Super Admin |
-|------|----------|---------|---------|-------|-------------|
-| Mahsulotlarni ko'rish (faol) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Mahsulot yaratish | ❌ | ✅ *(inactive → approval kerak)* | ❌ | ✅ *(inactive → approval kerak)* | ✅ *(inactive → approval kerak)* |
-| Mahsulot tasdiqlash → active | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Mahsulot tahrirlash | ❌ | ✅ *(o'ziniki)* | ❌ | ✅ | ✅ |
-| Mahsulot o'chirish | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Buyurtma berish | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Barcha buyurtmalarni ko'rish | ❌ | ✅ *(paid/confirmed)* | ❌ | ✅ | ✅ |
-| Buyurtmani qabul qilish (confirmed) | ❌ | ✅ | ❌ | ❌ | ✅ |
-| Buyurtmani yig'ish (ready_to_deliver) | ❌ | ✅ | ❌ | ❌ | ✅ |
-| Kuryerni tayinlash | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Buyurtmani qabul qilish (delivering) | ❌ | ❌ | ✅ | ❌ | ✅ |
-| "Yetkazildi" bosish | ❌ | ❌ | ✅ | ❌ | ✅ |
-| "Topilmadi" bosish | ❌ | ❌ | ✅ | ❌ | ✅ |
-| delivery_issue hal qilish | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Buyurtmani bekor qilish | ✅ *(pending)* | ❌ | ❌ | ❌ | ✅ |
-| Foydalanuvchi asosiy ma'lumotlari | ❌ | ❌ | ❌ | ✅ *(cheklangan)* | ✅ |
-| Foydalanuvchi to'liq ma'lumotlari | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Tranzaksiyalarni ko'rish | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Sharh moderatsiya | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Admin yaratish | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Manager / Courier yaratish | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Tizim sozlamalari (narx, hudud) | ❌ | ❌ | ❌ | ❌ | ✅ |
-
----
-
-### Admin (Oddiy) — Ko'ra OLMAYDI:
+## 5. Mahsulot moderatsiyasi
 
+```mermaid
+flowchart TD
+    A["Seller mahsulot yaratadi"] --> B["Media, narx va miqdorlarni kiritadi"]
+    B --> C["Moderatsiyaga yuboradi"]
+    C --> D{"Ma'lumot to'g'rimi?"}
+    D -->|"Yo'q"| E["Sabab bilan sellerga qaytariladi"]
+    E --> B
+    D -->|"Ha"| F["Tasdiqlanadi va marketga chiqadi"]
+    F --> G{"Seller amali"}
+    G -->|"Tahrirlash"| C
+    G -->|"Deactive"| H["Yangi sotuvdan olinadi"]
 ```
-❌ Foydalanuvchilarning shaxsiy profil tarixi
-❌ To'lov tranzaksiyalari va moliyaviy ma'lumotlar
-❌ Boshqa adminlar ma'lumotlari
-✅ Buyurtmalar (faqat manzil + ism + telefon — yetkazish uchun zarur)
-✅ Mahsulot yaratish (yaratilishi bilanoq inactive — moderatsiyaga tushadi)
-✅ Mahsulotlarni tasdiqlash / rad etish (barcha moderatsiyadagilarni)
-✅ Sharhlarni moderatsiya qilish
-✅ Kuryer tayinlash va boshqarish
-```
 
-### Super Admin — Hamma narsani qila oladi:
+Active mahsulot tahrirlanganda yangi variant moderatsiyaga tushadi. U tasdiqlanguncha
+marketda oldingi tasdiqlangan variant ko'rinadi.
 
-```
-✅ Customer kabi: buyurtma bera oladi, to'lay oladi
-✅ Manager kabi: buyurtmani qabul qiladi, yig'adi, kuryerga topshiradi
-✅ Courier kabi: buyurtmani delivering ga o'tkazadi, yetkazildi bosadi
-✅ Admin kabi: kuryer tayinlaydi, mahsulot tasdiqlaydi, sharhlarni moderatsiya qiladi
-✅ + Tranzaksiyalar, to'liq user ma'lumotlari, tizim sozlamalari
-```
+Seller mahsulotni deactive qilsa yangi order olinmaydi. Oldin active qilingan orderlar
+esa oxirigacha bajariladi.
 
-### Manager — Ko'ra OLMAYDI va Qila OLMAYDI:
+## 6. Narx va ulushlar
 
-```
-❌ Buyurtmani bekor qilish
-❌ Refund amalga oshirish
-❌ Customer to'liq profili va to'lov tarixi
-❌ Boshqa managerlarga tegishli mahsulotlar (CRUD)
-✅ Faqat paid statusdagi buyurtmalarni olish
-✅ Buyurtmani yig'ish va kuryerga topshirish
-✅ O'z mahsulotlarini yaratish (admin tasdiqlagunicha inactive)
-```
+Seller xaridor ko'radigan mahsulot narxini kiritadi. Panel taxminiy taqsimotni ko'rsatadi:
 
----
+- 10% - Uvita platforma ulushi;
+- 7% - kurier uchun maksimal rezerv;
+- 83% - sellerning kutiladigan sof tushumi.
 
-## Mahsulot Approval Tizimi
+Kurierning haqiqiy ulushi masofaga qarab 0.1% dan 7% gacha bo'ladi. Agar kurierga
+7%dan kam hisoblangan bo'lsa, foydalanilmagan qism Uvita daromadida qoladi.
 
-**Har qanday rol (manager / admin / super admin) mahsulot yaratsa:**
-```
-1. Yangi mahsulot yaratiladi
-   → status: inactive (moderatsiyada)
-   → Saytda ko'rinmaydi va sotilmaydi
+Kurier foizi Dashboardda masofa oraliqlari bo'yicha sozlanadi. Masalan, har 20 km
+oralig'i uchun alohida foiz. Bu qiymatlar doimiy emas.
 
-2. Admin / Super Admin moderatsiyadagi mahsulotlarni ko'radi
-   → Ko'rib chiqadi: nomi, narxi, tavsifi, rasmlari, kategoriyasi
+Xaridorga ko'rsatiladigan yetkazish narxi masofa, og'irlik, fizik hajm, transport,
+qo'shimcha manzil va maxsus tashish shartidan hisoblanadi. Checkoutda mahsulot narxi,
+yetkazish narxi va jami summa alohida va tushunarli ko'rsatiladi.
 
-3. Tasdiqlaydi → status: active
-   → Mahsulot saytda ko'rinadi va sotilishi mumkin
+Har orderda ishlatilgan tarif va foizlarning snapshoti saqlanadi. Keyingi setting
+o'zgarishi eski orderni qayta hisoblamaydi.
 
-   Rad etadi (block) → status: rejected + sabab
-   → Manager (agar manager yaratgan bo'lsa) ga Notification: "Mahsulot rad etildi. Sabab: [...]"
+Soliq va fiskal chek modeli hozircha ochiq. Birinchi relizda real fiskal ma'lumot
+yuborilmaydi; ommaviy ishga tushirishdan oldin buxgalter va huquqshunos bilan belgilanadi.
 
-4. Manager rejected mahsulotni tahrirlaydi
-   → Qayta moderatsiyaga o'tkazadi
-   → Admin yana ko'rib chiqadi
-```
+## 7. Market, savatcha va checkout
 
-> **Qoida:** Har qanday mahsulot admin yoki super admin tasdiqisiz saytda ko'rinmaydi —
-> kim yaratganidan qat'i nazar (admin/super o'zi yaratgan mahsulotni ham tasdiqlashi kerak).
->
-> **Status o'zgarishlari (faqat admin / super admin):**
-> ```
-> inactive  → active     (tasdiqlash)
-> rejected  → active     (blokdan chiqarish / qayta tasdiqlash)
-> inactive  → rejected   (moderatsiyada rad etish)
-> active    → rejected   (faol mahsulotni bloklash)
-> ```
+Xaridor marketda mahsulotlarni ko'radi va savatchaga qo'shadi. Seller belgilagan
+minimumdan kam, maksimumdan ko'p yoki qadamga mos bo'lmagan miqdorni ololmaydi.
 
----
+Checkoutda xaridor quyidagilarni beradi:
 
-## Mahsulot Stock Tizimi
+- ism;
+- majburiy asosiy telefon;
+- ixtiyoriy qo'shimcha telefon;
+- xaritadan aniq manzil;
+- yozma manzil va mo'ljal;
+- kurier uchun qo'shimcha izoh.
 
-### Ko'rinish Qoidasi
+Bitta savatchadagi turli seller mahsulotlari alohida orderlarga ajratiladi. Yaqin
+yo'nalishdagi orderlar keyinchalik bitta kurier reysiga birlashtirilishi mumkin, ammo
+ularning selleri, summasi, statusi va moliyaviy hisobi alohida qoladi.
 
-```
-stock > 0  → Mahsulot ko'rinadi, sotib olish mumkin
-stock = 0  → "Tugagan" belgisi bilan ko'rinadi, sotib bo'lmaydi
-```
+Checkoutdan oldin tizim har order uchun qayta tekshiradi:
 
-### Stock O'zgarish Nuqtalari
+- mahsulot va seller active;
+- narx o'zgarmagan;
+- stock yetarli;
+- min, max va step to'g'ri;
+- yetkazish manzili xizmat hududida;
+- yetkazish narxi va taxminiy vaqt hisoblangan.
 
-```
-Buyurtma yaratishda     → SELECT FOR UPDATE + stock tekshiriladi
-                           (yetarli emas → 422 xato)
-To'lov webhook kelganda → Idempotency tekshiriladi (transaction_id)
-                           → Stock atomik kamayadi (decrement)
-Buyurtma cancelled      → Stock qaytarilmaydi
-                           (pending holatda stock hali kamaygan emas)
-```
+## 8. Operator tekshiruvi
 
-### Race Condition Yechimi — SELECT FOR UPDATE
-
-```php
-// OrderService — buyurtma yaratish
-DB::transaction(function () use ($cartItems) {
-    foreach ($cartItems as $item) {
-        // Bir vaqtda ikki buyurtma kelsa — biri kutadi
-        $product = Product::lockForUpdate()->find($item['product_id']);
-
-        if ($product->stock < $item['quantity']) {
-            throw new InsufficientStockException($product->name);
-            // → 422: "Mahsulot yetarli emas: [mahsulot nomi]"
-        }
-        // Order yaratiladi — stock HALI kamaytirilmaydi
-        // Stock faqat to'lov webhook tasdiqlanganda kamayadi
-    }
-    // Order + OrderItems + Payment (pending) yaratiladi
-});
-```
+Yangi order darhol sellerga yuborilmaydi. Avval operator mijoz bilan bog'lanadi.
 
-### Webhook Idempotency — transaction_id
-
-```php
-// PaymentWebhookHandler
-$alreadyProcessed = Payment::where('transaction_id', $webhookData['transaction_id'])
-                           ->where('status', 'paid')
-                           ->exists();
-
-if ($alreadyProcessed) {
-    return response()->json(['status' => 'ok']); // Duplicate → skip, 200 qaytariladi
-}
-
-// Yangi to'lov → atomik davom ettiriladi
-DB::transaction(function () use ($order, $webhookData) {
-    $payment->update([
-        'status'         => 'paid',
-        'transaction_id' => $webhookData['transaction_id'],
-    ]);
-    $order->update(['status' => 'paid']);
-
-    foreach ($order->items as $item) {
-        $item->product->decrement('stock', $item['quantity']);
-        // Stock kamayishi faqat shu yerda — bir marta
-    }
-});
+```mermaid
+flowchart TD
+    A["Yangi order"] --> B["Operator qo'ng'iroq qiladi"]
+    B --> C{"Mijoz javob berdimi?"}
+    C -->|"Ha, oladi"| D["Order active"]
+    C -->|"Ha, olmaydi"| E["Order deactive"]
+    C -->|"Yo'q"| F["Qayta qo'ng'iroq"]
+    F --> G{"3 urinish tugadimi?"}
+    G -->|"Yo'q"| B
+    G -->|"Ha"| E
+    D --> H["Stock rezervlanadi"]
+    H --> I["Sellerga ko'rinadi"]
 ```
 
----
+Har qo'ng'iroq operator, vaqt, natija va izoh bilan tarixda saqlanadi. Javob bo'lmasa
+uchta majburiy urinish qilinadi. Urinish soni va oralig'i keyinchalik settingdan
+o'zgartirilishi mumkin.
 
-## Narx va Yetkazish Tizimi
-
-```
-Hudud:          Bitta shahar (Super Admin sozlaydi)
-Yetkazish:      Mijozdan yetkazish uchun pul OLINMAYDI (tekin)
-Xizmat haqi:    Mahsulotlar summasining 15% — mijoz shuni qo'shib to'laydi
-Minimal summa:  50 000 so'm — kam bo'lsa buyurtma RAD etiladi (422)
-Kuryer haqi:    Pog'onali; platforma o'z 15% ustamasidan to'laydi — MIJOZGA KO'RINMAYDI
-                  < 200 000  → 10 000
-                  200–300k   → 15 000
-                  ≥ 300 000  → 20 000
-```
+## 9. Stock
 
-**Mijoz to'lovi = Mahsulotlar summasi + 15% xizmat haqi**  (yetkazish tekin)
+Stock faqat operator orderni `active` qilgan paytda transaction ichida rezervlanadi.
+Parallel orderlar stockni manfiy qila olmaydi.
 
-Ichki taqsimot:
-```
-Sotuvchi oladi:      mahsulotlar summasi           (total_price)
-Platforma ustamasi:  15% xizmat haqi               (service_fee)  ← mijoz to'laydi
-Kuryerga:            pog'onali haq                 (courier_fee)  ← 15% ustamadan, ichki
-Platformada qoladi:  service_fee − courier_fee
-```
+Order active bo'lmasa stock kamaymaydi. Active order keyin bekor/deactive qilinsa,
+rezerv aynan bir marta stockka qaytariladi.
 
-Narxlar buyurtma yaratilganda **snapshotga** olinadi (total_price, service_fee,
-courier_fee, grand_total). Keyin qoidalar o'zgarsa — eski buyurtmalarga ta'sir qilmaydi.
+Payment webhook stockni kamaytirmaydi. Bu eski model hisoblanadi.
 
-> Eslatma: 15% hozircha alohida "xizmat haqi" satri bo'lib ko'rsatiladi.
-> Kelajakda mahsulot narxiga qo'shib ko'rsatilishi mumkin.
+## 10. Seller orderni tayyorlaydi
 
----
+Active order seller panelda yuqorida ko'rinadi. Seller mahsulotni buyurtmadagi miqdor
+va tashish talabiga mos tayyorlaydi.
 
-## To'liq Life Cycle
+Default tayyorlash muddati 5 soat. Muddat active bo'lgan vaqtdan boshlanadi.
 
----
+- Seller tayyor bo'lsa `Olib ketishga tayyor` qiladi.
+- 5 soatdan oshsa order bekor bo'lmaydi.
+- Sellerga eslatma yuboriladi.
+- Dashboardda kechikkan order sifatida ko'rinadi.
+- Keyinchalik seller SLA statistikasi uchun hodisa saqlanadi.
 
-### BOSQICH 1: Mahsulotlarni Ko'rish (Login shart emas)
+## 11. Yetkazma va reys
 
-```
-1. Customer ilovani ochadi — loginsiz
-2. Kategoriyalar bo'yicha ko'radi
-3. Mahsulotlarni filter qiladi (kategoriya / narx oralig'i / qidiruv)
-4. Mahsulot detail sahifasini ochadi
-5. Narx, tavsif, rasmlar, sharhlar va yulduzchalarni ko'radi
-6. stock = 0 bo'lsa → "Tugagan" ko'rinadi, buyurtma tugmasi o'chirilgan
-```
+- Order - bitta sellerga tegishli xarid.
+- Yetkazma - orderni sellerdan xaridorga olib borish vazifasi.
+- Reys - bitta kurier bir yo'nalishda olib boradigan bir yoki bir nechta yetkazma.
 
-> Savatchaga qo'shish yoki buyurtma berishga harakat qilsa →
-> avtomatik OTP login oqimi boshlanadi.
+Bir reysga qo'shishda quyidagilar tekshiriladi:
 
----
+- masofa va asosiy yo'nalish;
+- yo'nalishdan maksimal chetlashish;
+- pickup va drop-off ketma-ketligi;
+- kurier transportining maksimal og'irligi;
+- transportning fizik hajmi;
+- kurier yuradigan maksimal masofa;
+- mahsulotlarning birga tashishga mosligi;
+- maxsus harorat yoki boshqa shart;
+- yetkazish vaqti.
 
-### BOSQICH 2: Customer Kirishi (OTP)
+Yuk kam bo'lsa reys bekor qilinmaydi. Kichikroq mos avtomobilga taklif qilinadi.
 
-```
-1. "Savatchaga qo'sh" yoki "Buyurtma berish" tugmasini bosadi
-2. Telefon raqam kiritish sahifasi chiqadi (+998XXXXXXXXX)
-3. OTP SMS yuboriladi (120 soniya amal qiladi)
-4. OTP kodni kiritadi
-5. Yangi foydalanuvchi bo'lsa → ism kiritish so'raladi:
-   - Ism *
-   - Telefon (avtomatik — kirish paytida to'ldirilgan)
-6. Sanctum token oladi (muddati: 30 kun)
-7. Asl harakati (savatcha / buyurtma) davom ettiradi
-```
+## 12. Kurier profili va reysni olish
 
-**OTP Xavfsizlik Qoidalari:**
+Kurier profilida quyidagilar bo'ladi:
 
-```
-Amal muddati:           120 soniya
-Maksimal urinish:       5 ta (noto'g'ri kod kiritish)
-5 marta noto'g'ri:      10 daqiqa blok (IP + telefon raqam bo'yicha)
-Yangi OTP so'rash:      Avvalgi OTP muddati tugaganidan keyin mumkin
-Rate limiting:          IP va telefon raqam bo'yicha alohida kuzatiladi
-```
+- telefon va asosiy shaxsiy ma'lumotlar;
+- transport turi va raqami;
+- maksimal yuk og'irligi;
+- foydali fizik hajm;
+- maksimal yurish masofasi;
+- maxsus yuk imkoniyatlari;
+- active va online holatlari;
+- naqd qarz bo'yicha blok holati.
 
----
+Kurier `Zakaz olish`ni bosganda tizim faqat profiliga va transportiga mos reyslarni
+taklif qiladi. Taklifda yo'nalish, yuk, masofa, olinadigan naqd summa va taxminiy
+daromad ko'rsatiladi.
 
-### BOSQICH 3: Savatcha
+Kurier reysni qabul qilganidan keyin 1 soat ichida, yukni hali sellerdan olmagan bo'lsa,
+sabab bilan bekor qilishi mumkin. Keyingi oddiy so'rovda aynan shu rad qilingan taklif
+unga qayta berilmaydi. Bir soatdan keyin yoki pickupdan keyin faqat Logistics Manager
+aralashuvi bilan hal qilinadi.
 
-```
-1. Customer mahsulot sahifasida "Savatchaga qo'sh" bosadi
-2. Miqdorni tanlaydi
-3. Savatcha yangilanadi (DB da saqlanadi)
-4. Savatcha sahifasida ko'rinadi:
-   - Mahsulotlar ro'yxati + miqdor
-   - Mahsulotlar jami narxi
-   - Xizmat haqi (15%)
-   - To'lash kerak bo'lgan jami summa (yetkazish tekin)
-```
+## 13. Sellerdan yukni olish
 
-**Qoidalar:**
+Kurier seller manziliga boradi va quyidagilarni tekshiradi:
 
-```
-- stock = 0 → savatchaga qo'shib bo'lmaydi
-- Bir xil mahsulotni qayta qo'shsa → miqdor oshadi
-- Mavjud stockdan ortiq miqdor kiritib bo'lmaydi
-- Savatcha DB da saqlanadi (sessiya tugasa ham yo'qolmaydi)
-```
+- mahsulot nomi va miqdori;
+- brak yoki ko'rinadigan sifat muammosi;
+- qadoq;
+- maxsus tashish sharti;
+- kerak bo'lsa foto, vaqt va GPS dalili.
 
----
+Kurierga aniq ogohlantirish beriladi: yukni qabul qilishdan oldin tekshir; qabuldan
+keyin tashish davridagi kamomad, buzilish yoki yo'qotish javobgarligi senda.
 
-### BOSQICH 4: Buyurtma Berish
+Yukni qabul qilgach order `yo'lda` holatiga o'tadi. Uvita omboriga olib borilmaydi.
 
-```
-1. Customer savatchani ko'radi
-2. "Buyurtma berish" tugmasini bosadi
-3. Yetkazish ma'lumotlarini kiritadi:
-   - To'liq manzil * (viloyat, tuman, ko'cha, uy raqami)
-   - Mo'ljal — ixtiyoriy
-   - Asosiy telefon * (profildan avtomatik, o'zgartirsa bo'ladi)
-   - Qo'shimcha telefon — ixtiyoriy
-   - Yetkazish vaqti * (kun va soat oralig'i)
-     Masalan: "Ertaga 14:00–18:00"
-   - Kuryer uchun izoh — ixtiyoriy
-4. To'lov usulini tanlaydi: Payme / Click / Uzum
-5. Jami summa ko'rinadi: mahsulotlar + 15% xizmat haqi (yetkazish tekin)
-6. "To'lov qilish" tugmasini bosadi
-```
+## 14. To'liq yetkazish va naqd pul
 
-**Tizim ichida — buyurtma yaratish:**
+Birinchi relizda xaridor naqd to'laydi.
 
-```
-1. DB transaction ochiladi
-2. Har bir mahsulot uchun: SELECT FOR UPDATE + stock tekshiriladi
-   → stock < quantity → 422: "Mahsulot yetarli emas: [nomi]"
-   → Xato chiqsa — savatcha o'zgarmaydi, customer xabar oladi
-3. Minimal buyurtma tekshiriladi: mahsulotlar < 50 000 → 422 (buyurtma yaratilmaydi)
-4. Order yaratiladi (status: pending)
-5. Order items yaratiladi:
-   → mahsulot_id + miqdor + shu paytdagi narx (snapshot)
-6. Narx snapshot: service_fee (15%) va courier_fee (pog'onali, ichki) hisoblanadi
-6. Savatcha tozalanadi
-7. Payment yaratiladi (status: pending)
-8. Customer ga SMS: "Buyurtmangiz #123 yaratildi. To'lovni amalga oshiring."
-9. To'lov provider URL qaytariladi
-10. Customer provider sahifasiga yo'naltiriladi
+```mermaid
+flowchart TD
+    A["Kurier xaridorga yetib boradi"] --> B["Topshirishni boshlaydi"]
+    B --> C["Olinadigan aniq summa ko'rsatiladi"]
+    C --> D["Kurier Pulni oldim deydi"]
+    D --> E["Xaridorga SMS PIN yuboriladi"]
+    E --> F{"PIN to'g'rimi?"}
+    F -->|"Yo'q"| G["Order yopilmaydi"]
+    F -->|"Ha"| H["Pul olindi va delivered"]
+    H --> I["Seller hisob-kitobi boshlanadi"]
+    H --> J["Kurier naqd qarzi yoziladi"]
 ```
 
----
+PIN tasdiqlanmaguncha order delivered va pul olindi deb hisoblanmaydi. Courier summani
+o'zi o'zgartirmaydi. Tasdiq aynan bir marta moliyaviy yozuv yaratadi.
 
-### BOSQICH 5: To'lov
+Hozirgi birinchi relizda xaridor orderni 100% qabul qiladi deb olinadi. Umuman qabul
+qilmaslik va oddiy return/refund keyingi alohida lifecycle bo'ladi.
 
-```
-1. Customer Payme / Click / Uzum sahifasida to'laydi
-2. Provider webhook yuboradi
-3. Tizim webhook ni qabul qiladi:
-   a. Signature tekshiriladi (provider kaliti bilan)
-   b. transaction_id avval kelganmi? → Ha → skip, 200 OK qaytariladi
-   c. DB transaction:
-      - Payment: pending → paid (transaction_id yoziladi)
-      - Order:   pending → paid
-      - Har bir mahsulot: stock atomik kamayadi (decrement)
-   d. Customer ga SMS: "To'lovingiz qabul qilindi. Buyurtma #123"
-   e. Manager ga Telegram: "Yangi to'langan buyurtma #123 keldi!"
-```
+## 15. Qisman yetkazish
 
-**To'lov muvaffaqiyatsiz bo'lsa:**
+Mahsulot buyurtmadagidan kam borgan bo'lsa courier qisman yetkazishni tanlaydi:
 
-```
-- Payment status: failed
-- Order status:   pending (o'zgarmaydi)
-- Stock:          o'zgarmaydi
-- Customer ga SMS: "To'lov amalga oshmadi. Qayta urinib ko'ring."
-- Buyurtma sahifasida "Qayta to'lash" tugmasi chiqadi:
-  → Yangi payment yaratiladi
-  → Yangi provider URL beriladi
-  → Eski failed payment tarix uchun saqlanib qoladi
-```
+1. har mahsulotning haqiqiy miqdorini kiritadi;
+2. sabab va dalolatnoma yozadi;
+3. rasm, video yoki fayl dalilini yuklaydi;
+4. haqiqiy summa qayta hisoblanadi;
+5. sellerga notification yuboriladi;
+6. seller 4 soat ichida approve yoki reject qiladi.
 
-**To'lovdan oldin bekor qilish (pending holatda):**
+Seller approve qilsa qisman yetkazish haqiqiy miqdor bo'yicha yakunlanadi. Seller rad
+etsa yoki 4 soat javob bermasa avtomatik approve bo'lmaydi; Dashboarddagi mas'ul xodim
+tekshiradi.
 
-```
-- Customer o'zi bekor qiladi
-- Order: pending → cancelled
-- Stock qaytarilmaydi (chunki hali kamaygan emas)
-- Payment: pending/failed → cancelled
-```
+## 16. Seller balansi
 
-**To'lovdan keyin pul qaytarish:**
+Delivery PIN tasdiqlangan paytdan seller hisob-kitobi boshlanadi:
 
+```mermaid
+flowchart LR
+    A["Delivered"] --> B["2 soat processing"]
+    B --> C["Pending balans"]
+    C -->|"Delivered vaqtidan 48 soat"| D["Yechishga tayyor"]
+    D --> E["Seller ariza yuboradi"]
+    E --> F["Accountant tekshiradi"]
+    F --> G["Pul to'landi"]
 ```
-Status paid va undan keyin:
-  → Customer tomonidan bekor qilish YO'Q
-  → Pul qaytarish YO'Q (hozircha)
-  → Istisno: delivery_issue holati (9.1-bosqichga qarang)
-  → Kelajakda refund tizimi qo'shilishi mumkin
-```
-
----
-
-### BOSQICH 6: Manager — Buyurtmani Qabul Qilish
 
-```
-1. Manager platformaga kiradi (email + parol)
-2. Yangi buyurtmalar ro'yxatini ko'radi (status: paid)
-3. Buyurtma detailini ko'radi:
-   - Mahsulotlar ro'yxati + miqdorlar
-   - Yetkazish manzili, vaqti, kuryer izohi
-   - Jami summa + xizmat haqi (15%)
-   - Customer: faqat ism + asosiy telefon + qo'shimcha telefon
-4. Buyurtmani qabul qiladi → status: paid → confirmed
-5. Customer ga SMS: "Buyurtmangiz #123 qabul qilindi. Tayyorlanmoqda."
-```
+Seller quyidagilarni ko'radi:
 
-> **Eslatma:** Manager faqat buyurtmani qabul qiladi va yig'adi.
-> Bekor qilish va refund uning vakolati emas.
+- jami savdo;
+- processing summa;
+- pending summa;
+- yechishga tayyor balans;
+- platforma va kurier ushlanmalari;
+- arizalar va tranzaksiyalar.
 
----
+Pul yechish arizasida seller nomi, telefon va saqlangan to'lov rekviziti avtomatik
+olinadi. Seller faqat yechishga tayyor balansdan oshmaydigan summa va ixtiyoriy izoh
+kiritsa bo'ladi.
 
-### BOSQICH 7: Manager — Yig'ish va Kuryerga Topshirish
+Ariza yuborilganda summa hold qilinadi. Accountant approve/paid yoki reject qiladi.
+Reject bo'lsa hold yechiladi. Kim qaror qilgani auditga yoziladi. Ariza topshirish uchun
+alohida muddat cheklovi yo'q.
 
-```
-1. Manager mahsulotlarni yig'adi va paketlaydi
-2. Kuryer uchun izoh qoldirishi mumkin (ixtiyoriy)
-   Masalan: "Mo'rtga ehtiyotkorlik bilan"
-3. "Kuryerga topshirish" tugmasini bosadi
-   → status: confirmed → ready_to_deliver
-4. Admin ga Notification: "Buyurtma #123 yig'ildi — kuryer tayinlanishi kerak"
-```
+## 17. Kurier daromadi va naqd qarzi
 
----
+Kurier daromadi yetkazilgan mahsulot qiymati va masofa bandiga mos foizdan hisoblanadi.
+Masofa bandlari Dashboard settingida turadi va har orderda snapshot qilinadi.
 
-### BOSQICH 7.5: Admin — Kuryerni Tayinlash
+Kurier mijozdan olgan barcha naqd pul bo'yicha Uvita oldida qarzdor bo'ladi.
 
-```
-1. Admin ready_to_deliver buyurtmalar ro'yxatini ko'radi
-2. Faol kuryerlar ro'yxatini ko'radi; smenadagi kuryerlar birinchi chiqadi
-3. Mos kuryerni tanlaydi va tayinlaydi
-4. Tizim alohida tayinlov yozuvini yaratadi (assigned)
-5. Kuryer ga Push + ilova ichidagi Notification:
-   "Sizga #123 buyurtma tayinlandi!"
-```
+Reys tugagach:
 
-> Kuryer tayinlanmasa — buyurtma ready_to_deliver da qoladi.
-> Admin qayta tayinlashi mumkin.
-> `is_active` akkaunt ruxsatini, `is_online` esa kuryerning ish smenasini bildiradi.
+1. courier pul topshirish so'rovini yuboradi;
+2. Dashboardda uning ismi, telefoni, reysi, kutilgan summa va topshirayotgan summasi chiqadi;
+3. Accountant real olingan summani tasdiqlaydi;
+4. tasdiqdan keyingina courier qarzi kamayadi.
 
----
+Yangi reys olish uchun courier tegishli summaning kamida 90%ini topshirgan bo'lishi kerak.
+90%dan kam bo'lsa yangi reys bloklanadi. Qolgan qarzni yopish uchun 3 kun beriladi.
+3 kun o'tsa qarz to'liq yopilmaguncha courier blokda qoladi va Dashboardda alert chiqadi.
 
-### BOSQICH 8: Kuryer — Qabul Qilish
+## 18. Dashboard nazorati
 
-```
-1. Kuryer platformaga kiradi (email + parol)
-2. O'ziga tayinlangan buyurtmani ko'radi (status: ready_to_deliver)
-3. Buyurtma detailini ko'radi:
-   - Yetkazish manzili va vaqti
-   - Customer asosiy va qo'shimcha telefoni
-   - Manager uchun izoh
-4. Kuryer qaror qiladi:
-   - "Qabul qilish" → tayinlov accepted
-   - "Rad etish" → sabab majburiy; tayinlov rejected, order tayinlovsiz qoladi
-5. Qabul qilsa, do'kondan buyurtmani oladi
-6. "Qabul qilish" tugmasini bosadi
-   → status: ready_to_deliver → delivering
-7. Yo'lga chiqishdan AVVAL customer ga qo'ng'iroq qiladi:
-   - Manzilni aniqlashtiradi
-   - Kelish vaqtini kelishadi
-8. Customer ga SMS: "Kuryer yo'lda, tez orada yetkazadi!"
-9. GPS faqat delivering davrida va faqat shu order uchun yoziladi
-```
+Dashboardda quyidagilar bo'ladi:
 
----
+- sellerlar va ularning holati;
+- mahsulot moderatsiyasi;
+- orderlar, qo'ng'iroq va qayta qo'ng'iroqlar;
+- 5 soatdan oshgan tayyorlashlar;
+- reys, active trip va kechikishlar;
+- courier, transport va capacity;
+- courier naqd qarzi va pul topshirish;
+- seller balans va withdrawal;
+- qisman yetkazish dalolatnomalari;
+- xodimlar, role va permission;
+- settinglar;
+- audit;
+- umumiy analitika va alertlar.
 
-### BOSQICH 9: Kuryer — Yetkazish
+## 19. Sozlanadigan qoidalar
 
-```
-1. Kuryer manzilga boradi
-2. Buyurtmani topshiradi
-3. Customer ilovasi/SMS dagi 4 xonali PIN ni oladi
-4. PIN ni kiritadi (5 noto'g'ri urinish → 10 daqiqa blok)
-5. PIN to'g'ri bo'lsa "Yetkazildi" tasdiqlanadi
-   → status: delivering → delivered
-6. Yetkazish isboti saqlanadi: vaqt, kuryer, usul, GPS (mavjud bo'lsa)
-7. Customer ga SMS: "Buyurtmangiz #123 yetkazildi! Iltimos baholang."
-8. Kuryerning yetkazish tarixi va daromadi yangilanadi
-```
+Quyidagilar kodga qotirilmaydi:
 
----
+- active hudud va reyslar;
+- reys kunlari va vaqti;
+- pickup/drop-off radiusi;
+- maksimal detour;
+- yetkazish tariflari va ETA bandlari;
+- seller tayyorlash muddati, default 5 soat;
+- operator urinish soni va oralig'i, default 3 urinish;
+- partial approval muddati, default 4 soat;
+- seller processing muddati, default 2 soat;
+- seller withdrawable muddati, default delivered'dan 48 soat;
+- platforma ulushi, default 10%;
+- kurier maksimal rezervi, default 7%;
+- kurier distance bandlari, 0.1%-7%;
+- courier unblock chegarasi, default 90%;
+- qolgan qarz muddati, default 3 kun;
+- umumiy min/max/step xavfsizlik chegaralari.
 
-### BOSQICH 9.1: Kuryer — "Topilmadi" Oqimi
+Setting o'zgarganda eski order va reys tarixiy snapshotini saqlaydi.
 
-**1-chi va 2-chi marta:**
+## 20. Notification va audit
 
-```
-1. Kuryer customer bilan bog'lana olmaydi yoki topib bo'lmaydi
-2. "Topilmadi" tugmasini bosadi
-3. Sabab tanlaydi va izoh kiritadi:
-   `no_answer` / `wrong_address` / `customer_unavailable` / `other`
-4. Tizim: not_found_count + 1 (1 yoki 2 bo'ladi)
-5. Status o'zgarmaydi (delivering qoladi)
-6. Customer ga SMS:
-   "Kuryer siz bilan bog'lana olmadi.
-    Iltimos telefonga chiqing yoki qayta murojaat qiling."
-7. Admin ga Notification: "Buyurtma #123 — topilmadi (urinish #N)"
-8. Yetkazish vaqti yangilanadi (admin qayta belgilaydi)
-9. Kuryer keyingi belgilangan vaqtda yana urinadi
-10. Har bir urinish alohida audit yozuvi sifatida saqlanadi:
-    kuryer, sabab, izoh, vaqt, GPS va urinish raqami
-```
+Muhim xabarlar queue orqali yuboriladi. Provider ishlamasa asosiy transaction yo'qolmaydi.
 
-**3-chi marta (delivery_issue):**
+Notification kerak bo'lgan asosiy holatlar:
 
-```
-1. Kuryer yana "Topilmadi" bosadi → not_found_count = 3
-2. → status: delivering → delivery_issue
-3. Admin ga yuqori prioritetli Notification:
-   "⚠️ Buyurtma #123 — 3 marta topilmadi! Aralashish kerak."
-4. Customer ga SMS:
-   "Yetkazishda muammo yuzaga keldi.
-    Administrator siz bilan tez orada bog'lanadi."
-5. Admin mijoz bilan bog'lanadi va holat aniqlanadi:
-
-   Variant A — Yangi vaqt kelishiladi:
-   → status: delivery_issue → ready_to_deliver
-   → not_found_count = 0
-   → Xuddi shu yoki boshqa kuryer tayinlanadi
-   → Kuryer qayta qabul qilgandan keyin delivering bo'ladi
-
-   Variant B — Mijoz buyurtmani bekor qilishni xohlaydi:
-   → status: delivery_issue → cancelled
-   → Refund masalasi admin ixtiyori bilan hal qilinadi
-   → ⚠️ Bu holat noyob — protsedura keyinroq batafsil aniqlanadi
-
-Eslatma: delivery_issue holatlari juda kam bo'ladi.
-```
+- OTP va delivery PIN;
+- product approve/reject;
+- order active;
+- seller deadline eslatmasi va overdue;
+- ready for pickup va courier offer;
+- trip accept/cancel;
+- partial delivery seller qarori va escalation;
+- seller balans bosqichlari va withdrawal;
+- courier 90%/3 kun qarz alerti;
+- accountantga cash handover request.
 
----
+Barcha muhim admin, seller va courier amallari auditda actor, amal, entity, vaqt va
+xavfsiz old/new diff bilan saqlanadi. Password, token, OTP/PIN va boshqa secret auditga
+yozilmaydi.
 
-### BOSQICH 10: Review
+## 21. Canonical biznes holatlar
 
-```
-1. delivered bo'lganidan 24 soat o'tgach — avtomatik SMS yuboriladi
-   YOKI customer ixtiyoriy ravishda buyurtma tarixidan baholaydi
-2. Customer ga SMS: "Buyurtmangiz #123 ni baholang!"
-3. Customer sharh yozadi:
-   - Yulduzcha (1–5) *
-   - Izoh matni — ixtiyoriy
-4. Sharh darhol ko'rinmaydi → moderation queue ga tushadi
-5. Admin / Super Admin sharhni ko'rib chiqadi:
-   - Tasdiqlaydi → mahsulot sahifasida ko'rinadi
-   - Rad etadi → customer xabar olishi mumkin (ixtiyoriy)
-6. Bir buyurtma = bir sharh imkoniyati
-7. Yozilgan sharh o'zgartirish mumkin (admin qayta moderatsiya qiladi)
-8. Sharh o'chirilmaydi (faqat admin yashirishi mumkin)
-```
+Texnik enum nomlari migratsiya davomida farq qilishi mumkin, ammo biznes ma'nosi bitta:
 
----
+| Obyekt | Asosiy holatlar |
+|---|---|
+| Product | draft, moderation, active, rejected, deactive |
+| Order | operator_review, callback_required, active, preparing, ready_for_pickup, assigned, in_transit, partial_review, delivered, deactive/cancelled |
+| Trip offer | offered, accepted, rejected/expired, cancelled |
+| Withdrawal | requested, held, approved, paid, rejected |
+| Cash handover | requested, accepted, rejected/reconciled |
+| Partial case | submitted, seller_approved, seller_rejected, manual_review, resolved |
 
-### BOSQICH 11: Kuryer Hisob-Kitobi
+Har status o'tishi backendda tekshiriladi va tarixda saqlanadi. UI statusni o'zicha
+o'zgartirmaydi.
 
-```
-Har bir delivered buyurtma uchun kuryerga belgilangan haq qo'shiladi.
-Kuryer ilovada bugungi, haftalik, oylik va jami daromadini ko'radi.
-Super Admin sana oralig'ini tanlab hisob-kitob yaratadi.
-Summa requestdan olinmaydi — delivered orderlarning courier_fee qiymatidan server hisoblaydi.
-Bir kuryer va bir xil davr uchun takroriy hisob-kitob yaratilmaydi.
-Hisob-kitob pending → paid bo'lganda vaqt saqlanadi va kuryerga notification yuboriladi.
-```
+## 22. Hozircha ochiq masalalar
 
----
+Quyidagilar birinchi implementatsiyani bloklamaydi, lekin productiondan oldin yoki keyingi
+relizda alohida tasdiqlanadi:
 
-## Bekor Qilish Qoidalari
+- soliq va fiskal chek kim nomidan berilishi;
+- online payment;
+- xaridor butunlay qabul qilmasa return/refund;
+- sifat nizosi va seller javobi;
+- sertifikat va yaroqlilik muddati;
+- sug'urta va murakkab zarar undirish;
+- qisman yetkazishning kengaytirilgan dispute qoidalari.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  STATUS       │  KIM BEKOR QILA OLADI  │  STOCK    │  REFUND │
-├───────────────┼────────────────────────┼───────────┼─────────┤
-│  pending      │  Customer (o'zi)       │  yo'q     │  yo'q   │
-│  paid+        │  Hech kim              │  —        │  yo'q   │
-│  delivery_    │  Admin (ixtiyori bilan │  —        │  TBD    │
-│  issue        │  mijoz roziligida)     │           │         │
-└─────────────────────────────────────────────────────────────┘
-
-pending — to'lov amalga oshmagan, stock hali kamaygan emas
-paid va undan keyin — manager bekor qila olmaydi, refund yo'q (hozircha)
-delivery_issue — noyob holat, admin hal qiladi
-```
+Bu ochiq masalalar uchun kodga noto'g'ri qat'iy formula yozilmaydi; adapter va setting
+orqali keyin kengaytirish imkoniyati saqlanadi.
 
----
-
-## Notification Jadvali
-
-| Hodisa | Customer | Manager | Admin | Kuryer |
-|--------|----------|---------|-------|--------|
-| Buyurtma yaratildi (pending) | SMS ✅ | Telegram ✅ | — | — |
-| To'lov tasdiqlandi (paid) | SMS ✅ | Telegram ✅ | — | — |
-| To'lov muvaffaqiyatsiz | SMS ✅ | — | — | — |
-| Buyurtma qabul qilindi (confirmed) | SMS ✅ | — | — | — |
-| Yig'ildi (ready_to_deliver) | — | — | Notification ✅ | — |
-| Kuryer tayinlandi | — | — | — | Push + In-app ✅ |
-| Kuryer yo'lda (delivering) | SMS ✅ | — | — | — |
-| Yetkazildi (delivered) | SMS ✅ | — | — | — |
-| Topilmadi — 1/2 marta | SMS ✅ | — | Notification ✅ | — |
-| Topilmadi — 3 marta (delivery_issue) | SMS ✅ | — | Push ✅ *(urgent)* | — |
-| Review so'rovi | SMS ✅ | — | — | — |
-| Mahsulot tasdiqlandi | — | Notification ✅ | — | — |
-| Mahsulot rad etildi | — | Notification ✅ | — | — |
-
----
-
-## Kerakli Modullar
-
-| Modul | Guard | Tavsif |
-|-------|-------|--------|
-| `Auth` | — | Customer OTP auth (rate limiting, 10 daqiqa blok) |
-| `User` | `api` | Customer profil, buyurtma tarixi |
-| `Category` | `api` / `admin` | Kategoriyalar CRUD |
-| `Product` | `api` / `admin` | Mahsulotlar CRUD + approval oqimi + filter |
-| `Cart` | `api` | Savatcha (DB da, persistent) |
-| `Order` | `api` / `admin` | Buyurtma oqimi + status boshqarish |
-| `Payment` | — | To'lov + webhook + idempotency (transaction_id) |
-| `Review` | `api` / `admin` | Sharh, baholash, moderatsiya queue |
-| `Courier` | `courier` | Profil/smena + tayinlov + PIN yetkazish + GPS + topilmadi audit + support + daromad |
-| `Admin/Auth` | `admin` | Manager, Admin, Super Admin login |
-| `Admin/Order` | `admin` | Buyurtmalarni ko'rish, boshqarish, delivery_issue |
-| `Admin/Product` | `admin` | Mahsulot approval / reject |
-| `Admin/Courier` | `admin` | Kuryer tayinlash, boshqarish |
-| `Admin/Review` | `admin` | Sharh moderatsiyasi |
-| `Admin/User` | `super_admin` | To'liq user ma'lumotlari |
-| `Admin/Transaction` | `super_admin` | To'lov tranzaksiyalari tarixi |
-| `Admin/Settings` | `super_admin` | Xizmat haqi, shahar, minimal buyurtma, tizim parametrlari |
-| `Notification` | — | SMS + Telegram + Push (Shared Service) |
-
----
-
-## Tizim Chegaralari (Hozirgi Versiya v3)
+## 23. Umumiy yakuniy oqim
 
+```mermaid
+flowchart LR
+    A["Seller mahsulot qo'yadi"] --> B["Moderatsiya"]
+    B --> C["Market"]
+    C --> D["Xaridor order beradi"]
+    D --> E["Operator tekshiradi"]
+    E --> F["Stock rezerv"]
+    F --> G["Seller tayyorlaydi"]
+    G --> H["Reys va courier"]
+    H --> I["Sellerdan pickup"]
+    I --> J["Xaridorga delivery"]
+    J --> K["Naqd pul va SMS PIN"]
+    K --> L["Seller balansi"]
+    K --> M["Courier naqd qarzi"]
+    M --> N["Accountant qabul qiladi"]
+    O["Dashboard"] -.->|"Barcha bosqichni nazorat qiladi"| B
+    O -.-> E
+    O -.-> H
+    O -.-> L
+    O -.-> N
 ```
-Yetkazish hududi:     Bitta shahar (Super Admin tomonidan belgilanadi)
-Yetkazish narxi:      Mijozdan OLINMAYDI (tekin); mijoz 15% xizmat haqi to'laydi
-Kuryer haqi:          Pog'onali, platforma 15% ustamadan to'laydi — mijozga ko'rinmaydi
-Minimal buyurtma:     50 000 so'm — kam bo'lsa buyurtma rad etiladi (422)
-Pul qaytarish:        Faqat pending holatda (to'lovsiz bekor qilish)
-                      Delivery_issue — admin ixtiyori bilan (TBD)
-Kuryer "Topilmadi":   3 marta → delivery_issue → admin hal qiladi
-OTP blok:             5 noto'g'ri urinish → 10 daqiqa blok
-Sharh moderatsiya:    Admin / Super Admin tomonidan
-Mahsulot tasdiqlash:  Admin / Super Admin tomonidan
-Kuryer hisob-kitobi:  Sana oralig'i bo'yicha Super Admin; summa serverda hisoblanadi
-```
-
----
 
-> **Eslatma:**
-> Bu hujjat loyiha rivojlanishi bilan yangilanadi.
-> Har qanday oqim o'zgarishi avval shu yerda muhokama qilinadi.
-> v4 — seller va fermer mahsulotlari uchun B2B/B2B2C oqimi kiritilgan versiya.
+Qisqa xulosa: Uvita mahsulotni omborga olmaydi. Platforma seller, xaridor va courierni
+bog'laydi; mahsulotni moderatsiya qiladi, orderni tekshiradi, stockni rezervlaydi, mos
+reysga beradi, to'g'ridan-to'g'ri yetkazishni va naqd hisob-kitobni nazorat qiladi.
